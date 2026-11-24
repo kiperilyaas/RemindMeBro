@@ -106,6 +106,15 @@ def root():
     return RedirectResponse(url="/docs")
 
 
+@app.get("/media/intro.mp4", include_in_schema=False)
+def intro_video():
+    """3-second Remind Me Bro intro shown once after sign-in (frontend/brand/intro.mp4, no audio)."""
+    video = Path(settings.FRONTEND_PATH).parent.parent / "brand" / "intro.mp4"
+    if not video.is_file():
+        return JSONResponse({"detail": "intro not found"}, status_code=404)
+    return FileResponse(video, media_type="video/mp4", headers={"Cache-Control": "public, max-age=86400"})
+
+
 @app.get("/classic", include_in_schema=False)
 def classic(request: Request):
     """The previous single-file interface, kept as a fallback for demos (only on this computer, not through the public link)."""

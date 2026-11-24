@@ -8,6 +8,8 @@ interface Session {
   login: (email: string, password: string) => Promise<void>;
   register: (p: { email: string; password: string; full_name: string; role: User["role"] }) => Promise<void>;
   logout: (reason?: string) => void; expiredNotice: string | null; refreshHealth: () => Promise<void>;
+  /** true right after a sign-in or sign-up in this tab (not when a saved session is restored): App plays the intro once */
+  justSignedIn: boolean; introDone: () => void;
 }
 const Ctx = createContext<Session | null>(null);
 const DEFAULT_NOW = new Date();
@@ -19,9 +21,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [health, setHealth] = useState<Health | null>(null);
   const [demo, setDemo] = useState<DemoAccounts | null>(null);
   const [expiredNotice, setExpired] = useState<string | null>(null);
+  const [justSignedIn, setJustSignedIn] = useState(false);
+  const introDone = useCallback(() => setJustSignedIn(false), []);
 
   const logout = useCallback((reason?: string) => {
-    api.setToken(null); storage.del("rmb.user"); setUser(null); setExpired(reason ?? null);
+    api.setToken(null); storage.del("rmb.user"); setUser(null); setExpired(reason ?? null); setJustSignedIn(false);
     // start the next session from its home page
     if (location.hash) { history.replaceState(null, "", location.pathname + location.search); window.dispatchEvent(new HashChangeEvent("hashchange")); }
   }, []);
@@ -50,14 +54,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [offline, refreshHealth]);
 
   const start = useCallback((r: { access_token: string; user: User }) => {
-    api.setToken(r.access_token); storage.setJSON("rmb.user", r.user); setExpired(null); setUser(r.user);
+    api.setToken(r.access_token); storage.setJSON("rmb.user", r.user); setExpired(null); setJustSignedIn(true); setUser(r.user);
   }, []);
   const login = useCallback(async (email: string, password: string) => start(await api.login(email, password)), [start]);
   const register = useCallback(async (p: Parameters<Session["register"]>[0]) => start(await api.register(p)), [start]);
 
   const now = useMemo(() => (health ? new Date(health.reference_date) : DEFAULT_NOW), [health]);
-  const value = useMemo<Session>(() => ({ user, booting, offline, health, now, demo, login, register, logout, expiredNotice, refreshHealth }),
-    [user, booting, offline, health, now, demo, login, register, logout, expiredNotice, refreshHealth]);
+  const value = useMemo<Session>(() => ({ user, booting, offline, health, now, demo, login, register, logout, expiredNotice, refreshHealth, justSignedIn, introDone }),
+    [user, booting, offline, health, now, demo, login, register, logout, expiredNotice, refreshHealth, justSignedIn, introDone]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
