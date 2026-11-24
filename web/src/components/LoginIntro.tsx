@@ -1,14 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 
-// The intro video (frontend/brand/intro.mp4, served by the hub at /media/intro.mp4): 1080x1920, 3 s, no audio.
-// At WAVE_AT the bell lands on "bro" and sends out a ring; from that moment the intro opens with a circular
-// hole that grows from the bell, so the app underneath appears inside the wave.
-export const INTRO_SRC = "/media/intro.mp4";
-const VIDEO_W = 1080, VIDEO_H = 1920;
-const BELL = { x: 0.749, y: 0.53 };   // bell centre, as a fraction of the video frame
-const WAVE_AT = 1.6;                  // seconds into the video
+// The intro videos (frontend/brand, served by the hub at /media/...), 3 s, no audio: 9:16 for phones and
+// portrait screens, 4:3 for computers. At WAVE_AT the bell lands on "bro" and sends out a ring; from that
+// moment the intro opens with a circular hole that grows from the bell, so the app underneath appears inside the wave.
+export const INTRO_PORTRAIT = { src: "/media/intro.mp4", w: 1080, h: 1920, bell: { x: 0.749, y: 0.53 } };
+export const INTRO_LANDSCAPE = { src: "/media/intro-4x3.mp4", w: 1440, h: 1080, bell: { x: 0.699, y: 0.557 } };
+type IntroClip = typeof INTRO_PORTRAIT;
+const WAVE_AT = 1.6;                  // seconds into the video, same in both
 const OPEN_MS = 900;                  // how long the hole takes to cover the screen
 const START_TIMEOUT_MS = 1500;        // video not playing by then → skip the intro
+
+export function pickIntro(width: number, height: number): IntroClip {
+  return width > height ? INTRO_LANDSCAPE : INTRO_PORTRAIT;
+}
 
 /** Plays only where it makes sense: not with "reduce motion" on, not in tests. */
 export function wantsIntro(): boolean {
@@ -17,10 +21,10 @@ export function wantsIntro(): boolean {
 }
 
 /** Where the bell sits on screen, with the video drawn like object-fit: cover. */
-function bellOnScreen(w: number, h: number) {
-  const scale = Math.max(w / VIDEO_W, h / VIDEO_H);
-  const offX = (w - VIDEO_W * scale) / 2, offY = (h - VIDEO_H * scale) / 2;
-  return { x: offX + BELL.x * VIDEO_W * scale, y: offY + BELL.y * VIDEO_H * scale };
+function bellOnScreen(clip: IntroClip, w: number, h: number) {
+  const scale = Math.max(w / clip.w, h / clip.h);
+  const offX = (w - clip.w * scale) / 2, offY = (h - clip.h * scale) / 2;
+  return { x: offX + clip.bell.x * clip.w * scale, y: offY + clip.bell.y * clip.h * scale };
 }
 
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
@@ -30,6 +34,7 @@ export function LoginIntro({ onDone }: { onDone: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
   const [leaving, setLeaving] = useState(false);
+  const [clip] = useState(() => pickIntro(window.innerWidth, window.innerHeight));
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
 
@@ -42,7 +47,7 @@ export function LoginIntro({ onDone }: { onDone: () => void }) {
     const fadeOut = () => { if (finished) return; cancelAnimationFrame(raf); setLeaving(true); window.setTimeout(finish, 300); };
 
     const setHole = (r: number) => {
-      const { x, y } = bellOnScreen(root.clientWidth, root.clientHeight);
+      const { x, y } = bellOnScreen(clip, root.clientWidth, root.clientHeight);
       const mask = `radial-gradient(circle at ${x}px ${y}px, transparent ${r}px, #000 ${r + 1.5}px)`;
       root.style.setProperty("mask-image", mask);
       root.style.setProperty("-webkit-mask-image", mask);
@@ -54,7 +59,7 @@ export function LoginIntro({ onDone }: { onDone: () => void }) {
       if (!openStart && video.currentTime >= WAVE_AT) openStart = now;
       if (openStart) {
         const w = root.clientWidth, h = root.clientHeight;
-        const { x, y } = bellOnScreen(w, h);
+        const { x, y } = bellOnScreen(clip, w, h);
         const far = Math.hypot(Math.max(x, w - x), Math.max(y, h - y)) + 40;
         const p = Math.min(1, (now - openStart) / OPEN_MS);
         setHole(easeOut(p) * far);
@@ -84,12 +89,12 @@ export function LoginIntro({ onDone }: { onDone: () => void }) {
       window.removeEventListener("keydown", onKey);
       video.removeEventListener("error", fadeOut);
     };
-  }, []);
+  }, [clip]);
 
   return (
     <div className={`intro ${leaving ? "leaving" : ""}`}>
       <div ref={rootRef} className="intro-stage" aria-hidden="true">
-        <video ref={videoRef} className="intro-video" src={INTRO_SRC} muted playsInline autoPlay preload="auto" />
+        <video ref={videoRef} className="intro-video" src={clip.src} muted playsInline autoPlay preload="auto" />
       </div>
       <div ref={ringRef} className="intro-ring" aria-hidden="true" />
       <button className="intro-skip" onClick={() => { setLeaving(true); window.setTimeout(() => doneRef.current(), 300); }} aria-label="Skip intro">Skip</button>

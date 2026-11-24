@@ -106,12 +106,15 @@ def root():
     return RedirectResponse(url="/docs")
 
 
-@app.get("/media/intro.mp4", include_in_schema=False)
-def intro_video():
-    """3-second Remind Me Bro intro shown once after sign-in (frontend/brand/intro.mp4, no audio)."""
-    video = Path(settings.FRONTEND_PATH).parent.parent / "brand" / "intro.mp4"
-    if not video.is_file():
-        return JSONResponse({"detail": "intro not found"}, status_code=404)
+INTRO_VIDEOS = {"intro.mp4", "intro-4x3.mp4"}   # frontend/brand: 9:16 for phones, 4:3 for computers
+
+
+@app.get("/media/{name}", include_in_schema=False)
+def intro_video(name: str):
+    """Remind Me Bro intro (3 s, no audio) shown once after sign-in."""
+    video = Path(settings.FRONTEND_PATH).parent.parent / "brand" / name
+    if name not in INTRO_VIDEOS or not video.is_file():
+        return JSONResponse({"detail": "not found"}, status_code=404)
     return FileResponse(video, media_type="video/mp4", headers={"Cache-Control": "public, max-age=86400"})
 
 

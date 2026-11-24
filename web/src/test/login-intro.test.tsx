@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { INTRO_SRC, LoginIntro, wantsIntro } from "../components/LoginIntro";
+import { INTRO_LANDSCAPE, INTRO_PORTRAIT, LoginIntro, pickIntro, wantsIntro } from "../components/LoginIntro";
 
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
@@ -9,8 +9,13 @@ describe("Login intro", () => {
     const { container } = render(<LoginIntro onDone={() => undefined} />);
     const video = container.querySelector("video");
     expect(video).not.toBeNull();
-    expect(video?.getAttribute("src")).toBe(INTRO_SRC);
+    expect([INTRO_PORTRAIT.src, INTRO_LANDSCAPE.src]).toContain(video?.getAttribute("src"));
     expect(video?.muted).toBe(true);
+  });
+
+  it("uses the 4:3 video on computers and the 9:16 one on phones", () => {
+    expect(pickIntro(1440, 900).src).toBe(INTRO_LANDSCAPE.src);
+    expect(pickIntro(390, 844).src).toBe(INTRO_PORTRAIT.src);
   });
 
   it("Skip closes the intro", () => {

@@ -342,8 +342,11 @@ def health() -> schemas.HealthOut:
 
 @router.get("/demo-accounts", summary="Demo accounts for the login screen (public)")
 def demo_accounts(request: Request, db: Session = Depends(get_db)) -> dict:
-    """Demo accounts for the sign-in page: only on the computer that runs the demo, never through the public link."""
-    if not settings.DEMO_SEED_USERS or not is_local_request(request):
-        return {"password": None, "accounts": [], "local": False}
+    """Demo accounts for the sign-in page. Through the public link only the demo student (one-tap sign-in), never lecturers."""
+    if not settings.DEMO_SEED_USERS:
+        return {"password": None, "accounts": [], "local": is_local_request(request)}
+    if not is_local_request(request):
+        students = [a for a in list_demo_accounts(db) if a["role"] == "student" and a["password"]]
+        return {"password": None, "accounts": students, "local": False}
     return {"password": None, "accounts": list_demo_accounts(db), "local": True,
             "staff_passwords_file": "data/STAFF-PASSWORDS.txt"}
