@@ -5,7 +5,11 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 OUT_DIR="$(dirname "$HERE")"
-NAME="RemindMeBro-demo-$(date +%Y-%m-%d).zip"
+# on a branch other than main the zip name says which one (RemindMeBro-demo-YYYY-MM-DD-feature-x.zip)
+BRANCH="$(git -C "$HERE" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+SUFFIX=""
+[ "$BRANCH" != "main" ] && [ "$BRANCH" != "HEAD" ] && SUFFIX="-$(echo "$BRANCH" | tr '/ ' '--')"
+NAME="RemindMeBro-demo-$(date +%Y-%m-%d)$SUFFIX.zip"
 PY="$(command -v python3 || true)"
 [ -z "$PY" ] && [ -x "$HERE/.runtime/venv/bin/python" ] && PY="$HERE/.runtime/venv/bin/python"
 [ -z "$PY" ] && { echo "python3 not found"; exit 1; }

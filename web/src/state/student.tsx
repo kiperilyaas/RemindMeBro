@@ -31,8 +31,8 @@ export function StudentProvider({ children }: { children: ReactNode }) {
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
 
   const reload = useCallback(async () => {
-    // Range: from this week's Monday to ~4 months ahead (timeline, plan, semester map).
-    const from = mondayOf(now), to = addDays(now, 120);
+    // Range: from the Monday of the week holding the 1st of this month (the calendar's month grid) to ~4 months ahead.
+    const from = mondayOf(new Date(now.getFullYear(), now.getMonth(), 1)), to = addDays(now, 120);
     const [c, d, i, s, cn] = await Promise.allSettled([
       api.courses(), api.deadlines(), api.inbox(), api.schedule(isoDate(from), isoDate(to)), api.connections(),
     ]);
