@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Web services{% endblock %}
+{% block content %}
+<div><div class="eyebrow">Site administration</div><h1>Web services</h1></div>
+<section class="card">
+  <div class="card-h"><h2>Endpoints</h2><span class="chip ok">REST protocol enabled · mobile service enabled</span></div>
+  <p style="margin:0" class="mono">{{ base }}/login/token.php?username=…&amp;password=…&amp;service=moodle_mobile_app<br>{{ base }}/webservice/rest/server.php?wstoken=…&amp;wsfunction=…&amp;moodlewsrestformat=json</p>
+  <p class="fine" style="margin:10px 0 0;display:flex;flex-wrap:wrap;gap:4px;align-items:center;white-space:normal">Functions: {% for f in functions %}<span class="code">{{ f }}</span>{% endfor %}</p>
+</section>
+<section class="card">
+  <div class="card-h"><h2>Function call log</h2><span class="sub">Last 50 calls · refresh to update</span></div>
+  <table><thead><tr><th>Time</th><th>User</th><th>Function</th><th>Result</th></tr></thead><tbody>
+  {% for l in log %}<tr><td class="mono">{{ l.at.strftime("%H:%M:%S") }}</td><td class="mono">{{ l.username or "—" }}</td><td class="mono">{{ l.function }}</td>
+    <td><span class="chip {{ 'ok' if l.status == 'ok' else 'bad' }}">{{ l.status }}</span></td></tr>
+  {% else %}<tr><td colspan="4" class="muted">No calls yet.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+<section class="card">
+  <div class="card-h"><h2>Manage tokens</h2></div>
+  <table><thead><tr><th>User</th><th>Token</th><th>App</th><th>Created</th><th>Last access</th><th></th></tr></thead><tbody>
+  {% for t in tokens %}<tr><td>{{ t.user.fullname }}</td><td class="mono">••••{{ t.token_hint }}</td><td>{{ t.client_name or "—" }}</td><td>{{ t.created|dt }}</td><td>{{ t.lastaccess|dt }}</td>
+    <td><form class="inline" method="post" action="/user/security-keys/{{ t.id }}/reset"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn danger">Delete</button></form></td></tr>
+  {% else %}<tr><td colspan="6" class="muted">No tokens.</td></tr>{% endfor %}
+  </tbody></table>
+</section>
+{% endblock %}

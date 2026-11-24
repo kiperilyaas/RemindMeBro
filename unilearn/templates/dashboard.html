@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div><div class="eyebrow">Welcome back</div><h1>{{ user.firstname }}'s dashboard</h1></div>
+<div class="grid-2">
+  <section class="card">
+    <div class="card-h"><h2>My courses</h2><span class="sub">{{ courses|length }} courses</span></div>
+    <div class="courses">
+      {% for c in courses %}
+      <a class="course-card" href="/course/{{ c.id }}"><div class="band"></div><div class="in"><span class="code">{{ c.shortname }}</span><b>{{ c.fullname }}</b>
+        <span>{{ c.teachers()|map(attribute='fullname')|join(', ') }}</span></div></a>
+      {% endfor %}
+    </div>
+  </section>
+  <section class="card">
+    <div class="card-h"><h2>Timeline</h2><span class="sub">Upcoming assignments</span></div>
+    {% for row in timeline %}{% set a = row.a %}
+    <div class="item"><div><div class="t"><a href="/course/{{ a.course_id }}">{{ a.name }}</a></div><div class="d">{{ a.course.fullname }} · due {{ a.duedate|dt }}</div></div>
+      <div>{% if user.role == "student" %}{% if row.submitted %}<span class="chip ok">Submitted</span>{% else %}<span class="chip warn">To do</span>{% endif %}{% endif %}</div></div>
+    {% else %}<p class="muted" style="margin:0">Nothing due.</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}

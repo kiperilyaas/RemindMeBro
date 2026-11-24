@@ -1,0 +1,22 @@
+# Runtime / local environment
+.runtime/
+node_modules/
+dist/
+__pycache__/
+*.pyc
+*.log
+.DS_Store
+*.timestamp-*
+
+# Local data: databases, vector store, staff passwords, keys (never commit)
+data/
+*.db
+*.sqlite3
+*.key
+STAFF-PASSWORDS*.txt
+.env
+.env.*
+
+# Scratch / backups
+_to_delete/
+_backup*/

@@ -1,0 +1,5 @@
+{% macro window_chip(status, opens, closes) -%}
+{% if status == "open" %}<span class="chip open">Open</span> <span class="muted" style="font-size:13px">until {{ closes|dt }}</span>
+{% elif status == "upcoming" %}<span class="chip upcoming">Opens</span> <span class="muted" style="font-size:13px">{{ opens|dt }}</span>
+{% else %}<span class="chip closed">Closed</span>{% endif %}
+{%- endmacro %}

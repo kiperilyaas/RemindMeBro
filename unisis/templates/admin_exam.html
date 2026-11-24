@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "_window.html" import window_chip %}
+{% set active = "admin" %}
+{% block title %}{{ ex.course.name }} · {{ ex.title }}{% endblock %}
+{% block content %}
+<div class="head">
+  <div><div class="eyebrow"><a href="/admin">Dashboard</a> / Exam term</div><h1>{{ ex.course.name }} · {{ ex.title }}</h1></div>
+  <form class="inline" method="post" action="/admin/exams/{{ ex.id }}/window/{{ 'close' if status == 'open' else 'open' }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn {{ 'danger' if status == 'open' else 'primary' }}">{{ "Close registration now" if status == "open" else "Open registration now" }}</button></form>
+</div>
+<div class="grid">
+  <section class="card"><dl class="kv">
+    <dt>Date</dt><dd>{{ ex.starts_at|dt }} – {{ ex.ends_at.strftime("%H:%M") }}</dd>
+    <dt>Room</dt><dd>{{ ex.room }}</dd>
+    <dt>Registered</dt><dd>{{ regs|length }} / {{ ex.capacity }}</dd>
+    <dt>Registration</dt><dd>{{ window_chip(status, ex.registration_opens_at, ex.registration_closes_at) }}</dd>
+    <dt>Type</dt><dd>{{ "Partial test (no transcript grade)" if ex.is_partial else "Final exam" }}</dd>
+  </dl></section>
+</div>
+<section class="card">
+  <div class="card-h"><h2>Registered students</h2>{% if not ex.is_partial %}<span class="sub">Grades: 1 (best) to 5 (fail), or pass. Saving publishes them to the transcripts.</span>{% endif %}</div>
+  {% if regs %}
+  <form method="post" action="/admin/exams/{{ ex.id }}/grades">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Student</th><th>Student number</th><th>Registered on</th>{% if not ex.is_partial %}<th>Grade</th>{% endif %}</tr></thead>
+      <tbody>
+      {% for r in regs %}
+      <tr><td>{{ r.user.full_name }}</td><td class="mono">{{ r.user.student_number }}</td><td>{{ r.created_at|dt }}</td>
+        {% if not ex.is_partial %}<td>{% set g = grades.get(r.user_id) %}<input name="grade_{{ r.user_id }}" value="{{ grade_label(g) if g else '' }}" placeholder="—" style="width:80px;border:1px solid var(--line);border-radius:6px;padding:5px 8px"></td>{% endif %}
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% if not ex.is_partial %}<div style="margin-top:12px"><button class="btn primary">Save and publish grades</button></div>{% endif %}
+  </form>
+  {% else %}<p class="muted" style="margin:0">Nobody is registered yet.</p>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,2167 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Remind Me Bro</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* Layout: app shell — left rail on desktop, bottom tab bar on phones; content in two columns that stack when narrow */
+/* Calm study palette: soft blue-grey ground, focused blue for actions, sage green for done and study time,
+   one warm amber-orange reserved only for things that need attention today */
+:root{
+  --bg:#EDF2F7; --surface:#FBFCFE; --surface-2:#E3EAF2; --fg:#1C2B3E; --muted:#5A6A7F; --line:#D6DFE9;
+  --accent:#2F69A3; --accent-fg:#FFFFFF; --accent-soft:#DCE8F5;
+  --urgent:#C2470F; --urgent-soft:#FCE6D6; --warn:#2A7670; --warn-soft:#DAEEEB; --ok:#3B8559; --ok-soft:#DEF0E4;
+  --moodle:#9A6A2E; --teams:#5B5FC7; --mail:#2F69A3; --insis:#3B8559;
+  --display:"Lexend", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"Lexend", "Segoe UI", system-ui, sans-serif;
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1723; --surface:#162131; --surface-2:#1F2C3F; --fg:#E3EBF4; --muted:#9AA9BC; --line:#2A3A50;
+  --accent:#7FB0E3; --accent-fg:#0F1723; --accent-soft:#1E3550;
+  --urgent:#FF9B5E; --urgent-soft:#3A2517; --warn:#6CC2B8; --warn-soft:#173331; --ok:#7CC79B; --ok-soft:#18301F;
+  --moodle:#D8A866; --teams:#A0A3F2; --mail:#7FB0E3; --insis:#7CC79B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1723; --surface:#162131; --surface-2:#1F2C3F; --fg:#E3EBF4; --muted:#9AA9BC; --line:#2A3A50;
+  --accent:#7FB0E3; --accent-fg:#0F1723; --accent-soft:#1E3550;
+  --urgent:#FF9B5E; --urgent-soft:#3A2517; --warn:#6CC2B8; --warn-soft:#173331; --ok:#7CC79B; --ok-soft:#18301F;
+  --moodle:#D8A866; --teams:#A0A3F2; --mail:#7FB0E3; --insis:#7CC79B; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:500}
+
+.app{display:grid;grid-template-columns:236px 1fr;min-height:100%}
+.rail{position:sticky;top:0;height:100vh;border-right:0;background:var(--surface);display:flex;flex-direction:column;gap:22px;padding:22px 14px}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px}
+.brand-mark{width:30px;height:30px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:var(--accent-fg);font-family:var(--display);font-weight:700;font-size:17px}
+.brand b{font-family:var(--display);font-size:20px;letter-spacing:-.01em}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;align-items:center;gap:12px;border:0;background:none;padding:10px 12px;border-radius:9px;text-align:left;font-weight:500;color:var(--muted)}
+.nav button:hover{background:var(--surface-2);color:var(--fg)}
+.nav button[aria-current="page"]{background:var(--accent-soft);color:var(--fg);font-weight:600}
+.nav svg{width:19px;height:19px;flex:none}
+.nav .count{margin-left:auto;font-size:12px;font-weight:700;background:var(--urgent);color:var(--surface);border-radius:20px;padding:0 7px;min-width:20px;text-align:center}
+.sources{margin-top:auto;padding:12px;border-radius:var(--r);background:var(--surface-2);display:flex;flex-direction:column;gap:7px;font-size:13px}
+.sources .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.src-row{display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.src-row .mono{margin-left:auto;color:var(--muted);font-size:11px}
+
+main{min-width:0;padding-block:26px 60px;padding-left:max(28px, env(safe-area-inset-left, 0px));padding-right:max(28px, env(safe-area-inset-right, 0px))}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.topbar h1{font-size:clamp(26px,4vw,34px);letter-spacing:-.02em;margin-top:4px}
+.demo-pill{font-size:12px;color:var(--warn);background:var(--warn-soft);border-radius:20px;padding:4px 10px;font-weight:600}
+
+.cols{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:22px;align-items:start}
+.stack{display:flex;flex-direction:column;gap:22px;min-width:0}
+.panel{background:var(--surface);border:0;border-radius:16px;padding:22px;min-width:0}
+.panel-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.panel-h h2{font-size:18px}
+.panel-h .sub{font-size:13px;color:var(--muted)}
+
+.brief{background:var(--accent);color:var(--accent-fg);border-radius:16px;padding:24px 26px;display:flex;flex-direction:column;gap:10px}
+.brief .eyebrow{color:inherit;opacity:.8;display:flex;align-items:center;gap:8px}
+.brief p{margin:0;font-size:17px;line-height:1.5;max-width:62ch}
+.brief .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.btn{border:1px solid var(--line);background:var(--surface-2);border-radius:9px;padding:8px 14px;font-weight:600;font-size:14px}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.08)}
+.brief .btn{background:transparent;border-color:currentColor;color:inherit}
+.brief .btn:hover{background:rgba(255,255,255,.14)}
+.brief .btn.solid{background:var(--accent-fg);color:var(--accent);border-color:var(--accent-fg)}
+
+.load{display:flex;flex-direction:column;gap:6px}
+.load-bar{height:10px;border-radius:6px;background:var(--surface-2);overflow:hidden;display:flex}
+.load-bar span{display:block;height:100%}
+.load-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.load-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+.tasks{display:flex;flex-direction:column}
+.task{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:15px 0;border-top:1px solid var(--line)}
+.task:first-child{border-top:0;padding-top:2px}
+.check{width:22px;height:22px;border-radius:7px;border:2px solid var(--line);background:none;display:grid;place-items:center;margin-top:1px;padding:0}
+.check:hover{border-color:var(--accent)}
+.task.done .check{background:var(--ok);border-color:var(--ok)}
+.task.done .check::after{content:"";width:9px;height:5px;border:2px solid var(--surface);border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
+.task.done .t-title{text-decoration:line-through;color:var(--muted)}
+.t-title{font-weight:600}
+.t-meta{display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted);margin-top:3px}
+.why{margin-top:7px;font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:flex-start}
+.why svg{width:14px;height:14px;flex:none;margin-top:3px;color:var(--accent)}
+.src{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600}
+.due{text-align:right;white-space:nowrap}
+.due .mono{display:block}
+.chip{display:inline-block;font-size:11.5px;font-weight:700;border-radius:20px;padding:2px 9px;letter-spacing:.02em;white-space:nowrap}
+.chip.now{background:var(--urgent-soft);color:var(--urgent)}
+.chip.plan{background:var(--warn-soft);color:var(--warn)}
+.chip.later{background:var(--surface-2);color:var(--muted)}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.acc{background:var(--accent-soft);color:var(--accent)}
+
+.timeline{display:flex;flex-direction:column;gap:8px}
+.ev{display:grid;grid-template-columns:52px minmax(0,1fr);gap:12px;align-items:stretch}
+.ev .tm{color:var(--muted);padding-top:9px}
+.ev-card{border-radius:10px;padding:9px 12px;background:var(--surface-2);border-left:3px solid var(--muted);min-width:0}
+.ev-card.class{border-left-color:var(--fg);background:var(--bg)}
+.ev-card.study{background:var(--accent-soft);border-left-color:var(--accent)}
+.ev-card.group{background:var(--accent-soft);border-left-color:var(--urgent)}
+.ev-card.live{box-shadow:0 0 0 2px var(--accent) inset}
+.ev-card b{display:block;font-weight:600;font-size:14px}
+.ev-card small{color:var(--muted);font-size:12.5px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.flag{color:var(--urgent);font-weight:600}
+.new-in{animation:pop .45s ease both}
+@keyframes pop{from{opacity:.2;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.msgs{display:flex;flex-direction:column}
+.msg{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;padding:13px 0;border-top:1px solid var(--line);background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;width:100%}
+.msg:first-child{border-top:0}
+.msg .av{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:700;font-size:13px;color:var(--surface)}
+.msg .from{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.msg .from b{color:var(--fg);font-weight:600;font-size:14px}
+.msg .subj{font-weight:600;margin-top:2px}
+.msg.unread .subj::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:7px;vertical-align:2px}
+.msg .ai{margin-top:3px;font-size:14px;color:var(--muted);display:flex;gap:8px}
+.msg .ai svg{width:15px;height:15px;flex:none;color:var(--accent);margin-top:2px}
+.msg .orig{font-size:13.5px;color:var(--muted);margin-top:6px;max-width:68ch}
+.msg .row-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.msg .row-actions .btn{padding:5px 11px;font-size:13px}
+
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.filters button{border:0;background:var(--surface);border-radius:20px;padding:5px 13px;font-size:13px;font-weight:600;color:var(--muted)}
+.filters button[aria-pressed="true"]{background:var(--fg);border-color:var(--fg);color:var(--bg)}
+
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.days button{border:0;background:var(--surface);border-radius:10px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.days button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.days .dn{font-size:11px;text-transform:uppercase;letter-spacing:.07em;opacity:.75}
+.days .dd{font-family:var(--display);font-size:20px;font-weight:700}
+.days .pips{display:flex;gap:3px;height:6px}
+.days .pips i{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.55}
+.days .pips i.s{background:var(--accent);opacity:1}
+.days .pips i.d{background:var(--urgent);opacity:1}
+
+.chat{display:flex;flex-direction:column;gap:12px;min-height:340px}
+.bubble{max-width:min(78ch,88%);padding:11px 14px;border-radius:14px;font-size:14.5px}
+.bubble.me{align-self:flex-end;background:var(--accent);color:var(--accent-fg);border-bottom-right-radius:4px}
+.bubble.bot{align-self:flex-start;background:var(--surface-2);border-bottom-left-radius:4px}
+.bubble.bot ul{margin:6px 0 0;padding-left:18px}
+.bubble.bot li{margin:3px 0}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chips button{border:0;background:var(--surface);border-radius:20px;padding:6px 13px;font-size:13.5px}
+.chips button:hover{border-color:var(--accent);color:var(--accent)}
+.composer{display:flex;gap:8px}
+.composer input{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:10px 13px;font:inherit}
+
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-top:1px solid var(--line)}
+.set-row:first-child{border-top:0;padding-top:0}
+.set-row .t{font-weight:600}
+.set-row .d{font-size:13px;color:var(--muted)}
+.switch{width:42px;height:24px;border-radius:20px;border:0;background:var(--line);position:relative;flex:none;padding:0}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--surface);transition:transform .2s}
+.switch[aria-checked="true"]{background:var(--ok)}
+.switch[aria-checked="true"]::after{transform:translateX(18px)}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.plan{border:1px solid var(--line);background:var(--bg);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:8px}
+.plan.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.plan h3{font-size:18px}
+.plan .price{font-family:var(--display);font-size:26px;font-weight:700}
+.plan .price small{font-family:var(--body);font-size:13px;color:var(--muted);font-weight:500}
+.plan ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--muted)}
+.plan li{margin:3px 0}
+.lock{font-size:11.5px;font-weight:700;color:var(--warn)}
+
+.toast{position:fixed;right:max(20px, env(safe-area-inset-right, 0px));top:calc(20px + env(safe-area-inset-top, 0px));z-index:50;width:min(360px, calc(100% - 32px));background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 15px;box-shadow:0 12px 32px rgba(10,15,40,.18);display:flex;gap:12px;animation:pop .35s ease both}
+.toast .brand-mark{width:34px;height:34px;flex:none}
+.toast b{display:block;font-size:14px}
+.toast span{font-size:13.5px;color:var(--muted)}
+.empty{color:var(--muted);font-size:14px;padding:6px 0}
+
+
+/* calm look: quiet surfaces, one warm colour for urgency only */
+.topbar .eyebrow{color:var(--muted)}
+.nav button[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.nav .count{background:var(--urgent);color:var(--surface)}
+.brief{box-shadow:0 8px 24px rgba(47,105,163,.22)}
+.chip.now{background:var(--urgent-soft);color:var(--urgent);box-shadow:inset 0 0 0 1px var(--urgent)}
+.switch::after{background:var(--surface)}
+.switch[aria-checked="true"]{background:var(--accent)}
+.msg .av{color:var(--surface)}
+.task.done .check{background:var(--ok);border-color:var(--ok)}
+.task.done .check::after{border-color:var(--surface)}
+.panel{box-shadow:0 1px 2px rgba(28,43,62,.05),0 4px 16px rgba(28,43,62,.05)}
+.panel-h h2{color:var(--fg);font-weight:600}
+h1{font-weight:600}
+.check{border-color:var(--line)}
+.check:hover{border-color:var(--accent)}
+.days button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.filters button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.brand-mark{background:var(--accent)}
+.bubble.me{background:var(--accent)}
+.ev-card.study{background:var(--ok-soft);border-left-color:var(--ok)}
+.ev-card.group{background:var(--warn-soft);border-left-color:var(--warn)}
+.ev-card.live{box-shadow:0 0 0 2px var(--urgent) inset}
+.ev-card.live .chip.acc{background:var(--urgent);color:var(--surface)}
+.flag{color:var(--urgent)}
+.pro{background:var(--accent-soft);color:var(--accent)}
+.nav button[aria-current="page"] .pro{background:var(--accent);color:var(--accent-fg)}
+.prem-pill{background:var(--accent-soft);color:var(--accent)}
+
+.nav-label{display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;font-weight:700;color:var(--muted);padding:14px 12px 4px}
+.nav-label::after{content:"";flex:1;height:1px;background:var(--line)}
+.pro{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:800;letter-spacing:.06em;background:var(--fg);color:var(--surface);border-radius:20px;padding:2px 8px}
+.pro svg{width:10px;height:10px}
+.nav button[aria-current="page"] .pro{background:var(--accent-fg);color:var(--accent)}
+.prem-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:var(--fg);color:var(--surface);border-radius:20px;padding:5px 12px}
+.gate{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:24px;align-items:center}
+.gate h2{font-size:24px}
+.gate p{margin:8px 0 0;color:var(--muted);max-width:52ch}
+.gate ul{margin:14px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.gate li{display:flex;gap:10px;align-items:flex-start}
+.gate li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:8px;flex:none}
+.gate-cta{background:var(--surface-2);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.gate-cta .price{font-family:var(--display);font-size:30px;font-weight:700}
+.gate-cta .price small{font-family:var(--body);font-size:13px;color:var(--muted);font-weight:500}
+.gate-cta .fine{font-size:12.5px;color:var(--muted)}
+.rec{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
+.rec:first-child{border-top:0;padding-top:0}
+.rec .ic{width:40px;height:40px;border-radius:12px;background:var(--surface-2);display:grid;place-items:center;color:var(--accent)}
+.rec .ic svg{width:20px;height:20px}
+.rec .t{font-weight:600}
+.rec .d{font-size:13px;color:var(--muted)}
+.upload{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:2px dashed var(--line);border-radius:14px;padding:16px;margin-top:14px;font-size:14px;color:var(--muted)}
+.upload label{cursor:pointer}
+.upload input{position:absolute;width:1px;height:1px;opacity:0}
+.progress{height:10px;border-radius:6px;background:var(--surface-2);overflow:hidden;margin-top:12px}
+.progress span{display:block;height:100%;background:var(--accent);transition:width .3s}
+.points{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.terms{display:flex;gap:7px;flex-wrap:wrap}
+.terms span{background:var(--surface-2);border-radius:20px;padding:4px 12px;font-size:13px;font-weight:600}
+.todo{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.todo:first-child{border-top:0;padding-top:0}
+.todo .d{font-size:13px;color:var(--muted)}
+.transcript{display:flex;flex-direction:column;gap:10px;font-size:14px}
+.transcript div{display:grid;grid-template-columns:62px minmax(0,1fr);gap:10px}
+.transcript .mono{color:var(--muted);padding-top:2px}
+.transcript b{font-weight:600}
+@media (max-width: 760px){.gate{grid-template-columns:minmax(0,1fr)}}
+
+.task[data-toggle]{cursor:pointer;border-radius:10px;transition:background .15s}
+.task[data-toggle]:hover{background:var(--surface-2);box-shadow:-8px 0 0 var(--surface-2),8px 0 0 var(--surface-2)}
+.task[data-toggle]:hover .check{border-color:var(--accent)}
+.task.done .t-meta{opacity:.6}
+
+.legend{display:flex;gap:6px;flex-wrap:wrap}
+.legend button{display:inline-flex;align-items:center;gap:7px;border:0;background:var(--surface);border-radius:20px;padding:5px 12px;font-size:13px;font-weight:600}
+.legend button[aria-pressed="false"]{opacity:.45}
+.legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.legend i.sq{border-radius:3px}
+.map-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.map{min-width:980px;display:flex;flex-direction:column}
+.map-row{display:grid;grid-template-columns:172px minmax(0,1fr);border-top:1px solid var(--line)}
+.map-row.head{border-top:0}
+.map-row.all{border-top:0;border-bottom:2px solid var(--line)}
+.map-label{position:sticky;left:0;z-index:4;background:var(--surface);padding:8px 12px 8px 0;display:flex;flex-direction:column;justify-content:center;border:0;text-align:left;font:inherit;color:var(--fg);min-width:0}
+.map-label b{font-weight:700;font-size:14px}
+.map-label small{color:var(--muted);font-size:12px}
+button.map-label:hover b{color:var(--accent)}
+.map-row.sel .map-label b{color:var(--accent)}
+.map-row.sel .map-track{background-color:var(--accent-soft)}
+.map-track{position:relative;height:46px;background-image:linear-gradient(to right,var(--line) 1px,transparent 1px);background-size:calc(100% / 21) 100%}
+.map-row.all .map-track{height:60px}
+.map-track.months{height:34px;background-image:none}
+.months span{position:absolute;top:8px;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding-left:6px;border-left:2px solid var(--line);white-space:nowrap}
+.months .exam-lbl{color:var(--urgent);border-left-color:var(--urgent)}
+.months .today-tag{top:auto;bottom:0;transform:translateX(-50%);border:0;padding:0 6px;background:var(--fg);color:var(--surface);border-radius:6px;font-size:10.5px}
+.band{position:absolute;top:0;bottom:0;background:var(--urgent-soft);opacity:.55;pointer-events:none}
+.today-line{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--fg);opacity:.55;pointer-events:none;z-index:2}
+.mk{position:absolute;width:14px;height:14px;border-radius:50%;border:2px solid var(--surface);transform:translate(-50%,-50%);padding:0;z-index:3;transition:transform .15s}
+.mk.major{width:19px;height:19px;border-radius:5px}
+.mk.past{opacity:.35}
+.mk:hover,.mk.on{transform:translate(-50%,-50%) scale(1.35);z-index:5;box-shadow:0 0 0 2px var(--fg)}
+.ov-list{display:flex;flex-direction:column}
+.ov-item{display:grid;grid-template-columns:96px 12px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 6px;border-top:1px solid var(--line);border-radius:8px}
+.ov-item:first-child{border-top:0}
+.ov-item.on{background:var(--accent-soft)}
+.ov-item .dotc{width:12px;height:12px;border-radius:50%}
+.ov-item .dotc.sq{border-radius:3px}
+.ov-item .ov-t{font-weight:600;min-width:0}
+.ov-item .ov-t small{display:block;font-weight:400;color:var(--muted);font-size:13px}
+.ov-item.past .ov-t{color:var(--muted)}
+.ov-item.past .ov-t span{text-decoration:line-through}
+.ov-month{font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;color:var(--muted);padding:14px 0 4px}
+.ov-month:first-child{padding-top:0}
+@media (max-width: 760px){
+  .map-row{grid-template-columns:120px minmax(0,1fr)}
+  .ov-item{grid-template-columns:80px 12px minmax(0,1fr)}
+  .ov-item > .chip{grid-column:3;justify-self:start}
+  .nav{overflow-x:auto;justify-content:flex-start}
+  .nav button{min-width:64px}
+}
+
+@media (max-width: 920px){
+  .cols{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width: 760px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .rail{position:fixed;inset:auto 0 0 0;top:auto;height:auto;flex-direction:row;border-right:0;border-top:1px solid var(--line);padding:6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));z-index:20}
+  .brand,.sources,.nav-label{display:none}
+  .pro{position:absolute;top:0;left:calc(50% + 4px);font-size:8.5px;padding:1px 5px;margin:0}
+  .pro svg{display:none}
+  .nav{flex-direction:row;width:100%;justify-content:space-around}
+  .nav button{flex-direction:column;gap:2px;padding:6px 4px;font-size:11px;position:relative;flex:1;align-items:center}
+  .nav .count{position:absolute;top:0;right:calc(50% - 22px);margin:0;font-size:10px;padding:0 5px;min-width:16px}
+  main{padding-block:18px 96px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+  .panel{padding:15px}
+  .days .dd{font-size:17px}
+  .task{grid-template-columns:auto minmax(0,1fr)}
+  .due{grid-column:2;text-align:left}
+  .due .mono{display:inline}
+}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+@media (max-width: 760px){.nav{justify-content:flex-start}.nav button{flex:0 0 auto}}
+.code{display:inline-block;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:11.5px;font-weight:600;letter-spacing:.03em;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:0 6px;margin-right:6px;vertical-align:1px}
+
+/* ---------- Additions: auth, account, backend status, teacher area (theme tokens unchanged) ---------- */
+.app.logged-out{grid-template-columns:minmax(0,1fr)}
+.app.logged-out .rail{display:none}
+.auth{min-height:calc(100vh - 110px);display:grid;place-items:center}
+.auth-card{width:min(470px,100%);display:flex;flex-direction:column;gap:16px}
+.auth-card .brand{padding:0}
+.auth-sub{margin:0;color:var(--muted);font-size:14.5px}
+.form{display:flex;flex-direction:column;gap:12px}
+.field{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:var(--muted);min-width:0}
+.field input,.field select,.field textarea{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:10px 13px;font:inherit;font-weight:400;font-size:15px;min-width:0;width:100%}
+.field textarea{min-height:140px;resize:vertical;line-height:1.5}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.form-err{background:var(--urgent-soft);color:var(--urgent);border-radius:10px;padding:9px 12px;font-size:13.5px;font-weight:600}
+.form-ok{background:var(--ok-soft);color:var(--ok);border-radius:10px;padding:9px 12px;font-size:13.5px;font-weight:600}
+.btn[disabled]{opacity:.6;cursor:progress}
+.btn.block{width:100%;padding:11px 14px}
+.btn.danger{color:var(--urgent);border-color:var(--urgent)}
+.filters.seg button:not([aria-pressed="true"]){background:var(--surface-2)}
+.demo-list{display:flex;flex-direction:column;gap:6px}
+.demo-list button{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 12px;font-size:13.5px;text-align:left}
+.demo-list button:hover{border-color:var(--accent)}
+.demo-list small{color:var(--muted);white-space:nowrap}
+.userbox{margin-top:auto;padding:12px;border-radius:var(--r);background:var(--surface-2);display:flex;align-items:center;gap:10px;min-width:0}
+.userbox .av,.acct-m .av{width:34px;height:34px;border-radius:10px;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none;font-family:var(--display)}
+.userbox .who{min-width:0;flex:1}
+.userbox b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.userbox small{color:var(--muted);font-size:12px}
+.userbox .btn{padding:5px 10px;font-size:12.5px}
+.acct-m{display:none}
+.offline{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--urgent-soft);color:var(--urgent);border-radius:12px;padding:11px 14px;font-weight:700;font-size:14px;box-shadow:inset 0 0 0 1px var(--urgent)}
+.offline span{flex:1;min-width:200px}
+.offline small{display:block;font-weight:400;color:var(--fg);opacity:.8;margin-top:2px}
+.offline .btn{padding:5px 12px;font-size:13px}
+.json{margin:0;background:var(--bg);border-radius:10px;padding:12px 14px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.5;overflow-x:auto;white-space:pre-wrap;word-break:break-word;color:var(--fg)}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 16px;margin:0;font-size:14.5px}
+.kv dt{color:var(--muted);font-size:13px;font-weight:600;padding-top:2px}
+.kv dd{margin:0;font-weight:600;min-width:0}
+.note{border-radius:12px;padding:12px 14px;font-size:14px;background:var(--accent-soft);color:var(--fg)}
+.note.warn{background:var(--urgent-soft);color:var(--urgent)}
+.note b{font-weight:700}
+.progress.indet span{width:35%;animation:indet 1.2s ease-in-out infinite}
+@keyframes indet{from{transform:translateX(-100%)}to{transform:translateX(290%)}}
+.typing{color:var(--muted);font-style:italic}
+.xd{padding:15px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px}
+.xd:first-child{border-top:0;padding-top:0}
+.xd .head{display:flex;gap:8px 10px;align-items:center;flex-wrap:wrap}
+.xd .head b{font-weight:700}
+.xd .orig{font-size:13.5px;color:var(--muted);border-left:3px solid var(--line);padding-left:10px;max-width:72ch}
+.xd .row-actions{display:flex;gap:8px;flex-wrap:wrap}
+.xd .row-actions .btn{padding:5px 11px;font-size:13px}
+.stat{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.stat b{color:var(--fg)}
+@media (max-width: 760px){
+  .userbox{display:none}
+  .acct-m{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13.5px;color:var(--muted)}
+  .acct-m .who{display:flex;align-items:center;gap:10px;min-width:0}
+  .acct-m .btn{padding:5px 11px;font-size:13px}
+  .row2{grid-template-columns:minmax(0,1fr)}
+  .auth{min-height:auto}
+  .kv{grid-template-columns:minmax(0,1fr)}
+}
+#userbox{margin-top:auto;min-width:0}
+/* fix: the pricing card class .plan also matched the "This week" chip (.chip.plan) and stretched it */
+.chip.plan{display:inline-block;border:0;padding:2px 9px;border-radius:20px;gap:0}
+.form .chips button{background:var(--surface-2)}
+/* Studies (UniSIS) */
+.ev-card.exam{background:var(--urgent-soft);border-left-color:var(--urgent)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px}
+.kpi b{display:block;font-family:var(--display);font-size:26px;font-weight:600;letter-spacing:-.01em}
+.kpi span{font-size:13px;color:var(--muted)}
+.credit-bar{height:12px;border-radius:7px;background:var(--surface-2);overflow:hidden;display:flex;margin-top:10px}
+.credit-bar span{display:block;height:100%}
+.st-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.st-row:first-child{border-top:0;padding-top:0}
+.st-row .t{font-weight:600}
+.st-row .d{font-size:13px;color:var(--muted);display:flex;gap:4px 10px;flex-wrap:wrap;align-items:center;margin-top:2px}
+.st-row .acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.st-row .acts .btn{padding:5px 11px;font-size:13px}
+.st-row .why{margin:0;font-size:12.5px}
+.scope{display:inline-block;font-family:var(--mono);font-size:11.5px;background:var(--surface-2);border-radius:5px;padding:1px 6px;margin:4px 4px 0 0}
+.oauth-steps{display:flex;flex-direction:column;gap:9px;margin:14px 0 0;padding:0;list-style:none}
+.oauth-steps li{display:flex;gap:10px;font-size:14px;align-items:flex-start}
+.oauth-steps li b{flex:none;width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:12px;margin-top:1px}
+.grade{font-family:var(--display);font-weight:600;font-variant-numeric:tabular-nums}
+@media (max-width: 760px){.st-row{grid-template-columns:minmax(0,1fr)}.st-row .acts{justify-content:flex-start}}
+</style>
+
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><div class="brand-mark">R</div><b>Remind Me Bro</b></div>
+    <nav class="nav" id="nav" aria-label="Main"></nav>
+    <div id="userbox"></div>
+  </aside>
+  <main><div class="wrap" id="view"></div></main>
+</div>
+<div id="toastHost"></div>
+
+<script>
+(function(){
+"use strict";
+
+// =====================================================================
+// 1. CONFIG + API CLIENT
+// =====================================================================
+// Backend URL: same origin when the page is served over http(s) by FastAPI (any port, so the
+// run & go scripts can pick a free one), otherwise http://localhost:8000/api (index.html opened from disk).
+// Override from the console with: localStorage.setItem("rmb.apiBase", "http://host:port/api")
+const API_BASE = (() => {
+  try { const o = localStorage.getItem("rmb.apiBase"); if (o) return o.replace(/\/+$/, ""); } catch(e) {}
+  if (/^https?:$/.test(location.protocol)) return location.origin + "/api";
+  return "http://localhost:8000/api";
+})();
+const BACKEND_HOST = (() => { try { return new URL(API_BASE).host.replace("127.0.0.1", "localhost"); } catch(e) { return "localhost:8000"; } })();
+const OFFLINE_MSG = "Backend not connected on " + BACKEND_HOST;
+
+// Browser storage can throw (private mode, blocked storage): every access is guarded
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e) { return null; } },
+  set(k, v){ try { localStorage.setItem(k, v); } catch(e) {} },
+  del(k){ try { localStorage.removeItem(k); } catch(e) {} },
+  getJSON(k, fb){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch(e) { return fb; } },
+  setJSON(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} }
+};
+
+class ApiError extends Error {
+  constructor(message, status, offline){ super(message); this.status = status || 0; this.offline = !!offline; }
+}
+
+const API = {
+  token: store.get("rmb.token"),
+
+  async request(path, opts = {}){
+    const { method = "GET", body, form, timeout = 20000, auth = true } = opts;
+    const headers = { "Accept": "application/json" };
+    if (auth && this.token) headers["Authorization"] = "Bearer " + this.token;
+    let payload;
+    if (form){ payload = new URLSearchParams(form); headers["Content-Type"] = "application/x-www-form-urlencoded"; }
+    else if (body !== undefined){ payload = JSON.stringify(body); headers["Content-Type"] = "application/json"; }
+
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeout);
+    let res;
+    try {
+      res = await fetch(API_BASE + path, { method, headers, body: payload, signal: ctrl.signal });
+    } catch (err) {
+      clearTimeout(timer);
+      if (err && err.name === "AbortError") throw new ApiError("The backend did not respond in time. Please try again.", 0, false);
+      setOffline(true);
+      throw new ApiError(OFFLINE_MSG, 0, true);
+    }
+    clearTimeout(timer);
+    setOffline(false);
+    if (res.status === 204) return null;
+    let data = null;
+    try { data = await res.json(); } catch(e) {}
+    if (!res.ok){
+      let detail = data && data.detail;
+      if (Array.isArray(detail)) detail = detail.map(d => (d.loc ? d.loc[d.loc.length-1] + ": " : "") + d.msg).join(" · ");
+      if (res.status === 401 && auth && this.token) onUnauthorized();
+      throw new ApiError(detail || ("Errore HTTP " + res.status), res.status);
+    }
+    return data;
+  },
+
+  // --- public ---
+  health(){ return this.request("/health", { timeout: 6000, auth: false }); },
+  demoAccounts(){ return this.request("/demo-accounts", { timeout: 6000, auth: false }); },
+  // --- auth ---
+  login(email, password){ return this.request("/auth/login", { method: "POST", body: { email, password }, auth: false }); },
+  register(p){ return this.request("/auth/register", { method: "POST", body: p, auth: false }); },
+  me(){ return this.request("/auth/me"); },
+  // --- student ---
+  deadlines(){ return this.request("/deadlines"); },
+  setDone(id, done){ return this.request(`/deadlines/${id}/complete?completed=${done}`, { method: "PATCH" }); },
+  inbox(){ return this.request("/inbox"); },
+  schedule(start, end){ return this.request(`/schedule?start=${start}&end=${end}`); },
+  events(){ return this.request("/events"); },
+  courses(){ return this.request("/courses"); },
+  chat(question){ return this.request("/chat", { method: "POST", body: { question }, timeout: 180000 }); },
+  sync(){ return this.request("/sync", { method: "POST", timeout: 600000 }); },
+  // --- connections & studies (UniSIS) ---
+  connections(){ return this.request("/connections"); },
+  connectUnisis(){ return this.request("/connections/unisis/start", { method: "POST" }); },
+  syncUnisis(){ return this.request("/connections/unisis/sync", { method: "POST", timeout: 60000 }); },
+  disconnectUnisis(){ return this.request("/connections/unisis", { method: "DELETE" }); },
+  connectMoodle(username, password){ return this.request("/connections/moodle", { method: "POST", body: { username, password }, timeout: 60000 }); },
+  syncMoodle(){ return this.request("/connections/moodle/sync", { method: "POST", timeout: 180000 }); },
+  disconnectMoodle(){ return this.request("/connections/moodle", { method: "DELETE" }); },
+  studies(){ return this.request("/studies", { timeout: 30000 }); },
+  examRegister(id){ return this.request(`/studies/exams/${id}/registration`, { method: "POST", timeout: 30000 }); },
+  examCancel(id){ return this.request(`/studies/exams/${id}/registration`, { method: "DELETE", timeout: 30000 }); },
+  courseEnroll(code){ return this.request(`/studies/courses/${encodeURIComponent(code)}/enrollment`, { method: "POST", timeout: 30000 }); },
+  courseDrop(code){ return this.request(`/studies/courses/${encodeURIComponent(code)}/enrollment`, { method: "DELETE", timeout: 30000 }); },
+  // --- professor ---
+  prof: {
+    courses(){ return API.request("/professor/courses"); },
+    createCourse(p){ return API.request("/professor/courses", { method: "POST", body: p }); },
+    publish(p){ return API.request("/professor/announcements", { method: "POST", body: p, timeout: 180000 }); },
+    announcements(){ return API.request("/professor/announcements"); },
+    createAssignment(p){ return API.request("/professor/assignments", { method: "POST", body: p }); },
+    extracted(){ return API.request("/professor/extracted-deadlines"); },
+    updateExtracted(id, p){ return API.request(`/professor/extracted-deadlines/${id}`, { method: "PATCH", body: p }); },
+    deleteExtracted(id){ return API.request(`/professor/extracted-deadlines/${id}`, { method: "DELETE" }); }
+  }
+};
+
+// =====================================================================
+// 2. STATE
+// =====================================================================
+// "Now" comes from the backend (/api/health -> reference_date) so the demo is reproducible.
+let NOW = new Date(2026, 9, 20, 9, 30);
+const DAY = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const DAYFULL = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONFULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const d = (day, h, m=0) => new Date(2026, 9, day, h, m); // used by the Transcribe demo only
+const SRC = {
+  moodle:{name:"Moodle", c:"var(--moodle)"},
+  teams:{name:"Teams", c:"var(--teams)"},
+  mail:{name:"Outlook", c:"var(--mail)"},
+  insis:{name:"UniSIS", c:"var(--insis)"}
+};
+const srcKey = s => s === "email" ? "mail" : s === "unisis" ? "insis" : (SRC[s] ? s : "moodle");
+
+const state = {
+  booting: true,
+  offline: false,
+  loading: false,
+  syncing: false,
+  user: store.getJSON("rmb.user", null),
+  health: null,
+  view: "today",
+  inboxFilter: "important",
+  day: null,
+  planned: false,
+  premium: false,
+  openMsg: null,
+  chat: [],
+  chatBusy: false,
+  tx: {id:null, progress:0, added:[]},
+  ov: {sub:null, item:null, off:[]},
+  conns: [
+    {key:"mail", name:"University email", via:"Outlook · university account", what:"Messages from lecturers, the study department and your supervisor", mins:0, items:"–"},
+    {key:"teams", name:"Microsoft Teams", via:"Course teams", what:"Course chats, group calls and channel posts", mins:1, items:"–"}
+  ],
+  // UniLearn (real Moodle web-service token)
+  unilearn: null, ul: { username:"giulia.esposito", password:"", error:"" }, confirmUlDisconnect: false,
+  // UniSIS (real OAuth connection) and the live Studies data
+  unisis: null, studies: null, studiesBusy: false, studiesErr: "", pending: null, confirmDisconnect: false,
+  settings: { dayBefore:true, threeHours:true, brief:true, quiet:true, digest:false },
+  // auth screen
+  auth: { tab:"login", email:"", password:"", full_name:"", role:"student", busy:false, error:"", demo:null },
+  // teacher area
+  prof: { courses:[], extracted:[], announcements:[], editing:null, confirmDel:null },
+  pub: { course_id:"", channel:"teams", text:"", busy:false, result:null, error:"" },
+  assign: { course_id:"", title:"", description:"", due:"", busy:false, msg:"", err:"" },
+  newCourse: { code:"", name:"", busy:false, msg:"", err:"" }
+};
+
+// Data loaded from the backend
+let tasks = [];        // deadlines
+let msgs = [];         // inbox
+let classes = {};      // dayKey -> timetable entries
+let studyBlocks = {};  // dayKey -> generated study blocks ("Plan my week")
+let allEvents = [];    // whole-term events (overview)
+let courseList = [];
+const CODES = {};      // course name -> course code
+const codeTag = n => CODES[n] ? `<span class="code">${esc(CODES[n])}</span>` : "";
+
+// =====================================================================
+// 3. HELPERS
+// =====================================================================
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+const hm = dt => pad(dt.getHours())+":"+pad(dt.getMinutes());
+const dayKey = dt => dt.getFullYear()+"-"+pad(dt.getMonth()+1)+"-"+pad(dt.getDate());
+const keyDate = k => { const [y,m,dd] = k.split("-").map(Number); return new Date(y, m-1, dd, 12); };
+const isoDate = dt => dayKey(dt);
+const isoLocal = dt => dayKey(dt)+"T"+hm(dt)+":00";          // sent to the backend (naive local time)
+const inputLocal = dt => dayKey(dt)+"T"+hm(dt);               // value for <input type=datetime-local>
+// The backend returns naive ISO datetimes ("2026-10-30T23:59:00"): parse them as local time
+function parseDT(s){
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/.exec(s || "");
+  return m ? new Date(+m[1], m[2]-1, +m[3], +(m[4]||0), +(m[5]||0), +(m[6]||0)) : new Date(s);
+}
+const startOfDay = dt => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+const hoursLeft = t => (t.due - NOW) / 36e5;
+const fmtD = dt => DAY[dt.getDay()]+" "+dt.getDate()+" "+MON[dt.getMonth()];
+const fmtDT = dt => fmtD(dt)+" · "+hm(dt);
+function weekDays(){
+  const mon = startOfDay(NOW); mon.setDate(mon.getDate() - ((mon.getDay()+6)%7));
+  return Array.from({length:7}, (_,i) => new Date(mon.getFullYear(), mon.getMonth(), mon.getDate()+i, 12));
+}
+function dueLabel(dt){
+  const days = Math.round((startOfDay(dt) - startOfDay(NOW))/864e5);
+  const dayStr = days===0 ? "Today" : days===1 ? "Tomorrow" : (days>1 && days<7 ? DAY[dt.getDay()] : dt.getDate()+" "+MON[dt.getMonth()]);
+  return dayStr+" "+hm(dt);
+}
+function msgTime(dt){
+  const days = Math.round((startOfDay(NOW) - startOfDay(dt))/864e5);
+  return days===0 ? hm(dt) : days===1 ? "Yesterday" : DAY[dt.getDay()]+" "+dt.getDate()+" "+MON[dt.getMonth()];
+}
+const initials = s => String(s||"?").replace(/^(prof\.?(ssa)?|dott\.?(ssa)?)\s+/i,"").split(/[\s.\-]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join("").toUpperCase() || "?";
+const firstName = u => (u && u.full_name ? u.full_name.replace(/^(prof\.?(ssa)?|dott\.?(ssa)?)\s+/i,"").split(" ")[0] : "");
+const isProf = () => state.user && state.user.role === "professor";
+
+// Effort is not provided by the platforms: a rough estimate from the title, used only for ranking
+function effortFor(title){
+  const s = title.toLowerCase();
+  if (/project|case study|progett/.test(s)) return 4;
+  if (/report|problem set|assignment|lab|relazion|esercitaz/.test(s)) return 2;
+  if (/quiz|test|registration|iscrizion/.test(s)) return 0.5;
+  return 1.5;
+}
+// Priority = how close the deadline is + how much work is left relative to time
+function score(t){
+  const h = hoursLeft(t);
+  const urgency = h <= 0 ? 100 : Math.max(0, 100 - h*0.55);
+  const pressure = Math.min(35, (t.effort / Math.max(h,1)) * 400);
+  const blocking = t.note ? 12 : 0;
+  return urgency*0.6 + pressure + t.weight*0.9 + blocking;
+}
+function ranked(){ return tasks.slice().sort((a,b)=> (a.done-b.done) || (score(b)-score(a))); }
+function tier(t){
+  if (t.done) return ["Done","ok"];
+  const s = score(t);
+  if (s >= 55) return ["Do today","now"];
+  if (s >= 30) return ["This week","plan"];
+  return ["Later","later"];
+}
+function srcTag(key){ const s=SRC[key]; return `<span class="src"><span class="dot" style="background:${s.c}"></span>${s.name}</span>`; }
+const unreadImportant = () => msgs.filter(m=>m.important && m.unread).length;
+
+// Read/unread is a per-viewer convenience kept in this browser
+const readKey = () => "rmb.read." + (state.user ? state.user.id : "anon");
+let readSet = new Set();
+function markRead(ids){ ids.forEach(id => readSet.add(id)); store.setJSON(readKey(), Array.from(readSet)); }
+
+// Minimal formatting for LLM answers: escape, **bold**, bullet lists, line breaks
+function fmtAnswer(text){
+  const lines = esc(text || "").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").split(/\n/);
+  let html = "", inList = false;
+  for (const raw of lines){
+    const line = raw.trim();
+    const li = /^([-*•]|\d+[.)])\s+(.*)$/.exec(line);
+    if (li){ if (!inList){ html += "<ul>"; inList = true; } html += `<li>${li[2]}</li>`; continue; }
+    if (inList){ html += "</ul>"; inList = false; }
+    if (line) html += (html && !html.endsWith("</ul>") ? "<br>" : "") + line;
+  }
+  if (inList) html += "</ul>";
+  return html || "…";
+}
+
+// =====================================================================
+// 4. DATA LOADING (backend -> frontend models)
+// =====================================================================
+function mapDeadline(x){
+  const due = parseDT(x.due_date);
+  let note = "";
+  if (x.extracted_by_ai) note = "Detected by AI in a lecturer message";
+  if (x.replaces) note += ` · moved from ${fmtD(parseDT(x.replaces.old_due_date))}`;
+  return {
+    id: "d"+x.id, apiId: x.id, title: x.title, course: x.course_name || "General", code: x.course_code,
+    src: srcKey(x.source), due, effort: effortFor(x.title), weight: 0, note,
+    done: !!x.is_completed, ai: !!x.extracted_by_ai, replaces: x.replaces, description: x.description
+  };
+}
+function mapInbox(x){
+  return {
+    id: "a"+x.id, apiId: x.id, src: srcKey(x.source),
+    from: (x.course_name ? x.course_name+" · " : "") + x.author,
+    who: x.course_code ? x.course_code.split("-")[0].slice(0,3) : initials(x.author),
+    time: parseDT(x.created_at), subj: x.subject, orig: x.content,
+    important: !!x.important, unread: !readSet.has("a"+x.id), ai: x.ai_summary,
+    act: x.deadline_id ? ["See deadline"] : [], task: x.deadline_id ? "d"+x.deadline_id : null
+  };
+}
+function mapEvent(e){
+  const s = parseDT(e.start_time), en = parseDT(e.end_time);
+  return { key: dayKey(s), s: hm(s), e: hm(en), t: e.course_name || e.title, k: e.kind === "exam" ? "exam" : "class",
+           w: e.title + (e.location ? " · " + e.location : ""), start: s, title: e.title, course: e.course_name,
+           flag: e.kind === "exam" ? "Exam" : "" };
+}
+function registerCodes(list){ list.forEach(c => { if (c.name && c.code) CODES[c.name] = c.code; }); }
+
+async function loadStudentData(){
+  const week = weekDays();
+  const [c, dl, ib, sc, ev, cn] = await Promise.allSettled([
+    API.courses(), API.deadlines(), API.inbox(), API.schedule(isoDate(week[0]), isoDate(week[6])), API.events(), API.connections()
+  ]);
+  if (cn.status === "fulfilled"){
+    state.unisis = cn.value.find(x => x.provider === "unisis") || null;
+    state.unilearn = cn.value.find(x => x.provider === "moodle") || null;
+  }
+  if (c.status === "fulfilled"){ courseList = c.value; registerCodes(courseList); }
+  if (dl.status === "fulfilled"){
+    // keep locally-added Transcribe demo tasks (they have no backend id)
+    tasks = dl.value.map(mapDeadline).concat(tasks.filter(t => !t.apiId));
+    dl.value.forEach(x => { if (x.course_name && x.course_code) CODES[x.course_name] = x.course_code; });
+  }
+  if (ib.status === "fulfilled") msgs = ib.value.map(mapInbox);
+  if (sc.status === "fulfilled"){
+    classes = {};
+    sc.value.map(mapEvent).forEach(e => (classes[e.key] = classes[e.key] || []).push(e));
+  }
+  if (ev.status === "fulfilled"){
+    // /api/events returns only course_id: resolve the course name for the semester map
+    const byId = new Map(courseList.map(c => [c.id, c]));
+    allEvents = ev.value.map(e => mapEvent({ ...e, course_name: e.course_name || (byId.get(e.course_id) || {}).name }));
+  }
+  updateConnCounts();
+  const failed = [c, dl, ib, sc, ev].find(r => r.status === "rejected" && !r.reason.offline);
+  if (failed) toast("Some data could not be loaded", failed.reason.message);
+}
+function updateConnCounts(){
+  const by = k => msgs.filter(m => m.src === k).length;
+  const set = (k, v) => { const c = state.conns.find(x => x.key === k); if (c) c.items = v; };
+  set("mail", `${by("mail")} message${by("mail")===1?"":"s"}`);
+  set("teams", `${by("teams")} channel message${by("teams")===1?"":"s"}`);
+  const open = tasks.filter(t => t.src === "moodle" && !t.done).length;
+  set("moodle", `${open} open assignment${open===1?"":"s"}`);
+}
+async function loadProfessorData(){
+  const [c, ex, an, all] = await Promise.allSettled([API.prof.courses(), API.prof.extracted(), API.prof.announcements(), API.courses()]);
+  if (c.status === "fulfilled"){ state.prof.courses = c.value; registerCodes(c.value); }
+  if (ex.status === "fulfilled") state.prof.extracted = ex.value;
+  if (an.status === "fulfilled") state.prof.announcements = an.value;
+  if (all.status === "fulfilled") registerCodes(all.value);
+  const first = state.prof.courses[0];
+  if (first){
+    if (!state.prof.courses.some(x => String(x.id) === String(state.pub.course_id))) state.pub.course_id = String(first.id);
+    if (!state.prof.courses.some(x => String(x.id) === String(state.assign.course_id))) state.assign.course_id = String(first.id);
+  }
+  const failed = [c, ex, an].find(r => r.status === "rejected" && !r.reason.offline);
+  if (failed) toast("Some data could not be loaded", failed.reason.message);
+}
+const unisisConnected = () => !!(state.unisis && state.unisis.status === "connected");
+async function loadStudies(){
+  if (!unisisConnected()){ state.studies = null; return; }
+  state.studiesBusy = true; state.studiesErr = "";
+  if (state.view === "studies") render();
+  try {
+    const st = await API.studies();
+    state.studies = st.connected ? st : null;
+    if (!st.connected && state.unisis){ state.unisis.status = st.status; state.unisis.last_error = st.error || null; }
+  } catch(err){ state.studiesErr = err.message; if (err.status === 401 && state.unisis) state.unisis.status = "expired"; }
+  finally { state.studiesBusy = false; if (state.view === "studies") render(); }
+}
+async function loadAll(){
+  if (!state.user) return;
+  state.loading = true;
+  try { await (isProf() ? loadProfessorData() : loadStudentData()); }
+  finally { state.loading = false; }
+}
+
+// "Plan my week": study blocks placed in free slots around classes, before each deadline
+// due in the next three weeks (bigger tasks get two sessions). Pure client-side scheduling.
+function planStudyBlocks(){
+  studyBlocks = {};
+  const week = weekDays();
+  const slots = [["15:00","17:00"],["10:00","12:00"],["17:30","19:00"],["08:30","10:00"]];
+  const overlaps = (key, s, e) => (classes[key]||[]).concat(studyBlocks[key]||[]).some(x => s < x.e && e > x.s);
+  const load = key => (studyBlocks[key]||[]).length;
+  let added = 0;
+  tasks.filter(t => !t.done && hoursLeft(t) > 2 && hoursLeft(t) < 24*21).sort((a,b)=>a.due-b.due).forEach(t => {
+    const sessions = t.effort >= 3 ? 2 : 1;
+    // candidate days: from today until the day before the deadline (or the deadline day if it is close)
+    const lastDay = startOfDay(t.due); if (hoursLeft(t) > 30) lastDay.setDate(lastDay.getDate() - 1);
+    const days = week.filter(dt => startOfDay(dt) >= startOfDay(NOW) && startOfDay(dt) <= lastDay).map(dayKey);
+    for (let n = 0; n < sessions; n++){
+      const ranked = days.slice().sort((a,b) => load(a) - load(b) || a.localeCompare(b));
+      let placed = false;
+      for (const key of ranked){
+        if ((studyBlocks[key]||[]).some(x => x.task === t.id)) continue;
+        const isToday = key === dayKey(NOW), isDue = key === dayKey(t.due);
+        const slot = slots.find(([a,b]) => !overlaps(key, a, b) && (!isToday || a > hm(NOW)) && (!isDue || b <= hm(t.due)));
+        if (!slot) continue;
+        (studyBlocks[key] = studyBlocks[key] || []).push({ s:slot[0], e:slot[1], t:t.title, k:"study", w:"Due "+dueLabel(t.due), task:t.id });
+        added++; placed = true; break;
+      }
+      if (!placed) break;
+    }
+  });
+  return added;
+}
+
+// =====================================================================
+// 5. ICONS + NAV
+// =====================================================================
+const ICON = {
+  overview:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h18M3 18h18"/><circle cx="8" cy="6" r="1.6" fill="currentColor"/><circle cx="15" cy="12" r="1.6" fill="currentColor"/><circle cx="11" cy="18" r="1.6" fill="currentColor"/></svg>',
+  connections:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
+  sync:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/></svg>',
+  today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  inbox:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5.5 5h13L21 13v6H3v-6z"/></svg>',
+  schedule:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+  ask:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4z"/><path d="M18 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>',
+  settings:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>',
+  transcribe:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  file:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h2l2-5 3 10 3-8 2 3h4"/></svg>',
+  spark:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.2 5.8L20 10l-5.8 2.2L12 18l-2.2-5.8L4 10l5.8-2.2z"/></svg>',
+  pcourses:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/><path d="M9 8h7M9 12h5"/></svg>',
+  publish:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4a1 1 0 0 0 1 1h3l6 4V5L7 9H4a1 1 0 0 0-1 1z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
+  extracted:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3l1.5 3.8L14 8l-3.5 1.2L9 13l-1.5-3.8L4 8l3.5-1.2z"/><path d="M12 16l3 3 6-7"/></svg>',
+  studies:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/><path d="M22 9v6"/></svg>',
+  logout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/></svg>'
+};
+// Student: Ask Bro is wired to the local llama3.2 RAG, so it is no longer behind the Premium gate
+const NAV_MAIN = [["today","Today"],["inbox","Inbox"],["schedule","Schedule"],["studies","Studies"],["overview","Overview"],["ask","Ask Bro"],["connections","Connections"]];
+const NAV_PREM = [["transcribe","Transcribe Bro"]];
+const NAV_STUDENT = NAV_MAIN.concat(NAV_PREM, [["settings","Settings"]]);
+const NAV_PROF = [["pcourses","My Courses"],["publish","Post Announcement"],["extracted","AI-Extracted Deadlines"],["settings","Account"]];
+const navFor = () => isProf() ? NAV_PROF : NAV_STUDENT;
+
+function renderNav(){
+  const item = ([k,l], prem) => {
+    let c = "";
+    if (k==="inbox" && unreadImportant()) c = `<span class="count">${unreadImportant()}</span>`;
+    const badge = prem ? `<span class="pro" title="${state.premium?'Included in your Premium plan':'Premium subscription required'}">${state.premium?'':ICON.lock}PRO</span>` : "";
+    return `<button data-go="${k}" ${state.view===k?'aria-current="page"':''}>${ICON[k]}<span>${l}</span>${c}${badge}</button>`;
+  };
+  document.getElementById("nav").innerHTML = isProf()
+    ? `<div class="nav-label">Lecturer area</div>` + NAV_PROF.map(n=>item(n,false)).join("")
+    : NAV_MAIN.map(n=>item(n,false)).join("") + `<div class="nav-label">Premium</div>` + NAV_PREM.map(n=>item(n,true)).join("") + item(["settings","Settings"], false);
+  const u = state.user;
+  document.getElementById("userbox").innerHTML = u ? `
+    <div class="userbox">
+      <div class="av" aria-hidden="true">${esc(initials(u.full_name))}</div>
+      <div class="who"><b title="${esc(u.email)}">${esc(u.full_name)}</b><small>${u.role==="professor"?"Lecturer":"Student"}</small></div>
+      <button class="btn" data-logout title="Logout">Logout</button>
+    </div>` : "";
+}
+// Account row shown at the top of the content on phones (the rail becomes a bottom tab bar)
+function acctMobile(){
+  const u = state.user; if (!u) return "";
+  return `<div class="acct-m"><div class="who"><div class="av">${esc(initials(u.full_name))}</div><span><b style="color:var(--fg)">${esc(u.full_name)}</b> · ${u.role==="professor"?"Lecturer":"Student"}</span></div><button class="btn" data-logout>Logout</button></div>`;
+}
+function offlineBanner(){
+  if (!state.offline) return "";
+  return `<div class="offline" role="alert">${ICON.connections.replace('<svg','<svg width="18" height="18"')}<span>${OFFLINE_MSG}<small>Start it again with the Run &amp; Go script (run-mac.command, run-windows.bat or run-linux.sh) or with <code>uvicorn app.main:app</code>. The app retries automatically.</small></span><button class="btn" data-retry>Retry</button></div>`;
+}
+
+// =====================================================================
+// 6. STUDENT VIEWS
+// =====================================================================
+function taskRow(t){
+  const [label, cls] = tier(t);
+  const aiTag = t.ai ? `<span class="chip acc" title="${esc(t.note)}">AI</span>` : "";
+  const moved = t.replaces ? `<span>moved from ${fmtD(parseDT(t.replaces.old_due_date))}</span>` : "";
+  return `<div class="task ${t.done?'done':''}" data-toggle="${t.id}" role="button" tabindex="0" aria-pressed="${t.done}" aria-label="${esc(t.title)}: ${t.done?'done, click to undo':'click to mark as done'}">
+    <span class="check" aria-hidden="true"></span>
+    <div style="min-width:0">
+      <div class="t-title">${esc(t.title)}</div>
+      <div class="t-meta">${codeTag(t.course)}<span>${esc(t.course)}</span><span>·</span><span class="mono">${dueLabel(t.due)}</span>${srcTag(t.src)}${aiTag}${moved}</div>
+    </div>
+    <div class="due"><span class="chip ${cls}">${label}</span></div>
+  </div>`;
+}
+
+function events(key){
+  const list = (classes[key]||[]).concat(state.planned ? (studyBlocks[key]||[]) : []);
+  return list.slice().sort((a,b)=>a.s.localeCompare(b.s));
+}
+function evRow(e, isNew, key){
+  const live = key===dayKey(NOW) && e.s<=hm(NOW) && e.e>hm(NOW) ? " live" : "";
+  return `<div class="ev ${isNew && e.k!=='class'?'new-in':''}"><div class="tm mono">${e.s}</div>
+    <div class="ev-card ${e.k}${live}"><b>${e.k==="class"?codeTag(e.t):""}${esc(e.t)}</b><small><span>${e.s}–${e.e}</span><span>${esc(e.w)}</span>${e.flag?`<span class="flag">${esc(e.flag)}</span>`:''}${live?'<span class="chip acc">Now</span>':''}</small></div></div>`;
+}
+
+function briefText(){
+  const open = ranked().filter(t=>!t.done);
+  const top = open.filter(t=>tier(t)[1]==="now");
+  if (!tasks.length) return unilearnConnected() ? "No deadlines yet. Press Sync to pull UniLearn and Teams, the AI will read new messages for you."
+    : "No deadlines yet. Connect UniLearn in Connections to import your assignments, then press Sync.";
+  if (!open.length) return "You're done for the week. Nice work.";
+  if (!top.length) return "Nothing urgent today. " + (state.planned ? "Your study blocks are in the schedule." : "A good day to get ahead.");
+  return `${top.length} thing${top.length===1?'':'s'} to sort today. Start with ${top[0].title.split(":")[0].toLowerCase()}.`;
+}
+
+function greeting(){ const h = NOW.getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; }
+
+function viewToday(){
+  const open = tasks.filter(t=>!t.done);
+  const shown = tasks.filter(t=>!t.done || hoursLeft(t) > -24).sort((a,b)=>score(b)-score(a)).slice(0,5);
+  const done = tasks.filter(t=>t.done).length;
+  const key = dayKey(NOW);
+  const today = events(key);
+  return `
+  <div class="topbar">
+    <div><div class="eyebrow">${DAYFULL[NOW.getDay()]} ${NOW.getDate()} ${MONFULL[NOW.getMonth()]}</div><h1>${greeting()}, ${esc(firstName(state.user))}</h1></div>
+  </div>
+  <section class="brief" aria-label="Daily brief">
+    <div class="eyebrow">${ICON.spark.replace('<svg','<svg width="14" height="14"')}Your day in one line</div>
+    <p>${esc(briefText())}</p>
+    <div class="actions">
+      ${state.planned ? `<button class="btn solid" data-go="schedule">See my week</button>` : `<button class="btn solid" data-plan ${state.syncing?'disabled':''}>${state.syncing?'Syncing…':'Plan my week'}</button>`}
+      <button class="btn" data-sync="all" ${state.syncing?'disabled':''}>${ICON.sync.replace('<svg','<svg width="14" height="14" style="vertical-align:-2px;margin-right:6px"')}${state.syncing?'Syncing…':'Sync all'}</button>
+    </div>
+  </section>
+  <div class="cols">
+    <section class="panel">
+      <div class="panel-h"><h2>Up next</h2><span class="sub">${done ? done+' done · ' : ''}${open.length} open</span></div>
+      <div class="tasks">${shown.length ? shown.map(taskRow).join("") : '<div class="empty">All done. Nothing left this week.</div>'}</div>
+    </section>
+    <section class="panel">
+      <div class="panel-h"><h2>Today</h2></div>
+      <div class="timeline">${today.length ? today.map(e=>evRow(e,false,key)).join("") : '<div class="empty">No classes today.</div>'}</div>
+    </section>
+  </div>`;
+}
+
+function msgRow(m){
+  const s = SRC[m.src];
+  const open = state.openMsg===m.id;
+  return `<div class="msg ${m.unread?'unread':''}">
+    <div class="av" style="background:${s.c}">${esc(m.who)}</div>
+    <div style="min-width:0">
+      <div class="from"><b>${esc(m.from)}</b><span>·</span><span>${s.name}</span><span class="mono" style="margin-left:auto">${msgTime(m.time)}</span></div>
+      <div class="subj">${esc(m.subj)}</div>
+      <div class="ai">${ICON.spark}<span>${esc(m.ai)}</span></div>
+      ${open?`<div class="orig">${esc(m.orig)}</div>`:''}
+      <div class="row-actions">
+        ${m.act[0]?`<button class="btn primary" data-act="${m.id}" data-i="0">${esc(m.act[0])}</button>`:''}
+        <button class="btn" data-open="${m.id}">${open?'Hide':'Read'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function viewInbox(){
+  const f = state.inboxFilter;
+  const list = msgs.filter(m => f==="all" ? true : f==="important" ? m.important : m.src===f);
+  const btn = (k,l) => `<button data-filter="${k}" aria-pressed="${f===k}">${l}</button>`;
+  return `
+  <div class="topbar">
+    <div><div class="eyebrow">Moodle, Teams and Outlook</div><h1>Inbox</h1></div>
+    <button class="btn" data-readall>Mark all as read</button>
+  </div>
+  <div class="filters">${btn("important","Important")}${btn("all","All")}${btn("teams","Teams")}${btn("moodle","Moodle")}${btn("mail","Email")}</div>
+  <section class="panel">
+    <div class="msgs">${list.length ? list.map(msgRow).join("") : `<div class="empty">${msgs.length ? 'No messages here.' : 'No messages yet. Use Sync all to import Teams and Moodle posts.'}</div>`}</div>
+  </section>`;
+}
+
+function viewSchedule(){
+  const days = weekDays();
+  if (!state.day || !days.some(x=>dayKey(x)===state.day)) state.day = dayKey(NOW);
+  const deadlinesOn = key => tasks.filter(t=>!t.done && dayKey(t.due)===key);
+  const dayBtns = days.map(dt=>{
+    const key = dayKey(dt);
+    const pips = (classes[key]||[]).map(()=>'<i></i>').join("") + (state.planned?(studyBlocks[key]||[]).map(()=>'<i class="s"></i>').join(""):"") + deadlinesOn(key).map(()=>'<i class="d"></i>').join("");
+    return `<button data-day="${key}" aria-pressed="${state.day===key}"><span class="dn">${DAY[dt.getDay()]}</span><span class="dd">${dt.getDate()}</span><span class="pips">${pips}</span></button>`;
+  }).join("");
+  const ev = events(state.day);
+  const dl = deadlinesOn(state.day);
+  const dt = keyDate(state.day);
+  const a = days[0], b = days[6];
+  const range = a.getMonth()===b.getMonth() ? `${a.getDate()}–${b.getDate()} ${MONFULL[a.getMonth()]}` : `${a.getDate()} ${MON[a.getMonth()]} – ${b.getDate()} ${MON[b.getMonth()]}`;
+  return `
+  <div class="topbar">
+    <div><div class="eyebrow">Week of ${range}</div><h1>Schedule</h1></div>
+    ${state.planned ? `<button class="btn" data-unplan>Clear study blocks</button>` : `<button class="btn primary" data-plan ${state.syncing?'disabled':''}>${state.syncing?'Syncing…':'Plan my week'}</button>`}
+  </div>
+  <div class="days" role="group" aria-label="Pick a day">${dayBtns}</div>
+  <div class="cols">
+    <section class="panel">
+      <div class="panel-h"><h2>${DAY[dt.getDay()]} ${dt.getDate()} ${MONFULL[dt.getMonth()]}</h2><span class="sub">${ev.length} item${ev.length===1?'':'s'}</span></div>
+      <div class="timeline">${ev.length ? ev.map(e=>evRow(e,true,state.day)).join("") : `<div class="empty">${!unisisConnected() ? 'Your timetable comes from UniSIS. <button class="btn" data-go="connections" style="margin-left:6px">Connect UniSIS</button>' : state.planned?'A free day. Remind Me Bro kept it clear on purpose.':'No classes. Use "Plan my week" to fill free time with study blocks.'}</div>`}</div>
+    </section>
+    <div class="stack">
+      <section class="panel">
+        <div class="panel-h"><h2>Deadlines this day</h2></div>
+        ${dl.length ? `<div class="tasks">${dl.map(taskRow).join("")}</div>` : '<div class="empty">Nothing due.</div>'}
+      </section>
+    </div>
+  </div>`;
+}
+
+function gate(title, eyebrow, pitch, perks){
+  return `
+  <div class="topbar">
+    <div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1></div>
+    <span class="prem-pill">${ICON.lock.replace('<svg','<svg width="12" height="12"')}Premium</span>
+  </div>
+  <section class="panel gate">
+    <div>
+      <h2>${title} is part of Premium</h2>
+      <p>${pitch}</p>
+      <ul>${perks.map(x=>`<li>${x}</li>`).join("")}</ul>
+    </div>
+    <div class="gate-cta">
+      <div class="price">€3.99 <small>per month</small></div>
+      <span class="fine">Includes Transcribe Bro. Cancel any time.</span>
+      <button class="btn primary" data-premium>Start 14-day free trial</button>
+      <button class="btn" data-go="settings">Compare plans</button>
+    </div>
+  </section>`;
+}
+
+// ---------- Transcribe Bro (Premium demo, unchanged mock) ----------
+const RECS = {
+  lec:{title:"Corporate Finance · Lecture 5", meta:"Tue 13 Oct · 1 h 50 min · recorded in Room 1C", topic:"Capital budgeting: NPV, IRR and the cost of capital",
+    points:["NPV discounts every future cash flow at the cost of capital. Accept projects with a positive NPV.",
+            "IRR can mislead when cash flows change sign more than once or when projects are mutually exclusive. The lecturer said: \u201cwhen NPV and IRR disagree, follow NPV\u201d.",
+            "The Excel lab on NPV and IRR must include a sensitivity table for the discount rate. This is new this year.",
+            "Thursday's lab starts with a 10-minute quiz on today's formulas."],
+    terms:["Net present value","Internal rate of return","WACC","Discount rate","Sensitivity analysis","Payback period"],
+    todos:[{title:"Add a discount-rate sensitivity table to the Excel lab", course:"Corporate Finance", due:[37,12,0], effort:1.5, weight:0, why:"Mentioned at 41:20"},
+           {title:"Revise today's formulas for the lab quiz", course:"Corporate Finance", due:[22,14,0], effort:0.5, weight:0, why:"Mentioned at 1:27:05"}],
+    lines:[["04:12","Lecturer","Today we decide which projects a company should take on. Money today is worth more than money tomorrow."],
+           ["18:40","Lecturer","Always discount at the cost of capital. If the NPV is positive, the project creates value."],
+           ["41:20","Lecturer","For the Excel lab, add one sensitivity table for the discount rate. That's new this year."],
+           ["1:27:05","Lecturer","On Thursday we start the lab with a short quiz on today's formulas, so review your notes."]]},
+  meet:{title:"Group 3 meeting · Teams call", meta:"Yesterday 18:05 · 42 min · 4 people", topic:"Splitting the bank risk analysis project",
+    points:["Sara covers capital ratios, Giulia covers liquidity ratios, Luca and Marta share the stress-test section.",
+            "Everyone uploads drafts to the shared Teams folder by Wednesday 15:00.",
+            "Final merge happens at the Wednesday 17:00 meeting."],
+    terms:["CET1 ratio","Liquidity coverage ratio","Stress test","Shared folder"],
+    todos:[{title:"Upload your liquidity ratios draft to the Teams folder", course:"Financial Markets and Institutions", due:[21,15,0], effort:2, weight:0, why:"Agreed at 12:30"}],
+    lines:[["02:10","Sara","Shall we split it by section so nobody waits on anyone?"],
+           ["12:30","Giulia","I'll take the liquidity ratios. I'll have a draft in the folder by Wednesday at three."],
+           ["35:50","Marta","Then we merge everything on Wednesday at five."]]}
+};
+
+function viewTranscribe(){
+  if (!state.premium) return gate("Transcribe Bro", "Lectures and meetings into notes",
+    "Record a lecture or a group call and get a clean transcript, a short summary and the tasks that came up. Never miss what the lecturer said about the exam again.",
+    ["Full transcript with timestamps","Key points and terms to revise","Tasks mentioned in class go straight to your list","Works with recordings and Teams calls"]);
+  const tx = state.tx;
+  const head = `<div class="topbar"><div><div class="eyebrow">Lectures and meetings into notes</div><h1>Transcribe Bro</h1></div><span class="prem-pill">Premium</span></div>`;
+  if (!tx.id){
+    return head + `
+    <section class="panel">
+      <div class="panel-h"><h2>Recent recordings</h2></div>
+      ${Object.entries(RECS).map(([id,r])=>`<div class="rec"><div class="ic">${ICON.file}</div><div style="min-width:0"><div class="t">${esc(r.title)}</div><div class="d">${esc(r.meta)}</div></div><button class="btn primary" data-tx-start="${id}">Transcribe</button></div>`).join("")}
+      <div class="upload"><label class="btn" for="txFile">Upload a recording</label><input type="file" id="txFile" accept="audio/*,video/*"><span>MP3, M4A or MP4, up to 3 hours</span></div>
+    </section>`;
+  }
+  const r = RECS[tx.id];
+  if (tx.progress < 100){
+    return head + `<section class="panel"><div class="panel-h"><h2>${esc(r.title)}</h2><span class="sub mono">${tx.progress}%</span></div>
+      <div class="sub" style="color:var(--muted)">${tx.progress<40?'Turning speech into text':tx.progress<80?'Finding key points and terms':'Picking out tasks'}…</div>
+      <div class="progress"><span style="width:${tx.progress}%"></span></div></section>`;
+  }
+  return head + `
+  <div><button class="btn" data-tx-reset>← All recordings</button></div>
+  <section class="brief"><div class="eyebrow">${ICON.spark.replace('<svg','<svg width="14" height="14"')}${esc(r.title)}</div><p>${esc(r.topic)}</p></section>
+  <div class="cols">
+    <div class="stack">
+      <section class="panel"><div class="panel-h"><h2>Key points</h2></div><ol class="points">${r.points.map(x=>`<li>${esc(x)}</li>`).join("")}</ol></section>
+      <section class="panel"><div class="panel-h"><h2>Transcript</h2><span class="sub">Excerpt</span></div>
+        <div class="transcript">${r.lines.map(l=>`<div><span class="mono">${l[0]}</span><span><b>${esc(l[1])}:</b> ${esc(l[2])}</span></div>`).join("")}</div></section>
+    </div>
+    <div class="stack">
+      <section class="panel"><div class="panel-h"><h2>Tasks it found</h2></div>
+        ${r.todos.map((t,i)=>{const added=tx.added.includes(i);return `<div class="todo"><div><div style="font-weight:600">${esc(t.title)}</div><div class="d">${esc(t.why)} · due ${dueLabel(d(...t.due))}</div></div><button class="btn ${added?'':'primary'}" data-tx-add="${i}" ${added?'disabled':''}>${added?'Added':'Add'}</button></div>`;}).join("")}
+      </section>
+      <section class="panel"><div class="panel-h"><h2>Terms to revise</h2></div><div class="terms">${r.terms.map(x=>`<span>${esc(x)}</span>`).join("")}</div></section>
+    </div>
+  </div>`;
+}
+
+function viewAsk(){
+  const chips = ["What's due this week?","What should I do first?","Any announcements from lecturers?","When is the next Microeconomics lecture?"];
+  const bubbles = state.chat.length ? state.chat.map(c=>`<div class="bubble ${c.me?'me':'bot'}">${c.html}</div>`).join("")
+    : `<div class="bubble bot">Hi ${esc(firstName(state.user))}! I read your deadlines, timetable and lecturer messages from Moodle, Teams and email. Ask me anything about your week. Answers come from the local <b>llama3.2</b> model.</div>`;
+  const ollama = state.health && state.health.ollama;
+  const pill = ollama ? (ollama.model_available ? `<span class="chip ok">llama3.2 · local</span>` : `<span class="chip now">Ollama offline</span>`) : "";
+  return `
+  <div class="topbar">
+    <div><div class="eyebrow">Your study assistant · RAG on your data</div><h1>Ask Bro</h1></div>${pill}
+    ${state.chat.length?'<button class="btn" data-clearchat>New chat</button>':''}
+  </div>
+  <section class="panel">
+    <div class="chat" id="chat">${bubbles}</div>
+  </section>
+  <div class="chips">${chips.map(c=>`<button data-ask="${esc(c)}" ${state.chatBusy?'disabled':''}>${esc(c)}</button>`).join("")}</div>
+  <form class="composer" id="askForm"><input id="askInput" placeholder="Ask about deadlines, messages or your schedule" autocomplete="off" ${state.chatBusy?'disabled':''}><button class="btn primary" type="submit" ${state.chatBusy?'disabled':''}>${state.chatBusy?'Thinking…':'Send'}</button></form>`;
+}
+
+// ---------- Overview (semester map) built from backend deadlines + calendar events ----------
+// Winter term 2026/27: teaching 21 Sep – 18 Dec, break, exam period 4 Jan – 12 Feb
+const TERM_START = new Date(2026,8,21), TERM_END = new Date(2027,1,14);
+const EXAM_START = new Date(2027,0,4), EXAM_END = new Date(2027,1,13);
+const TYPES = {
+  assign:{n:"Assignment", c:"var(--accent)"},
+  group:{n:"Project", c:"var(--warn)"},
+  quiz:{n:"Quiz or test", c:"var(--ok)"},
+  present:{n:"Seminar or talk", c:"var(--teams)"},
+  exam:{n:"Exam", c:"var(--urgent)"},
+  admin:{n:"Admin", c:"var(--muted)"}
+};
+const RECURRING = /^(lecture|tutorial|lab|seminar|lezione|laboratorio|esercitazione)$/i;
+function typeOf(title){
+  const s = title.toLowerCase();
+  if (/exam|esame|appello/.test(s)) return "exam";
+  if (/midterm|quiz|test|prova/.test(s)) return "quiz";
+  if (/seminar|presentation|talk|presentaz/.test(s)) return "present";
+  if (/project|group|progett|gruppo/.test(s)) return "group";
+  if (/registration|register|iscrizion/.test(s)) return "admin";
+  return "assign";
+}
+let SUBJECTS = [];
+function buildSubjects(){
+  const names = new Map();
+  courseList.forEach(c => names.set(c.name, {id:"c"+c.id, name:c.name, items:[]}));
+  const get = n => { if (!names.has(n)) names.set(n, {id:"s"+names.size, name:n, items:[]}); return names.get(n); };
+  tasks.forEach(t => get(t.course).items.push([t.due, typeOf(t.title), t.title]));
+  allEvents.filter(e => !RECURRING.test(e.title)).forEach(e => get(e.course || "General").items.push([e.start, typeOf(e.title), e.title]));
+  SUBJECTS = Array.from(names.values()).filter(s => s.items.length);
+  if (!SUBJECTS.some(s => s.id === state.ov.sub)) state.ov.sub = SUBJECTS[0] ? SUBJECTS[0].id : null;
+}
+const MAJOR = new Set(["exam","present","group"]);
+const pos = dt => ((dt - TERM_START) / (TERM_END - TERM_START) * 100).toFixed(3) + "%";
+function status(dt){
+  const days = Math.ceil((dt - NOW)/864e5);
+  if (days < 0) return ["Done","later"];
+  if (days <= 7) return ["This week","now"];
+  if (days <= 14) return ["Next week","plan"];
+  return ["In "+Math.round(days/7)+" weeks","later"];
+}
+function markers(list){
+  const seen = {}, count = {};
+  const vis = list.filter(x=>!state.ov.off.includes(x.it[1]));
+  vis.forEach(x=>{ const k=startOfDay(x.it[0]).getTime(); count[k]=(count[k]||0)+1; });
+  return vis.map(x=>{
+    const [dt,type,title] = x.it; const k = startOfDay(dt).getTime(); seen[k] = (seen[k]||0)+1;
+    const n = count[k], gap = 30;
+    const top = n===1 ? 50 : 50 + (seen[k]-1 - (n-1)/2) * gap;
+    const id = x.sub.id+":"+x.i;
+    return `<button class="mk ${MAJOR.has(type)?'major':''} ${dt<NOW?'past':''} ${state.ov.item===id?'on':''}" style="left:${pos(dt)};top:calc(50% + ${(top-50)*0.6}px);background:${TYPES[type].c}" data-ov-item="${id}" title="${CODES[x.sub.name]?esc(CODES[x.sub.name])+" ":""}${esc(x.sub.name)}: ${esc(title)} · ${fmtD(dt)}" aria-label="${esc(x.sub.name)}: ${esc(title)}, ${fmtD(dt)}"></button>`;
+  }).join("");
+}
+function trackDeco(){ return `<span class="band" style="left:${pos(EXAM_START)};width:calc(${pos(EXAM_END)} - ${pos(EXAM_START)})"></span><span class="today-line" style="left:${pos(NOW)}"></span>`; }
+
+function viewOverview(){
+  buildSubjects();
+  const head = `<div class="topbar"><div><div class="eyebrow">Winter term 2026/27 · Week ${Math.max(1, Math.floor((NOW-TERM_START)/(7*864e5))+1)} of 13</div><h1>Overview</h1></div>`;
+  if (!SUBJECTS.length) return head + `</div><section class="panel"><div class="empty">No dates yet. Sync your courses to build the semester map.</div></section>`;
+  const all = [];
+  SUBJECTS.forEach(sub=>sub.items.forEach((it,i)=>all.push({sub,it,i})));
+  const months = [];
+  for (let m = new Date(2026,9,1); m < TERM_END; m = new Date(m.getFullYear(), m.getMonth()+1, 1)) months.push(m);
+  const visible = x => !state.ov.off.includes(x.it[1]);
+  const upcoming = all.filter(x=>x.it[0]>=startOfDay(NOW) && visible(x));
+  const majors = all.filter(x=>MAJOR.has(x.it[1]) && x.it[0]>=NOW && visible(x)).sort((a,b)=>a.it[0]-b.it[0]);
+  const sub = SUBJECTS.find(s=>s.id===state.ov.sub);
+  const legend = Object.entries(TYPES).map(([k,t])=>`<button data-ov-type="${k}" aria-pressed="${!state.ov.off.includes(k)}"><i class="${MAJOR.has(k)?'sq':''}" style="background:${t.c}"></i>${t.n}</button>`).join("");
+  let lastMonth = -1;
+  const majorList = majors.map(x=>{
+    const [dt,type,title]=x.it; const st=status(dt);
+    const mh = dt.getMonth()!==lastMonth ? `<div class="ov-month">${MON[dt.getMonth()]} ${dt.getFullYear()}</div>` : ""; lastMonth = dt.getMonth();
+    const id = x.sub.id+":"+x.i;
+    return mh + `<div class="ov-item ${state.ov.item===id?'on':''}"><span class="mono">${fmtD(dt)}</span><span class="dotc sq" style="background:${TYPES[type].c}"></span><span class="ov-t"><span>${esc(title)}</span><small>${CODES[x.sub.name]?esc(CODES[x.sub.name])+" · ":""}${esc(x.sub.name)} · ${TYPES[type].n}</small></span><span class="chip ${st[1]}">${st[0]}</span></div>`;
+  }).join("");
+  const subList = sub.items.map((it,i)=>[it,i]).filter(([it])=>!state.ov.off.includes(it[1])).sort((a,b)=>a[0][0]-b[0][0]).map(([it,i])=>{
+    const [dt,type,title]=it; const st=status(dt); const id=sub.id+":"+i;
+    return `<div class="ov-item ${dt<NOW?'past':''} ${state.ov.item===id?'on':''}"><span class="mono">${fmtD(dt)}</span><span class="dotc ${MAJOR.has(type)?'sq':''}" style="background:${TYPES[type].c}"></span><span class="ov-t"><span>${esc(title)}</span><small>${TYPES[type].n}</small></span><span class="chip ${st[1]}">${st[0]}</span></div>`;
+  }).join("");
+  return head + `
+    <span class="sub" style="color:var(--muted);font-size:14px">${upcoming.length} dates left this semester</span>
+  </div>
+  <div class="legend" role="group" aria-label="Show task types">${legend}</div>
+  <section class="panel">
+    <div class="panel-h"><h2>Semester map</h2><span class="sub">Squares are big deadlines. Click a subject or a dot.</span></div>
+    <div class="map-wrap"><div class="map">
+      <div class="map-row head"><div class="map-label"></div><div class="map-track months">
+        <span style="left:0">Sep</span>${months.map(m=>`<span style="left:${pos(m)}">${MON[m.getMonth()]}</span>`).join("")}
+        <span class="exam-lbl" style="left:calc(${pos(EXAM_START)} + 34px)">Exam period</span>
+        <span class="today-tag" style="left:${pos(NOW)}">Today</span>
+      </div></div>
+      <div class="map-row all"><div class="map-label"><b>Whole semester</b><small>${all.filter(visible).length} dates in total</small></div><div class="map-track">${trackDeco()}${markers(all)}</div></div>
+      ${SUBJECTS.map(s=>{const list=all.filter(x=>x.sub===s);const left=list.filter(x=>x.it[0]>=NOW).length;return `<div class="map-row ${state.ov.sub===s.id?'sel':''}"><button class="map-label" data-ov-sub="${s.id}"><b>${esc(s.name)}</b><small>${CODES[s.name]?`<span class="code">${esc(CODES[s.name])}</span>`:""}${left} of ${list.length} to come</small></button><div class="map-track">${trackDeco()}${markers(list)}</div></div>`;}).join("")}
+    </div></div>
+  </section>
+  <div class="cols">
+    <section class="panel">
+      <div class="panel-h"><h2>${esc(sub.name)}</h2><span class="sub">${CODES[sub.name]?`<span class="code">${esc(CODES[sub.name])}</span>`:""}Every date this semester</span></div>
+      <div class="ov-list">${subList || '<div class="empty">Nothing of the selected types.</div>'}</div>
+    </section>
+    <section class="panel">
+      <div class="panel-h"><h2>Big dates ahead</h2><span class="sub">Exams, seminars, projects</span></div>
+      <div class="ov-list">${majorList || '<div class="empty">None of the selected types left.</div>'}</div>
+    </section>
+  </div>`;
+}
+
+function syncLabel(m){
+  if (m===0) return "Just now";
+  if (m<60) return m+" min ago";
+  const h=Math.floor(m/60); return h+" h ago";
+}
+function syncClock(m){ return "Today "+hm(new Date(NOW - m*6e4)); }
+function unisisCard(){
+  const u = state.unisis;
+  if (!u) return `<div class="rec"><div class="ic" style="color:var(--insis)">${ICON.studies}</div><div><div class="t">UniSIS</div><div class="d">Loading…</div></div><div></div></div>`;
+  const connected = u.status === "connected";
+  const chip = connected ? '<span class="chip ok" style="margin-left:6px">Connected</span>'
+    : u.status === "expired" ? '<span class="chip now" style="margin-left:6px">Access revoked</span>'
+    : '<span class="chip later" style="margin-left:6px">Not connected</span>';
+  const last = u.last_sync_at ? "Synced " + msgTime(parseDT(u.last_sync_at)) : "";
+  let actions;
+  if (connected){
+    actions = `<button class="btn" data-unisis-sync ${state.pending?'disabled':''}>${state.pending==='unisis-sync'?'Syncing…':'Sync now'}</button>
+      ${state.confirmDisconnect ? `<button class="btn danger" data-unisis-disconnect="confirm">Confirm disconnect</button><button class="btn" data-unisis-disconnect="cancel">Keep</button>`
+        : `<button class="btn" data-unisis-disconnect="ask">Disconnect</button>`}`;
+  } else {
+    actions = `<button class="btn primary" data-unisis-connect ${!u.available || state.pending ? 'disabled' : ''}>${state.pending==='unisis-connect'?'Opening UniSIS…':(u.status==='expired'?'Reconnect':'Connect')}</button>`;
+  }
+  return `<div class="rec" style="align-items:flex-start">
+    <div class="ic" style="color:var(--insis)">${ICON.studies}</div>
+    <div style="min-width:0">
+      <div class="t">UniSIS · student information system ${chip}</div>
+      <div class="d">Timetable, exam registration, course registration and grades. Real connection: OAuth 2.0 with your consent, Remind Me Bro never sees your UniSIS password.</div>
+      ${connected ? `<div class="d" style="margin-top:4px">Signed in as <b style="color:var(--fg)">${esc(u.account || "")}</b> · <span class="mono">${esc(u.account_id || "")}</span>${last ? " · " + esc(last) : ""}</div>
+        <div>${u.scopes.map(x=>`<span class="scope">${esc(x)}</span>`).join("")}</div>`
+      : `<div class="d" style="margin-top:4px">${u.available ? 'Click Connect: you sign in on UniSIS and choose what to share.' : `<span class="flag">UniSIS is not running at ${esc(u.portal_url)}.</span>`}</div>`}
+      ${u.status === "expired" && u.last_error ? `<div class="d flag" style="margin-top:4px">${esc(u.last_error)}</div>` : ""}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+      ${actions}
+      <a class="btn" href="${esc(u.portal_url)}" target="_blank" rel="noopener" style="text-decoration:none">Open UniSIS</a>
+    </div>
+  </div>`;
+}
+const unilearnConnected = () => !!(state.unilearn && state.unilearn.status === "connected");
+function unilearnCard(){
+  const u = state.unilearn;
+  if (!u) return `<div class="rec"><div class="ic" style="color:var(--moodle)">${ICON.connections}</div><div><div class="t">UniLearn</div><div class="d">Loading…</div></div><div></div></div>`;
+  const connected = u.status === "connected";
+  const chip = connected ? '<span class="chip ok" style="margin-left:6px">Connected</span>'
+    : u.status === "expired" ? '<span class="chip now" style="margin-left:6px">Token deleted</span>'
+    : '<span class="chip later" style="margin-left:6px">Not connected</span>';
+  const last = u.last_sync_at ? "Synced " + msgTime(parseDT(u.last_sync_at)) : "";
+  const busy = state.pending && state.pending.startsWith("ul-");
+  let body, actions;
+  if (connected){
+    body = `<div class="d" style="margin-top:4px">Signed in as <b style="color:var(--fg)">${esc(u.account || "")}</b> · <span class="mono">${esc(u.account_id || "")}</span>${last ? " · " + esc(last) : ""}</div>
+      <div><span class="scope">web service: ${esc(u.scopes[0] || "moodle_mobile_app")}</span></div>`;
+    actions = `<button class="btn" data-ul-sync ${state.pending?'disabled':''}>${state.pending==='ul-sync'?'Syncing…':'Sync now'}</button>
+      ${state.confirmUlDisconnect ? `<button class="btn danger" data-ul-disconnect="confirm">Confirm disconnect</button><button class="btn" data-ul-disconnect="cancel">Keep</button>`
+        : `<button class="btn" data-ul-disconnect="ask">Disconnect</button>`}`;
+  } else if (!u.available){
+    body = `<div class="d" style="margin-top:4px"><span class="flag">UniLearn is not running at ${esc(u.portal_url)}.</span></div>`;
+    actions = "";
+  } else {
+    body = `<form id="ulForm" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
+        <label class="field" style="margin:0;flex:1 1 150px">UniLearn username<input data-bind="ul.username" value="${esc(state.ul.username)}" autocomplete="off" required></label>
+        <label class="field" style="margin:0;flex:1 1 150px">Password<input type="password" data-bind="ul.password" value="${esc(state.ul.password)}" autocomplete="off" placeholder="demo1234" required></label>
+        <button class="btn primary" type="submit" ${state.pending?'disabled':''}>${state.pending==='ul-connect'?'Getting token…':(u.status==='expired'?'Reconnect':'Connect')}</button>
+      </form>
+      <div class="d" style="margin-top:4px">Your password goes to UniLearn once to get a token, Remind Me Bro stores only the token (encrypted). Demo: giulia.esposito / demo1234</div>
+      ${state.ul.error ? `<div class="d flag" style="margin-top:4px">${esc(state.ul.error)}</div>` : ""}`;
+    actions = "";
+  }
+  return `<div class="rec" style="align-items:flex-start">
+    <div class="ic" style="color:var(--moodle)">${ICON.connections}</div>
+    <div style="min-width:0">
+      <div class="t">UniLearn · Moodle-compatible LMS ${chip}</div>
+      <div class="d">Assignments, submission status, course events and lecturer announcements. Real connection: the Moodle web-service API with a personal token, the same one the Moodle mobile app uses.</div>
+      ${body}
+      ${u.status === "expired" && u.last_error ? `<div class="d flag" style="margin-top:4px">${esc(u.last_error)}</div>` : ""}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+      ${actions}
+      <a class="btn" href="${esc(u.portal_url)}" target="_blank" rel="noopener" style="text-decoration:none">Open UniLearn</a>
+    </div>
+  </div>`;
+}
+function viewConnections(){
+  return `
+  <div class="topbar">
+    <div><div class="eyebrow">Your linked university systems</div><h1>Connections</h1></div>
+    <button class="btn primary" data-sync="all" ${state.syncing?'disabled':''}>${ICON.sync.replace('<svg','<svg width="15" height="15" style="vertical-align:-2px;margin-right:6px"')}${state.syncing?'Syncing…':'Sync all'}</button>
+  </div>
+  <section class="panel">
+    ${unisisCard()}
+    ${unilearnCard()}
+    ${state.conns.map(c=>`<div class="rec">
+      <div class="ic" style="color:${SRC[c.key].c}">${ICON.connections}</div>
+      <div style="min-width:0">
+        <div class="t">${esc(c.name)} <span class="chip acc" style="margin-left:6px" title="Simulated data for the demo">Demo data</span></div>
+        <div class="d">${esc(c.what)}</div>
+        <div class="d" style="margin-top:4px">${esc(c.via)} · ${esc(c.items)}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-weight:700">${syncLabel(c.mins)}</div>
+        <div class="mono" style="color:var(--muted)">${c.syncing?'Syncing…':syncClock(c.mins)}</div>
+        <button class="btn" data-sync="${c.key}" style="margin-top:6px;padding:4px 10px;font-size:13px" ${state.syncing?'disabled':''}>Sync now</button>
+      </div>
+    </div>`).join("")}
+  </section>
+  <p style="margin:0;font-size:14px;color:var(--muted)">Sync runs the backend pipeline: UniSIS and UniLearn data arrive through their APIs with your tokens, UniLearn announcements, Teams and email messages are read by the local llama3.2 model to find hidden deadlines. It can take up to a minute.</p>`;
+}
+
+// ---------- Studies (live from UniSIS) ----------
+const fmtWhen = iso => fmtDT(parseDT(iso));
+function windowChip(status, opens, closes){
+  if (status === "open") return `<span class="chip ok">Open</span><span>until ${fmtWhen(closes)}</span>`;
+  if (status === "upcoming") return `<span class="chip plan">Opens ${fmtWhen(opens)}</span>`;
+  return `<span class="chip later">Closed</span>`;
+}
+function examRow(e){
+  const key = "exam-" + e.id, busy = state.pending === key;
+  let act;
+  if (e.registered){
+    act = `<span class="chip ok">Registered</span>` + (e.can_cancel ? `<button class="btn" data-exam-cancel="${e.id}" ${state.pending?'disabled':''}>${busy?'…':'Cancel'}</button>` : "");
+  } else if (e.can_register){
+    act = `<button class="btn primary" data-exam-register="${e.id}" ${state.pending?'disabled':''}>${busy?'Registering…':'Register'}</button>`;
+  } else act = e.registration_status === "upcoming" ? "" : `<span class="why muted">${esc(e.reason || "")}</span>`;
+  const seats = e.registration_status === "open" ? `<span>${e.seats_left} of ${e.capacity} seats left</span>` : `<span>${e.capacity} seats</span>`;
+  return `<div class="st-row">
+    <div style="min-width:0"><div class="t">${codeTag(e.course_name)}${esc(e.course_name)} · ${esc(e.title)}${e.is_partial?' <span class="chip later">partial</span>':''}</div>
+      <div class="d"><span class="mono">${fmtWhen(e.starts_at)}</span><span>${esc(e.room)}</span>${seats}${windowChip(e.registration_status, e.registration_opens_at, e.registration_closes_at)}</div></div>
+    <div class="acts">${act}</div>
+  </div>`;
+}
+function offerRow(o, open){
+  const key = "course-" + o.course_code, busy = state.pending === key;
+  let act = "";
+  if (o.status === "enrolled") act = `<span class="chip ok">Enrolled</span>`;
+  if (o.status === "waitlisted") act = `<span class="chip plan">Waiting list #${o.waitlist_position}</span>`;
+  if (open){
+    if (o.status === "none") act += `<button class="btn ${o.seats_left ? 'primary' : ''}" data-course-enroll="${esc(o.course_code)}" ${state.pending?'disabled':''}>${busy?'…':(o.seats_left ? 'Enroll' : 'Join waiting list')}</button>`;
+    else act += `<button class="btn" data-course-drop="${esc(o.course_code)}" ${state.pending?'disabled':''}>${busy?'…':(o.status==='enrolled'?'Drop':'Leave list')}</button>`;
+  }
+  const seats = o.seats_left ? `${o.seats_left} of ${o.capacity} seats left` : `<span class="flag">Full</span>${o.waitlisted ? ` · ${o.waitlisted} waiting` : ""}`;
+  return `<div class="st-row">
+    <div style="min-width:0"><div class="t">${esc(o.course_name)} <span class="code">${esc(o.course_code)}</span></div>
+      <div class="d"><span>${esc(o.lecturer)}</span><span>${o.credits} ECTS</span><span>${seats}</span></div>
+      <div class="d">${esc(o.description || "")}</div></div>
+    <div class="acts">${act}</div>
+  </div>`;
+}
+function viewStudies(){
+  const u = state.unisis;
+  const head = (eyebrow, right) => `<div class="topbar"><div><div class="eyebrow">${eyebrow}</div><h1>Studies</h1></div>${right || ""}</div>`;
+  if (!unisisConnected()){
+    const expired = u && u.status === "expired";
+    return head("Your student record") + `
+    <section class="panel gate">
+      <div>
+        <h2>${expired ? "Reconnect your student record" : "Connect your student record"}</h2>
+        <p>${expired ? "Access to UniSIS was revoked or expired. Connect again to see your exams, courses and credits here." : "Link UniSIS, the university's student information system: your timetable, exam registrations, course registration and grades appear here, and registration windows become reminders."}</p>
+        <ul class="oauth-steps">
+          <li><b>1</b><span>You sign in on <b>UniSIS</b>, not here: Remind Me Bro never sees your password.</span></li>
+          <li><b>2</b><span>UniSIS shows what Remind Me Bro is asking for. You allow or deny.</span></li>
+          <li><b>3</b><span>Remind Me Bro receives an access token, stored encrypted. You can revoke it from UniSIS at any time.</span></li>
+        </ul>
+      </div>
+      <div class="gate-cta">
+        <div style="font-weight:700">UniSIS</div>
+        <span class="fine">${u ? esc(u.portal_url) : ""}</span>
+        <button class="btn primary" data-unisis-connect ${!u || !u.available || state.pending ? 'disabled' : ''}>${state.pending==='unisis-connect'?'Opening UniSIS…':'Connect UniSIS'}</button>
+        ${u && !u.available ? `<span class="fine flag">UniSIS is not running. Start it with the Run &amp; Go script.</span>` : `<span class="fine">Demo login on UniSIS: giulia.esposito / demo1234</span>`}
+      </div>
+    </section>`;
+  }
+  const st = state.studies;
+  if (!st){
+    return head("UniSIS · live") + `<section class="panel">${state.studiesErr ? `<div class="form-err">${esc(state.studiesErr)}</div><div style="margin-top:12px"><button class="btn" data-studies-reload>Try again</button></div>` : `<div class="empty">Loading your student record from UniSIS…</div><div class="progress indet"><span></span></div>`}</section>`;
+  }
+  const p = st.profile, cr = p.credits, reg = st.course_registration;
+  const pctEarned = Math.min(100, cr.earned / cr.required * 100), pctProg = Math.min(100 - pctEarned, cr.in_progress / cr.required * 100);
+  const exams = st.exams;
+  const booked = exams.filter(e => e.registered).length;
+  const partials = exams.filter(e => e.is_partial), finals = exams.filter(e => !e.is_partial);
+  const current = st.enrollments.filter(e => e.status === "enrolled" && e.kind === "core");
+  const right = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="chip ok">UniSIS · live</span>
+    <button class="btn" data-studies-reload ${state.studiesBusy?'disabled':''}>${state.studiesBusy?'Refreshing…':'Refresh'}</button>
+    <a class="btn" href="${esc(st.portal_url)}" target="_blank" rel="noopener" style="text-decoration:none">Open UniSIS</a></div>`;
+  return head(`${esc(p.programme.degree)} ${esc(p.programme.name)} · Year ${p.year_of_study} · <span class="mono">${esc(p.student_number)}</span>`, right) + `
+  <section class="panel">
+    <div class="kpis">
+      <div class="kpi"><b>${cr.earned}<span style="font-size:15px;color:var(--muted)"> / ${cr.required} ECTS</span></b><span>Credits earned · ${cr.in_progress} in progress</span>
+        <div class="credit-bar"><span style="width:${pctEarned}%;background:var(--ok)"></span><span style="width:${pctProg}%;background:var(--accent-soft)"></span></div></div>
+      <div class="kpi"><b>${p.weighted_average != null ? p.weighted_average.toFixed(2) : "—"}</b><span>Weighted average (/30)</span></div>
+      <div class="kpi"><b>${booked}</b><span>Exam registrations</span></div>
+      <div class="kpi"><b>${reg ? reg.electives_chosen + " / " + reg.electives_required : "—"}</b><span>Electives chosen${reg ? " · " + esc(reg.term.name) : ""}</span></div>
+    </div>
+  </section>
+  <div class="cols">
+    <div class="stack">
+      <section class="panel">
+        <div class="panel-h"><h2>Partial tests</h2><span class="sub">Booked directly in UniSIS</span></div>
+        ${partials.length ? partials.map(examRow).join("") : '<div class="empty">No partial tests.</div>'}
+      </section>
+      <section class="panel">
+        <div class="panel-h"><h2>Exam registration · winter session</h2><span class="sub">One date per course</span></div>
+        ${finals.length ? finals.map(examRow).join("") : '<div class="empty">No exam dates published yet.</div>'}
+      </section>
+      ${reg ? `<section class="panel">
+        <div class="panel-h"><h2>Course registration · ${esc(reg.term.name)}</h2><span class="sub">${reg.status === "open" ? `Open until ${fmtWhen(reg.closes_at)}` : reg.status === "upcoming" ? `Opens ${fmtWhen(reg.opens_at)}` : "Closed"}</span></div>
+        <p style="margin:0 0 10px;font-size:14px;color:var(--muted)">Choose ${reg.electives_required} electives. If a course is full you join the waiting list and UniSIS enrolls you automatically when a seat frees up.</p>
+        ${reg.offers.map(o => offerRow(o, reg.status === "open")).join("")}
+      </section>` : ""}
+    </div>
+    <div class="stack">
+      <section class="panel">
+        <div class="panel-h"><h2>This term</h2><span class="sub">${current.reduce((a,c)=>a+c.credits,0)} ECTS</span></div>
+        ${current.map(c => `<div class="st-row"><div><div class="t">${codeTag(c.course_name)}${esc(c.course_name)}</div><div class="d">${esc(c.lecturer)}</div></div><div class="acts"><span class="mono">${c.credits} ECTS</span></div></div>`).join("")}
+      </section>
+      <section class="panel">
+        <div class="panel-h"><h2>Transcript</h2><span class="sub">${st.grades.credits_earned} ECTS</span></div>
+        ${st.grades.records.map(r => `<div class="st-row"><div><div class="t">${esc(r.course_name)}</div><div class="d">${r.credits} ECTS · ${fmtD(parseDT(r.date))}</div></div><div class="acts"><span class="grade">${esc(r.grade)}</span></div></div>`).join("")}
+      </section>
+    </div>
+  </div>`;
+}
+
+function accountPanel(){
+  const u = state.user; const h = state.health; const o = h && h.ollama;
+  return `<section class="panel">
+    <div class="panel-h"><h2>Account</h2><span class="chip ${u.role==="professor"?"acc":"ok"}">${u.role==="professor"?"Lecturer":"Student"}</span></div>
+    <dl class="kv">
+      <dt>Name</dt><dd>${esc(u.full_name)}</dd>
+      <dt>Email</dt><dd>${esc(u.email)}</dd>
+      <dt>Backend</dt><dd>${state.offline ? '<span class="flag">Not connected</span>' : '<span style="color:var(--ok)">Connected</span>'} <span class="mono" style="color:var(--muted)">${esc(API_BASE)}</span></dd>
+      <dt>LLM</dt><dd>${o ? (o.model_available ? esc(o.model)+" ready" : '<span class="flag">'+esc(o.model)+' not available</span>') : "–"}</dd>
+    </dl>
+    <div style="margin-top:14px"><button class="btn" data-logout>${ICON.logout.replace('<svg','<svg width="15" height="15" style="vertical-align:-3px;margin-right:6px"')}Logout</button></div>
+  </section>`;
+}
+
+function viewSettings(){
+  if (isProf()) return `<div class="topbar"><div><div class="eyebrow">Profile and connection</div><h1>Account</h1></div></div>${accountPanel()}`;
+  const sw = (k,t,dsc) => `<div class="set-row"><div><div class="t">${t}</div><div class="d">${dsc}</div></div><button class="switch" role="switch" aria-checked="${state.settings[k]}" aria-label="${t}" data-set="${k}"></button></div>`;
+  const prem = state.premium;
+  return `
+  <div class="topbar"><div><div class="eyebrow">Reminders, plan and account</div><h1>Settings</h1></div></div>
+  <div class="cols">
+    <div class="stack">
+      ${accountPanel()}
+      <section class="panel">
+        <div class="panel-h"><h2>Reminders</h2></div>
+        ${sw("dayBefore","1 day before a deadline","A push notification with time left and effort needed")}
+        ${sw("threeHours","3 hours before a deadline","Only if the task is not marked done")}
+        ${sw("brief","Daily brief at 08:00","Your priorities and today's classes")}
+        ${sw("quiet","Quiet hours 22:00–07:00","No notifications overnight")}
+        ${sw("digest","Weekly digest by email","Sunday evening overview of next week")}
+      </section>
+    </div>
+    <section class="panel">
+      <div class="panel-h"><h2>Your plan</h2></div>
+      <div class="plans">
+        <div class="plan ${prem?'':'on'}">
+          <span class="chip ok" style="align-self:flex-start">Paid by your university</span>
+          <h3>Campus</h3>
+          <div class="price">€0 <small>for students</small></div>
+          <ul><li>All your systems in one place</li><li>Priorities and reminders</li><li>AI deadline detection in messages</li><li>Ask Bro, the local AI assistant</li></ul>
+        </div>
+        <div class="plan ${prem?'on':''}">
+          <span class="chip acc" style="align-self:flex-start">Optional</span>
+          <h3>Premium</h3>
+          <div class="price">€3.99 <small>per month</small></div>
+          <ul><li><b style="color:var(--fg)">Transcribe Bro</b>: lectures and meetings turned into notes and tasks</li><li>Calendar sync with Google and Apple</li></ul>
+          <button class="btn ${prem?'':'primary'}" data-premium>${prem?'Switch back to Campus':'Try Premium free for 14 days'}</button>
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin:14px 0 0">Universities pay a yearly licence per enrolled student. Students can upgrade to Premium on their own.</p>
+    </section>
+  </div>`;
+}
+
+// =====================================================================
+// 7. AUTH SCREEN
+// =====================================================================
+function viewAuth(){
+  const a = state.auth;
+  const tab = (k,l) => `<button type="button" data-auth-tab="${k}" aria-pressed="${a.tab===k}">${l}</button>`;
+  const role = (k,l) => `<button type="button" data-auth-role="${k}" aria-pressed="${a.role===k}">${l}</button>`;
+  const err = a.error ? `<div class="form-err" role="alert">${esc(a.error)}</div>` : "";
+  const login = `
+    <form class="form" id="loginForm" novalidate>
+      <label class="field">Email<input type="email" data-bind="auth.email" value="${esc(a.email)}" autocomplete="username" required></label>
+      <label class="field">Password<input type="password" data-bind="auth.password" value="${esc(a.password)}" autocomplete="current-password" required></label>
+      ${err}
+      <button class="btn primary block" type="submit" ${a.busy?'disabled':''}>${a.busy?'Signing in…':'Sign in'}</button>
+    </form>`;
+  const register = `
+    <form class="form" id="registerForm" novalidate>
+      <div class="field">Role<div class="filters seg" role="group" aria-label="Role">${role("student","Student")}${role("professor","Lecturer")}</div></div>
+      <label class="field">Full name<input data-bind="auth.full_name" value="${esc(a.full_name)}" autocomplete="name" placeholder="${a.role==='professor'?'Prof. Anna Smith':'Anna Smith'}" required></label>
+      <label class="field">Email<input type="email" data-bind="auth.email" value="${esc(a.email)}" autocomplete="email" required></label>
+      <label class="field">Password <span style="font-weight:400">(at least 6 characters)</span><input type="password" data-bind="auth.password" value="${esc(a.password)}" autocomplete="new-password" minlength="6" required></label>
+      ${a.role==='professor' ? '<div class="note" style="font-size:13px">Moodle courses taught under your name are linked to your account automatically. You can also create new ones from “My Courses”.</div>' : ''}
+      ${err}
+      <button class="btn primary block" type="submit" ${a.busy?'disabled':''}>${a.busy?'Creating account…':'Create account'}</button>
+    </form>`;
+  const demo = a.demo && a.demo.accounts && a.demo.accounts.length ? `
+    <div>
+      <div class="eyebrow" style="margin-bottom:8px">Demo accounts · password ${esc(a.demo.password)}</div>
+      <div class="demo-list">${a.demo.accounts.map(x=>`<button type="button" data-demo-login="${esc(x.email)}"><span>${esc(x.full_name)}</span><small>${x.role==="professor"?"Lecturer":"Student"} · ${esc(x.email)}</small></button>`).join("")}</div>
+    </div>` : "";
+  return `
+  ${offlineBanner()}
+  <div class="auth">
+    <section class="panel auth-card" aria-label="Sign in">
+      <div class="brand"><div class="brand-mark">R</div><b>Remind Me Bro</b></div>
+      <p class="auth-sub">Moodle, Teams and email in one place, with an AI assistant that runs locally.</p>
+      <div class="filters seg" role="group" aria-label="Sign in or register">${tab("login","Sign in")}${tab("register","Register")}</div>
+      ${a.tab==="login" ? login : register}
+      ${a.tab==="login" ? demo : ""}
+    </section>
+  </div>`;
+}
+
+// =====================================================================
+// 8. TEACHER VIEWS
+// =====================================================================
+// Lecturer views share the English date format of the student views
+const fmtDit = fmtD;
+const fmtDTit = fmtDT;
+const statusIt = status;
+const CHANNELS = [["teams","Teams"],["moodle","Moodle"],["email","Email"]];
+const SAMPLES = [
+  "Hi everyone, the project deadline is moved to 25 October at 18:00.",
+  "Remember to upload your lab report by next Friday.",
+  "Regular lecture tomorrow in the usual room, please bring your laptop."
+];
+const courseOptions = (sel) => state.prof.courses.map(c=>`<option value="${c.id}" ${String(sel)===String(c.id)?'selected':''}>${esc(c.code)} · ${esc(c.name)}</option>`).join("");
+const chSrc = ch => SRC[srcKey(ch)];
+
+function viewProfCourses(){
+  const cs = state.prof.courses;
+  const a = state.assign, n = state.newCourse;
+  if (!a.due){ const dd = new Date(NOW); dd.setDate(dd.getDate()+7); dd.setHours(23,59,0,0); a.due = inputLocal(dd); }
+  const list = cs.length ? cs.map(c=>`<div class="rec">
+      <div class="ic">${ICON.pcourses}</div>
+      <div style="min-width:0">
+        <div class="t"><span class="code">${esc(c.code)}</span>${esc(c.name)}</div>
+        <div class="stat"><span><b>${c.deadline_count}</b> deadlines</span><span><b>${c.ai_deadline_count}</b> extracted by AI</span><span><b>${c.announcement_count}</b> announcements</span></div>
+        <div class="d" style="margin-top:4px">${c.next_deadline ? `Next: <b style="color:var(--fg)">${esc(c.next_deadline.title)}</b> · ${fmtDTit(parseDT(c.next_deadline.due_date))}` : "No upcoming deadlines"}</div>
+      </div>
+      <button class="btn primary" data-pub-course="${c.id}">Announce</button>
+    </div>`).join("") : `<div class="empty">You don't manage any course yet. Create one on the right: Moodle courses taught under your name are linked automatically.</div>`;
+  return `
+  <div class="topbar">
+    <div><div class="eyebrow">Lecturer area · ${esc(state.user.full_name)}</div><h1>My Courses</h1></div>
+    <button class="btn primary" data-go="publish">${ICON.publish.replace('<svg','<svg width="15" height="15" style="vertical-align:-3px;margin-right:6px"')}Post announcement</button>
+  </div>
+  <div class="cols">
+    <section class="panel">
+      <div class="panel-h"><h2>Courses you manage</h2><span class="sub">${cs.length} course${cs.length===1?'':'s'}</span></div>
+      ${list}
+    </section>
+    <div class="stack">
+      <section class="panel">
+        <div class="panel-h"><h2>New assignment</h2><span class="sub">Structured deadline, no AI</span></div>
+        ${cs.length ? `<form class="form" id="assignForm" novalidate>
+          <label class="field">Course<select data-bind="assign.course_id">${courseOptions(a.course_id)}</select></label>
+          <label class="field">Title<input data-bind="assign.title" value="${esc(a.title)}" placeholder="e.g. Final project" required></label>
+          <label class="field">Description<textarea data-bind="assign.description" style="min-height:80px" placeholder="Optional">${esc(a.description)}</textarea></label>
+          <label class="field">Due<input type="datetime-local" data-bind="assign.due" value="${esc(a.due)}" required></label>
+          ${a.err?`<div class="form-err">${esc(a.err)}</div>`:''}${a.msg?`<div class="form-ok">${esc(a.msg)}</div>`:''}
+          <button class="btn primary" type="submit" ${a.busy?'disabled':''}>${a.busy?'Saving…':'Create assignment'}</button>
+        </form>` : '<div class="empty">Create a course first.</div>'}
+      </section>
+      <section class="panel">
+        <div class="panel-h"><h2>New course</h2></div>
+        <form class="form" id="courseForm" novalidate>
+          <div class="row2">
+            <label class="field">Code<input data-bind="newCourse.code" value="${esc(n.code)}" placeholder="BEHAV-2026" required></label>
+            <label class="field">Name<input data-bind="newCourse.name" value="${esc(n.name)}" placeholder="Behavioural Finance" required></label>
+          </div>
+          ${n.err?`<div class="form-err">${esc(n.err)}</div>`:''}${n.msg?`<div class="form-ok">${esc(n.msg)}</div>`:''}
+          <button class="btn" type="submit" ${n.busy?'disabled':''}>${n.busy?'Creating…':'Add course'}</button>
+        </form>
+      </section>
+    </div>
+  </div>`;
+}
+
+function pubResult(){
+  const p = state.pub, r = p.result;
+  if (p.busy) return `<div class="sub" style="color:var(--muted)">llama3.2 is reading the message and looking for deadlines…</div><div class="progress indet"><span></span></div>`;
+  if (p.error) return `<div class="note warn">${esc(p.error)}</div>`;
+  if (!r) return `<div class="empty">Write an informal message as you would on Teams and press <b>Post and analyse</b>. You will see the JSON produced by Ollama and the deadline saved in the database here.</div>`;
+  const ex = r.extraction;
+  const chip = {deadline_extracted:["Deadline extracted","ok"], no_deadline:["No deadline","later"], llm_unavailable:["LLM unavailable","now"], parsing_error:["Invalid JSON","now"]}[r.status] || [r.status,"later"];
+  let body = "";
+  if (r.status === "llm_unavailable" || r.status === "parsing_error"){
+    body = `<div class="note warn"><b>The announcement was posted</b>, but the AI analysis failed.<br>${esc(r.error || "")}</div>`;
+  } else if (ex){
+    body = `<dl class="kv">
+      <dt>Deadline</dt><dd>${ex.has_deadline ? "Yes" : "No"}</dd>
+      <dt>Course</dt><dd>${esc(r.matched_course || ex.course_name || "–")}</dd>
+      <dt>Title</dt><dd>${esc(ex.title || "–")}</dd>
+      <dt>Date and time</dt><dd>${ex.due_date ? `<span class="mono" style="font-size:14.5px">${fmtDTit(parseDT(ex.due_date))}</span>` : "–"}</dd>
+      <dt>Description</dt><dd style="font-weight:400">${esc(ex.description || "–")}</dd>
+    </dl>`;
+    if (r.updates_existing){
+      const u = r.updates_existing;
+      body += `<div class="note"><b>Updates an existing assignment:</b> “${esc(u.moodle_title)}” moves from ${fmtDTit(parseDT(u.old_due_date))} to <b>${fmtDTit(parseDT(u.new_due_date))}</b>. Students will only see the new date.</div>`;
+    }
+    if (r.saved_deadline) body += `<div class="form-ok">Saved in SQLite (deadline #${r.saved_deadline.id}) and visible to students right away.</div>`;
+  }
+  let raw = r.raw_llm_output || "";
+  try { raw = JSON.stringify(JSON.parse(raw.replace(/^```(?:json)?\s*|```\s*$/g,"")), null, 2); } catch(e) {}
+  return `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><span class="chip ${chip[1]}">${chip[0]}</span><span class="sub" style="color:var(--muted);font-size:13px">${r.llm_seconds ? "Analysed in "+r.llm_seconds.toFixed(1)+" s" : ""}${r.indexed_in_vector_db ? " · indexed in ChromaDB" : ""}</span></div>
+    <div style="display:flex;flex-direction:column;gap:12px">${body}
+    ${raw ? `<div><div class="eyebrow" style="margin-bottom:6px">Ollama JSON output</div><pre class="json">${esc(raw)}</pre></div>` : ""}</div>`;
+}
+
+function viewPublish(){
+  const p = state.pub;
+  const cs = state.prof.courses;
+  const ch = (k,l) => `<button type="button" data-channel="${k}" aria-pressed="${p.channel===k}">${l}</button>`;
+  const recent = state.prof.announcements.slice(0,6).map(a=>{const s=chSrc(a.source);return `<div class="msg"><div class="av" style="background:${s.c}">${esc((CODES[(cs.find(c=>c.id===a.course_id)||{}).name]||"").split("-")[0].slice(0,3) || initials(a.author))}</div><div style="min-width:0"><div class="from"><b>${esc((cs.find(c=>c.id===a.course_id)||{}).name || "Course")}</b><span>·</span><span>${s.name}</span><span class="mono" style="margin-left:auto">${msgTime(parseDT(a.created_at))}</span></div><div class="orig" style="margin-top:2px">${esc(a.content)}</div></div></div>`;}).join("");
+  return `
+  <div class="topbar">
+    <div><div class="eyebrow">Teams / Moodle / email simulator</div><h1>Post Announcement</h1></div>
+    <button class="btn" data-go="extracted">Extracted deadlines</button>
+  </div>
+  <div class="cols">
+    <div class="stack">
+      <section class="panel">
+        <div class="panel-h"><h2>New message</h2><span class="sub">Free text, as you would write it to students</span></div>
+        ${cs.length ? `<form class="form" id="pubForm" novalidate>
+          <div class="row2">
+            <label class="field">Course<select data-bind="pub.course_id">${courseOptions(p.course_id)}</select></label>
+            <div class="field">Channel<div class="filters seg" role="group" aria-label="Channel">${CHANNELS.map(([k,l])=>ch(k,l)).join("")}</div></div>
+          </div>
+          <label class="field">Message<textarea id="pubText" data-bind="pub.text" placeholder="e.g. Hi everyone, the project deadline is moved to next Friday at 23:59!" required>${esc(p.text)}</textarea></label>
+          <div class="chips">${SAMPLES.map((s,i)=>`<button type="button" data-sample="${i}">${esc(s.length>48?s.slice(0,46)+"…":s)}</button>`).join("")}</div>
+          <button class="btn primary" type="submit" ${p.busy?'disabled':''}>${ICON.spark.replace('<svg','<svg width="14" height="14" style="vertical-align:-2px;margin-right:6px"')}${p.busy?'Analysing…':'Post and analyse'}</button>
+        </form>` : `<div class="empty">You don't manage any course yet. <button class="btn" data-go="pcourses">Create a course</button></div>`}
+      </section>
+      <section class="panel">
+        <div class="panel-h"><h2>Your latest announcements</h2><span class="sub">${state.prof.announcements.length}</span></div>
+        <div class="msgs">${recent || '<div class="empty">No announcements posted from the app yet.</div>'}</div>
+      </section>
+    </div>
+    <section class="panel">
+      <div class="panel-h"><h2>AI result</h2><span class="sub">llama3.2 · local Ollama</span></div>
+      ${pubResult()}
+    </section>
+  </div>`;
+}
+
+function viewExtracted(){
+  const list = state.prof.extracted;
+  const items = list.map(x=>{
+    const s = SRC[srcKey(x.source)];
+    const editing = state.prof.editing === x.id;
+    const del = state.prof.confirmDel === x.id;
+    const due = parseDT(x.due_date);
+    const st = statusIt(due);
+    return `<div class="xd">
+      <div class="head">${x.course_code?`<span class="code">${esc(x.course_code)}</span>`:""}<b>${esc(x.title)}</b>${srcTag(srcKey(x.source))}<span class="chip ${st[1]}" style="margin-left:auto">${st[0]}</span></div>
+      <div class="stat"><span>Due <b class="mono" style="font-size:14px">${fmtDTit(due)}</b></span><span>${esc(x.course_name || "Course not recognised")}</span>${x.replaces?`<span>Moves “${esc(x.replaces.title)}” from ${fmtDit(parseDT(x.replaces.old_due_date))}</span>`:""}</div>
+      ${x.description?`<div style="font-size:14px">${esc(x.description)}</div>`:""}
+      ${x.source_message?`<div class="orig">“${esc(x.source_message)}”</div>`:""}
+      ${editing ? `<form class="form" id="editForm" data-id="${x.id}" novalidate style="margin-top:4px">
+          <div class="row2">
+            <label class="field">Title<input name="title" value="${esc(x.title)}" required></label>
+            <label class="field">Due<input type="datetime-local" name="due" value="${inputLocal(due)}" required></label>
+          </div>
+          <div class="row-actions" style="display:flex;gap:8px"><button class="btn primary" type="submit">Save correction</button><button class="btn" type="button" data-edit-cancel>Cancel</button></div>
+        </form>` : `<div class="row-actions">
+          <button class="btn" data-edit="${x.id}">Correct</button>
+          ${del ? `<button class="btn danger" data-del-confirm="${x.id}">Confirm discard</button><button class="btn" data-del-cancel>Cancel</button>` : `<button class="btn" data-del="${x.id}">Discard</button>`}
+        </div>`}
+    </div>`;
+  }).join("");
+  return `
+  <div class="topbar">
+    <div><div class="eyebrow">Review of automatic extraction</div><h1>AI-Extracted Deadlines</h1></div>
+    <button class="btn" data-reload>${ICON.sync.replace('<svg','<svg width="14" height="14" style="vertical-align:-2px;margin-right:6px"')}Refresh</button>
+  </div>
+  <section class="panel">
+    <div class="panel-h"><h2>From your messages and courses</h2><span class="sub">${list.length} deadline${list.length===1?'':'s'}</span></div>
+    ${items || '<div class="empty">No extracted deadlines yet. Post an announcement with a date, or ask a student to sync Teams.</div>'}
+  </section>`;
+}
+
+// =====================================================================
+// 9. RENDER + ROUTING
+// =====================================================================
+const STUDENT_VIEWS = {today:viewToday, inbox:viewInbox, schedule:viewSchedule, studies:viewStudies, overview:viewOverview, connections:viewConnections, ask:viewAsk, transcribe:viewTranscribe, settings:viewSettings};
+const PROF_VIEWS = {pcourses:viewProfCourses, publish:viewPublish, extracted:viewExtracted, settings:viewSettings};
+
+function render(){
+  const app = document.querySelector(".app");
+  const view = document.getElementById("view");
+  app.classList.toggle("logged-out", !state.user);
+  if (state.booting){
+    document.getElementById("nav").innerHTML = ""; document.getElementById("userbox").innerHTML = "";
+    view.innerHTML = `<section class="panel"><div class="empty">Connecting to the backend…</div><div class="progress indet"><span></span></div></section>`;
+    return;
+  }
+  if (!state.user){
+    document.getElementById("nav").innerHTML = ""; document.getElementById("userbox").innerHTML = "";
+    view.innerHTML = viewAuth();
+    return;
+  }
+  renderNav();
+  const views = isProf() ? PROF_VIEWS : STUDENT_VIEWS;
+  if (!views[state.view]) state.view = navFor()[0][0];
+  const loading = state.loading ? `<div class="sub" style="color:var(--muted);font-size:13px">Loading data…</div>` : "";
+  view.innerHTML = acctMobile() + offlineBanner() + loading + views[state.view]();
+  const chat = document.getElementById("chat");
+  if (chat) chat.lastElementChild && chat.lastElementChild.scrollIntoView({block:"nearest"});
+}
+
+function toast(title, body){
+  const host = document.getElementById("toastHost");
+  host.innerHTML = `<div class="toast" role="status"><div class="brand-mark">R</div><div><b>${esc(title)}</b><span>${esc(body)}</span></div></div>`;
+  clearTimeout(toast.t); toast.t = setTimeout(()=>{host.innerHTML=""}, 4600);
+}
+
+function go(view){
+  if (!navFor().some(([k])=>k===view)) view = navFor()[0][0];
+  state.view = view;
+  try{ history.replaceState(null, "", "#"+view); }catch(e){}
+  render(); window.scrollTo(0,0);
+  if (view === "studies" && !state.studies && !state.studiesBusy && unisisConnected()) loadStudies();
+}
+
+function setOffline(v){
+  if (state.offline === v) return;
+  state.offline = v;
+  if (!state.booting) render();
+}
+
+// =====================================================================
+// 10. SESSION
+// =====================================================================
+function resetData(){
+  tasks = []; msgs = []; classes = {}; studyBlocks = {}; allEvents = []; courseList = [];
+  state.chat = []; state.planned = false; state.openMsg = null;
+  state.unisis = null; state.studies = null; state.studiesErr = ""; state.pending = null; state.confirmDisconnect = false;
+  state.unilearn = null; state.ul = { username:"giulia.esposito", password:"", error:"" }; state.confirmUlDisconnect = false;
+  state.prof = { courses:[], extracted:[], announcements:[], editing:null, confirmDel:null };
+  state.pub = { course_id:"", channel:"teams", text:"", busy:false, result:null, error:"" };
+  state.assign = { course_id:"", title:"", description:"", due:"", busy:false, msg:"", err:"" };
+  state.newCourse = { code:"", name:"", busy:false, msg:"", err:"" };
+}
+async function startSession(tokenResponse){
+  API.token = tokenResponse.access_token;
+  state.user = tokenResponse.user;
+  store.set("rmb.token", API.token);
+  store.setJSON("rmb.user", state.user);
+  readSet = new Set(store.getJSON(readKey(), []));
+  resetData();
+  state.auth = { ...state.auth, password:"", busy:false, error:"" };
+  state.view = navFor()[0][0];
+  state.loading = true; go(state.view);
+  await loadAll(); render();
+  toast(isProf() ? "Welcome to the lecturer area" : "Welcome, " + firstName(state.user), isProf() ? "Post an announcement and the AI will extract the deadlines." : "Your deadlines, messages and timetable are loaded.");
+}
+function clearSession(){
+  API.token = null; state.user = null;
+  store.del("rmb.token"); store.del("rmb.user");
+  resetData();
+}
+function logout(){
+  clearSession();
+  try{ history.replaceState(null, "", location.pathname + location.search); }catch(e){}
+  loadDemoAccounts();
+  render();
+}
+function onUnauthorized(){
+  if (!state.user) return;
+  clearSession();
+  state.auth.error = "Your session has expired. Please sign in again.";
+  toast("Session expired", "Please sign in again.");
+  loadDemoAccounts();
+  render();
+}
+async function loadDemoAccounts(){
+  try { state.auth.demo = await API.demoAccounts(); if (!state.user) render(); } catch(e) {}
+}
+async function refreshHealth(){
+  try {
+    const h = await API.health();
+    state.health = h;
+    if (h.reference_date) NOW = parseDT(h.reference_date);
+    return true;
+  } catch(e) { return false; }
+}
+
+// =====================================================================
+// 11. ACTIONS
+// =====================================================================
+async function doLogin(email, password){
+  const a = state.auth;
+  if (!email || !password){ a.error = "Enter your email and password."; return render(); }
+  a.busy = true; a.error = ""; render();
+  try { await startSession(await API.login(email, password)); }
+  catch(err){ a.busy = false; a.error = err.message; render(); }
+}
+async function doRegister(){
+  const a = state.auth;
+  if (!a.full_name.trim() || !a.email.trim() || a.password.length < 6){ a.error = "Fill in name, email and a password of at least 6 characters."; return render(); }
+  a.busy = true; a.error = ""; render();
+  try { await startSession(await API.register({ email:a.email.trim(), password:a.password, full_name:a.full_name.trim(), role:a.role })); }
+  catch(err){ a.busy = false; a.error = err.message; render(); }
+}
+
+async function runSync(){
+  state.syncing = true; state.conns.forEach(c=>c.syncing=true); render();
+  toast("Sync started", "Importing UniLearn, UniSIS and Teams. The local AI is reading new messages, this can take a minute.");
+  try {
+    const s = await API.sync();
+    await loadAll();
+    state.conns.forEach(c=>{ c.mins = 0; });
+    if (state.studies) loadStudies();
+    const errs = s.errors && s.errors.length ? ` ${s.errors.length} warning(s): ${s.errors[0]}` : "";
+    const uni = s.unisis && s.unisis.status === "ok" ? ` UniSIS: ${s.unisis.deadlines} registration reminder(s).` : "";
+    toast("Everything is up to date", `${s.unilearn ? s.moodle_deadlines_imported + " UniLearn assignments" : "UniLearn not connected"}, ${s.teams_messages_processed} Teams messages, ${s.emails_processed || 0} emails, ${s.ai_deadlines_extracted} deadline(s) found by AI.${uni}${errs}`);
+    return s;
+  } catch(err){
+    toast("Sync failed", err.message);
+    return null;
+  } finally {
+    state.syncing = false; state.conns.forEach(c=>c.syncing=false); render();
+  }
+}
+async function connectUnisis(){
+  state.pending = "unisis-connect"; render();
+  try {
+    const r = await API.connectUnisis();
+    location.href = r.authorize_url;          // the browser goes to UniSIS (login + consent), then comes back
+  } catch(err){ state.pending = null; toast("Cannot connect UniSIS", err.message); render(); }
+}
+async function syncUnisis(){
+  state.pending = "unisis-sync"; render();
+  try {
+    const r = await API.syncUnisis();
+    await loadAll(); await loadStudies();
+    toast("UniSIS synced", `${r.events} timetable entries and ${r.deadlines} registration reminder(s) imported.`);
+  } catch(err){ toast("UniSIS sync failed", err.message); await loadAll(); }
+  finally { state.pending = null; render(); }
+}
+async function disconnectUnisis(){
+  state.pending = "unisis-disconnect"; render();
+  try { await API.disconnectUnisis(); state.studies = null; await loadAll(); toast("UniSIS disconnected", "Tokens revoked. Your UniSIS data was removed from Remind Me Bro."); }
+  catch(err){ toast("Could not disconnect", err.message); }
+  finally { state.pending = null; state.confirmDisconnect = false; render(); }
+}
+async function connectMoodle(){
+  const f = state.ul;
+  if (!f.username.trim() || !f.password){ f.error = "Enter your UniLearn username and password."; return render(); }
+  state.pending = "ul-connect"; f.error = ""; render();
+  try {
+    const r = await API.connectMoodle(f.username.trim(), f.password);
+    f.password = "";
+    await loadAll();
+    toast("UniLearn connected", `${r.assignments} assignments (${r.submitted} already submitted), ${r.events} course events and ${r.posts} announcements imported. Press Sync all to let the AI read the announcements.`);
+  } catch(err){ f.error = err.message; }
+  finally { state.pending = null; render(); }
+}
+async function syncMoodle(){
+  state.pending = "ul-sync"; render();
+  try {
+    const r = await API.syncMoodle();
+    await loadAll();
+    const ai = (r.ai_details || []).filter(d => d.status === "deadline_extracted").length;
+    toast("UniLearn synced", `${r.assignments} assignments, ${r.events} events, ${r.posts} announcements${ai ? `, ${ai} deadline(s) found by AI in new posts` : ""}.`);
+  } catch(err){ toast("UniLearn sync failed", err.message); await loadAll(); }
+  finally { state.pending = null; render(); }
+}
+async function disconnectMoodle(){
+  state.pending = "ul-disconnect"; render();
+  try { await API.disconnectMoodle(); await loadAll(); toast("UniLearn disconnected", "The token was removed from Remind Me Bro. You can also delete it in UniLearn under Security keys."); }
+  catch(err){ toast("Could not disconnect", err.message); }
+  finally { state.pending = null; state.confirmUlDisconnect = false; render(); }
+}
+async function studiesAction(key, fn, okTitle, okBody){
+  if (state.pending) return;
+  state.pending = key; render();
+  try {
+    await fn();
+    await Promise.all([loadStudies(), loadAll()]);
+    toast(okTitle, okBody);
+  } catch(err){ toast("UniSIS said no", err.message); await loadAll(); await loadStudies(); }
+  finally { state.pending = null; render(); }
+}
+async function planWeek(){
+  if (state.syncing) return;
+  await runSync();
+  const n = planStudyBlocks();
+  state.planned = true;
+  if (!state.day) state.day = dayKey(NOW);
+  toast("Your week is planned", n ? `${n} study block${n===1?'':'s'} added around your classes and deadlines.` : "No deadlines in the next days, your week stays free.");
+  if (state.view !== "schedule") go("schedule"); else render();
+}
+
+async function ask(q){
+  if (state.chatBusy) return;
+  state.chat.push({me:true, html:esc(q)});
+  const bot = {me:false, html:'<span class="typing">llama3.2 is reading your data…</span>'};
+  state.chat.push(bot);
+  state.chatBusy = true; render();
+  try { const r = await API.chat(q); bot.html = fmtAnswer(r.answer); }
+  catch(err){ bot.html = `<span class="flag">${esc(err.status===503 ? "The local model is not available: "+err.message : err.message)}</span>`; }
+  finally {
+    state.chatBusy = false;
+    if (state.view === "ask"){ render(); const i = document.getElementById("askInput"); if (i) i.focus(); }
+  }
+}
+
+async function toggleTask(id){
+  const t = tasks.find(x=>x.id===id); if (!t) return;
+  t.done = !t.done;
+  toast(t.done?"Nice, one less thing":"Moved back to your list", t.done?t.title+" is done. Click again to undo.":t.title);
+  render();
+  if (!t.apiId) return;
+  try { await API.setDone(t.apiId, t.done); }
+  catch(err){ t.done = !t.done; toast("Could not save", err.message); render(); }
+}
+
+async function publish(){
+  const p = state.pub;
+  if (!p.text.trim() || p.text.trim().length < 5){ p.error = "Write a message of at least 5 characters."; p.result = null; return render(); }
+  p.busy = true; p.error = ""; p.result = null; render();
+  try {
+    p.result = await API.prof.publish({ course_id: +p.course_id, content: p.text.trim(), channel: p.channel });
+    p.text = "";
+    await loadProfessorData();
+    toast("Announcement posted", p.result.status === "deadline_extracted" ? "The AI found a deadline and saved it." : p.result.status === "no_deadline" ? "No deadline in the message." : "Announcement saved, AI analysis failed.");
+  } catch(err){ p.error = err.message; }
+  finally { p.busy = false; render(); }
+}
+async function createAssignment(){
+  const a = state.assign;
+  a.err = ""; a.msg = "";
+  if (!a.title.trim() || !a.due){ a.err = "Title and due date are required."; return render(); }
+  a.busy = true; render();
+  try {
+    const dl = await API.prof.createAssignment({ course_id: +a.course_id, title: a.title.trim(), description: a.description.trim() || null, due_date: a.due.length === 16 ? a.due + ":00" : a.due });
+    a.msg = `Assignment created: ${dl.title} (${fmtDT(parseDT(dl.due_date))}).`; a.title = ""; a.description = "";
+    await loadProfessorData();
+  } catch(err){ a.err = err.message; }
+  finally { a.busy = false; render(); }
+}
+async function createCourse(){
+  const n = state.newCourse;
+  n.err = ""; n.msg = "";
+  if (!n.code.trim() || !n.name.trim()){ n.err = "Code and name are required."; return render(); }
+  n.busy = true; render();
+  try { const c = await API.prof.createCourse({ code:n.code.trim(), name:n.name.trim() }); n.msg = `Course ${c.code} created.`; n.code = ""; n.name = ""; await loadProfessorData(); }
+  catch(err){ n.err = err.message; }
+  finally { n.busy = false; render(); }
+}
+async function saveExtracted(form){
+  const id = +form.dataset.id;
+  const title = form.elements.title.value.trim(), due = form.elements.due.value;
+  if (!title || !due) return toast("Missing data", "Title and due date are required.");
+  try { await API.prof.updateExtracted(id, { title, due_date: due.length === 16 ? due + ":00" : due }); state.prof.editing = null; await loadProfessorData(); toast("Deadline corrected", title); }
+  catch(err){ toast("Could not save", err.message); }
+  render();
+}
+async function deleteExtracted(id){
+  try { await API.prof.deleteExtracted(id); state.prof.confirmDel = null; await loadProfessorData(); toast("Deadline discarded", "Students will no longer see it."); }
+  catch(err){ toast("Could not discard", err.message); }
+  render();
+}
+
+// =====================================================================
+// 12. EVENTS
+// =====================================================================
+function setPath(path, value){
+  const [obj, key] = path.split(".");
+  if (state[obj] && key in state[obj]) state[obj][key] = value;
+}
+document.addEventListener("input", e => { const p = e.target.dataset && e.target.dataset.bind; if (p) setPath(p, e.target.value); });
+document.addEventListener("change", e => {
+  const p = e.target.dataset && e.target.dataset.bind; if (p) setPath(p, e.target.value);
+  if (e.target.id==="txFile" && e.target.files && e.target.files.length) startTx("lec");
+});
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button,[data-toggle]"); if (!b || b.disabled) return;
+  const ds = b.dataset;
+  // --- session / auth ---
+  if ("logout" in ds) return logout();
+  if ("retry" in ds){ refreshHealth().then(ok => { if (ok && state.user) loadAll().then(render); else render(); if (!state.user) loadDemoAccounts(); }); return; }
+  if (ds.authTab){ state.auth.tab = ds.authTab; state.auth.error = ""; return render(); }
+  if (ds.authRole){ state.auth.role = ds.authRole; return render(); }
+  if (ds.demoLogin){
+    const pw = state.auth.demo ? state.auth.demo.password : "";
+    state.auth.email = ds.demoLogin; state.auth.password = pw;
+    return doLogin(ds.demoLogin, pw);
+  }
+  if (ds.go) return go(ds.go);
+  // --- teacher ---
+  if (ds.pubCourse){ state.pub.course_id = ds.pubCourse; return go("publish"); }
+  if (ds.channel){ state.pub.channel = ds.channel; return render(); }
+  if (ds.sample !== undefined){ state.pub.text = SAMPLES[+ds.sample]; render(); const t = document.getElementById("pubText"); if (t) t.focus(); return; }
+  if (ds.edit){ state.prof.editing = +ds.edit; state.prof.confirmDel = null; return render(); }
+  if ("editCancel" in ds){ state.prof.editing = null; return render(); }
+  if (ds.del){ state.prof.confirmDel = +ds.del; return render(); }
+  if ("delCancel" in ds){ state.prof.confirmDel = null; return render(); }
+  if (ds.delConfirm) return deleteExtracted(+ds.delConfirm);
+  if ("reload" in ds){ loadAll().then(render); return; }
+  // --- student ---
+  if (ds.toggle) return toggleTask(ds.toggle);
+  if ("plan" in ds) return planWeek();
+  if ("unplan" in ds){ state.planned = false; return render(); }
+  if (ds.day){ state.day = ds.day; return render(); }
+  if (ds.filter){ state.inboxFilter = ds.filter; state.openMsg=null; return render(); }
+  if (ds.open){ state.openMsg = state.openMsg===ds.open ? null : ds.open; const m=msgs.find(x=>x.id===ds.open); if (m){ m.unread=false; markRead([m.id]); } return render(); }
+  if (ds.act){
+    const m = msgs.find(x=>x.id===ds.act); if (!m) return;
+    m.unread = false; markRead([m.id]);
+    const t = m.task && tasks.find(x=>x.id===m.task);
+    if (t){ state.day = dayKey(t.due); toast("Deadline in your schedule", `${t.title} · ${dueLabel(t.due)}`); return go("schedule"); }
+    toast("Done", m.act[+ds.i]+"."); return render();
+  }
+  if ("readall" in ds){ msgs.forEach(m=>m.unread=false); markRead(msgs.map(m=>m.id)); return render(); }
+  if (ds.ask){ ask(ds.ask); return; }
+  if (ds.txStart){ startTx(ds.txStart); return; }
+  if ("txReset" in ds){ state.tx = {id:null, progress:0, added:[]}; return render(); }
+  if (ds.txAdd){
+    const t = RECS[state.tx.id].todos[+ds.txAdd];
+    tasks.push({id:"tx"+Date.now(), title:t.title, course:t.course, src:"moodle", due:d(...t.due), effort:t.effort, weight:t.weight, done:false});
+    state.tx.added.push(+ds.txAdd); toast("Added to your tasks", t.title); return render();
+  }
+  if (ds.ovSub){ state.ov.sub = ds.ovSub; state.ov.item = null; return render(); }
+  if (ds.ovItem){ state.ov.item = ds.ovItem; state.ov.sub = ds.ovItem.split(":")[0]; return render(); }
+  if (ds.ovType){ const o=state.ov.off; const k=ds.ovType; state.ov.off = o.includes(k) ? o.filter(x=>x!==k) : o.concat(k); return render(); }
+  if (ds.sync){ runSync(); return; }
+  if ("unisisConnect" in ds) return connectUnisis();
+  if ("unisisSync" in ds) return syncUnisis();
+  if ("ulSync" in ds) return syncMoodle();
+  if (ds.ulDisconnect){
+    if (ds.ulDisconnect === "ask"){ state.confirmUlDisconnect = true; return render(); }
+    if (ds.ulDisconnect === "cancel"){ state.confirmUlDisconnect = false; return render(); }
+    return disconnectMoodle();
+  }
+  if (ds.unisisDisconnect){
+    if (ds.unisisDisconnect === "ask"){ state.confirmDisconnect = true; return render(); }
+    if (ds.unisisDisconnect === "cancel"){ state.confirmDisconnect = false; return render(); }
+    return disconnectUnisis();
+  }
+  if ("studiesReload" in ds){ loadStudies(); return; }
+  if (ds.examRegister){ const id = +ds.examRegister; const e = (state.studies.exams||[]).find(x=>x.id===id);
+    return studiesAction("exam-"+id, () => API.examRegister(id), "Registered in UniSIS", e ? `${e.course_name} · ${e.title}, ${fmtWhen(e.starts_at)}.` : ""); }
+  if (ds.examCancel){ const id = +ds.examCancel; const e = (state.studies.exams||[]).find(x=>x.id===id);
+    return studiesAction("exam-"+id, () => API.examCancel(id), "Registration cancelled", e ? `${e.course_name} · ${e.title}.` : ""); }
+  if (ds.courseEnroll){ const c = ds.courseEnroll;
+    return studiesAction("course-"+c, () => API.courseEnroll(c), "Course registration sent", `UniSIS processed your request for ${c}.`); }
+  if (ds.courseDrop){ const c = ds.courseDrop;
+    return studiesAction("course-"+c, () => API.courseDrop(c), "Course dropped", `You left ${c}.`); }
+  if ("clearchat" in ds){ state.chat=[]; return render(); }
+  if (ds.set){ state.settings[ds.set] = !state.settings[ds.set]; return render(); }
+  if ("premium" in ds){ state.premium = !state.premium; if (state.premium) toast("Premium trial started", "14 days free. Transcribe Bro is unlocked."); return render(); }
+});
+function startTx(id){
+  state.tx = {id, progress:0, added:[]}; render();
+  const step = () => {
+    if (state.tx.id!==id) return;
+    state.tx.progress = Math.min(100, state.tx.progress + 9);
+    if (state.view==="transcribe") render();
+    if (state.tx.progress < 100) setTimeout(step, 220);
+    else toast("Transcript ready", RECS[id].title);
+  };
+  setTimeout(step, 220);
+}
+document.addEventListener("keydown", e => {
+  const row = e.target.closest && e.target.closest("[data-toggle]");
+  if (row && (e.key==="Enter" || e.key===" ")){ e.preventDefault(); row.click(); }
+});
+document.addEventListener("submit", e => {
+  const id = e.target.id;
+  const handlers = {
+    askForm: () => { const i = document.getElementById("askInput"); const q = i.value.trim(); if (q) ask(q); },
+    loginForm: () => doLogin(state.auth.email.trim(), state.auth.password),
+    registerForm: doRegister,
+    pubForm: publish,
+    assignForm: createAssignment,
+    courseForm: createCourse,
+    editForm: () => saveExtracted(e.target),
+    ulForm: connectMoodle
+  };
+  if (!handlers[id]) return;
+  e.preventDefault();
+  handlers[id]();
+});
+
+// =====================================================================
+// 13. BOOT
+// =====================================================================
+async function boot(){
+  state.booting = true; render();
+  await refreshHealth();
+  if (API.token){
+    try {
+      state.user = await API.me();
+      store.setJSON("rmb.user", state.user);
+    } catch(err){
+      if (err.status === 401) clearSession();
+      // offline: keep the cached profile so the app shell still opens, with the warning banner
+    }
+  } else {
+    state.user = null;
+  }
+  if (state.user){
+    readSet = new Set(store.getJSON(readKey(), []));
+    const [start, query] = (location.hash||"").replace("#","").split("?");
+    state.view = navFor().some(([k])=>k===start) ? start : navFor()[0][0];
+    if (!state.offline) await loadAll();
+    const ret = new URLSearchParams(query || "");
+    if (ret.get("unisis")){
+      try{ history.replaceState(null, "", "#"+state.view); }catch(e){}
+      if (ret.get("unisis") === "connected"){
+        state.view = "studies";
+        toast("UniSIS connected", "Your timetable, exams and registration windows are now in Remind Me Bro.");
+      } else toast("UniSIS not connected", ret.get("message") || "The connection was not completed.");
+    }
+    if (state.view === "studies") loadStudies();
+  } else {
+    loadDemoAccounts();
+  }
+  state.booting = false;
+  render();
+}
+// While the backend is down, check again every 8 seconds and reload data when it comes back
+setInterval(async () => {
+  if (!state.offline) return;
+  if (await refreshHealth()){
+    setOffline(false);
+    if (state.user){ await loadAll(); render(); } else loadDemoAccounts();
+    toast("Backend connected", "The server on " + BACKEND_HOST + " is reachable again.");
+  }
+}, 8000);
+
+boot();
+})();
+</script>
+
+</body></html>

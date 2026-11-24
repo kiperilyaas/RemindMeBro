@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% set active = "courses" %}
+{% block title %}Courses{% endblock %}
+{% block content %}
+<div class="head"><div><div class="eyebrow">Catalogue</div><h1>Courses</h1></div></div>
+<section class="card"><div class="table-wrap"><table>
+  <thead><tr><th>Course</th><th>Term</th><th>Lecturer</th><th class="num">ECTS</th><th class="num">Enrolled</th><th class="num">Waiting list</th><th>Timetable</th></tr></thead>
+  <tbody>
+  {% for row in rows %}{% set c = row.course %}
+  <tr>
+    <td><span class="code">{{ c.code }}</span><br><b>{{ c.name }}</b> {% if c.kind == "elective" %}<span class="chip brand">elective</span>{% endif %}</td>
+    <td>{{ c.term.name }}</td><td>{{ c.lecturer_name }}</td><td class="num">{{ c.credits }}</td>
+    <td class="num">{{ row.enrolled }} / {{ c.capacity }} {% if row.enrolled >= c.capacity %}<span class="chip bad">Full</span>{% endif %}</td>
+    <td class="num">{{ row.waitlisted or "—" }}</td>
+    <td style="font-size:13px">{% for s in c.slots %}{{ ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"][s.weekday] }} {{ s.start_time }}–{{ s.end_time }} · {{ s.kind }} · {{ s.room }}<br>{% else %}<span class="muted">—</span>{% endfor %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div></section>
+{% endblock %}

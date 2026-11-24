@@ -1,0 +1,163 @@
+REMIND ME BRO · RUN & GO
+========================
+
+ITALIANO
+--------
+1. Fai doppio clic sul file per il tuo sistema:
+     Mac      →  run-mac.command
+     Windows  →  run-windows.bat
+     Linux    →  run-linux.sh   (da terminale: ./run-linux.sh)
+2. Si apre una finestra nera che installa tutto da sola. La prima volta ci
+   vogliono 5–15 minuti (scarica circa 2,5 GB: Python e il modello AI;
+   su Windows circa 4 GB perché include l'installer di Ollama).
+   Dalla seconda volta parte in pochi secondi.
+3. Alla fine si apre il browser con l'app. Clicca un account demo
+   (password: demo1234), ad esempio "Giulia Esposito · Student".
+   La vecchia interfaccia è ancora su http://127.0.0.1:8000/classic
+4. Lascia aperta la finestra nera finché usi l'app. Per chiudere tutto,
+   chiudi quella finestra.
+5. Un solo programma avvia tutto: Remind Me Bro (http://127.0.0.1:8000),
+   UniSIS, la segreteria (http://127.0.0.1:8100) e UniLearn, il nostro
+   Moodle (http://127.0.0.1:8200). Gli indirizzi esatti sono scritti
+   nella finestra nera.
+6. SI PARTE DA OTTO CORSI (2PR515 Corporate Governance, 2IB468, 2MO522,
+   2IB421 con Chiara Neri; 3SG712, 3PA662, 3MA674, 3PO643 con Marco Rossi;
+   aule SB 408 e SB 410–416), senza lezioni, compiti o esami. Sono corsi a
+   scelta: Giulia non è iscritta a niente e sceglie lei (vedi punto 8).
+   La data è quella di oggi. Quello che crei resta salvato anche dopo aver chiuso e riaperto.
+   Account per entrare:
+     Studenti        si registrano da soli in Remind Me Bro ("Create account").
+                     Studentessa demo: student@demo.it / demo1234 (Giulia).
+     Staff           docenti hub (marco.rossi@demo.it, ...), UniLearn (admin,
+                     marco.rossi, ...), UniSIS (registrar): le password sono
+                     in data/STAFF-PASSWORDS.txt, solo su questo computer.
+                     Non mostrare quel file a nessuno.
+7. Crea i corsi. Usa lo STESSO codice nei tre sistemi (es. MICRO-2026):
+   così è un solo corso.
+     • UniLearn  http://127.0.0.1:8200/staff → New course: compiti, avvisi,
+       eventi di calendario, studenti iscritti.
+     • UniSIS    http://127.0.0.1:8100/staff → Courses → New course:
+       orario settimanale e iscritti; poi Exams → New exam date.
+     • Remind Me Bro, area docente → New course (o "prendi" un corso che è
+       già arrivato da UniLearn scrivendo lo stesso codice).
+8. Collega Giulia: in Remind Me Bro, come studente, Connections →
+   UniLearn (giulia.esposito / demo1234 → Connect) e Connect UniSIS
+   (accedi e premi "Allow access"). Poi Studies → Course registration:
+   Giulia sceglie i corsi (Enrol) o li lascia (Drop). In UniLearn
+   compare solo nei corsi scelti. Dopo ogni modifica premi Sync.
+   L'iscrizione è aperta per 30 giorni; la segreteria la apre o chiude
+   da UniSIS /staff → Exams → Course registration.
+   Per ripartire da zero un'altra volta: chiudi la finestra nera e
+   cancella la cartella "data".
+
+Se il Mac blocca il file ("non può essere aperto" / "sviluppatore non identificato"):
+   • clic destro su run-mac.command → Apri → Apri
+   • oppure: Impostazioni di Sistema → Privacy e sicurezza → "Apri comunque"
+   • oppure: apri l'app Terminale, scrivi  bash  (con uno spazio dopo),
+     trascina dentro il file run-mac.command e premi Invio.
+Se Windows mostra "Windows ha protetto il PC": Ulteriori informazioni → Esegui comunque.
+
+Serve: internet la prima volta, ~5 GB liberi, 8 GB di RAM.
+Non serve installare nulla prima: Python, uv e (su Mac) Ollama restano dentro
+la cartella ".runtime" di questo progetto. Il modello AI viene salvato da Ollama
+nella cartella ".ollama" della tua home.
+
+
+FAR PROVARE L'APP AGLI AMICI (link pubblico + QR code)
+------------------------------------------------------
+1. Al posto del file normale apri:
+     Mac      →  run-share-mac.command
+     Windows  →  run-share-windows.bat
+     Linux    →  run-share-linux.sh
+   Parte tutto come sempre, poi si apre un link pubblico con ngrok.
+2. Solo la prima volta lo script chiede il "token" di ngrok (gratis):
+   crea un account su https://dashboard.ngrok.com, copia il token da
+   https://dashboard.ngrok.com/get-started/your-authtoken, incollalo nella
+   finestra nera e premi Invio. Dalla volta dopo non lo chiede più.
+3. Nella finestra nera compare un QR code e si apre una pagina con il QR
+   grande e il link. Gli amici inquadrano il QR o aprono il link.
+   Se vedono la pagina di ngrok "You are about to visit", premono "Visit Site".
+4. Il link funziona solo finché la finestra nera resta aperta e cambia a
+   ogni avvio. Gli amici premono "Create account" e creano il loro account
+   studente: ricevono anche un account UniSIS e UniLearn con la stessa
+   email e password, già collegati. Ognuno vede solo i propri dati.
+5. Dal link pubblico NON si entra come docente, nemmeno con la password
+   giusta, e non si vedono account o password. Docenti, segreteria e
+   admin entrano solo da questo computer.
+
+
+ENGLISH
+-------
+1. Double-click the file for your system:
+     Mac      →  run-mac.command
+     Windows  →  run-windows.bat
+     Linux    →  run-linux.sh   (from a terminal: ./run-linux.sh)
+2. A terminal window opens and installs everything by itself. The first time
+   takes 5–15 minutes (about 2.5 GB download: Python and the AI model;
+   about 4 GB on Windows, which also downloads the Ollama installer).
+   After that it starts in a few seconds.
+3. Your browser opens the app. Click a demo account (password: demo1234),
+   e.g. "Giulia Esposito · Student". The previous interface is still at
+   http://127.0.0.1:8000/classic
+4. Keep the terminal window open while you use the app. Close it to stop.
+5. One program starts everything: Remind Me Bro (http://127.0.0.1:8000),
+   UniSIS, the student information system (http://127.0.0.1:8100) and
+   UniLearn, our Moodle (http://127.0.0.1:8200). The exact addresses are
+   printed in the terminal window.
+6. YOU START WITH EIGHT COURSES (2PR515 Corporate Governance, 2IB468,
+   2MO522, 2IB421 taught by Chiara Neri; 3SG712, 3PA662, 3MA674, 3PO643 by
+   Marco Rossi; rooms SB 408 and SB 410–416), with no lessons, assignments
+   or exams. They are optional courses: Giulia is not enrolled and chooses
+   them herself (see step 8). The date is today. What you create is saved, also after closing and reopening.
+   Accounts:
+     Students        sign up themselves in Remind Me Bro ("Create account").
+                     Demo student: student@demo.it / demo1234 (Giulia).
+     Staff           hub lecturers (marco.rossi@demo.it, ...), UniLearn (admin,
+                     marco.rossi, ...), UniSIS (registrar): passwords are in
+                     data/STAFF-PASSWORDS.txt, only on this computer.
+                     Never show that file to anyone.
+7. Create the courses. Use the SAME code in the three systems
+   (e.g. MICRO-2026), so they are one course.
+     • UniLearn  http://127.0.0.1:8200/staff → New course: assignments,
+       announcements, calendar events, enrolled students.
+     • UniSIS    http://127.0.0.1:8100/staff → Courses → New course:
+       weekly timetable and enrolments; then Exams → New exam date.
+     • Remind Me Bro, lecturer area → New course (or take over a course
+       that already came from UniLearn by typing the same code).
+8. Connect Giulia: in Remind Me Bro, as the student, Connections →
+   UniLearn (giulia.esposito / demo1234 → Connect) and Connect UniSIS
+   (sign in and click "Allow access"). Then Studies → Course registration:
+   Giulia picks courses (Enrol) or leaves them (Drop); in UniLearn she only
+   sees the courses she chose. Press Sync after every change. Registration
+   is open for 30 days; the Student Office opens or closes it in
+   UniSIS /staff → Exams → Course registration.
+   To start from zero again: close the window and delete the "data" folder.
+
+If the Mac blocks the file ("cannot be opened" / "unidentified developer"):
+   • right-click run-mac.command → Open → Open
+   • or: System Settings → Privacy & Security → "Open Anyway"
+   • or: open the Terminal app, type  bash  (followed by a space), drag the
+     run-mac.command file into the window and press Enter.
+If Windows shows "Windows protected your PC": More info → Run anyway.
+
+Requirements: internet the first time, ~5 GB free disk space, 8 GB RAM.
+Nothing needs to be installed beforehand.
+
+
+LET FRIENDS TRY THE APP (public link + QR code)
+-----------------------------------------------
+1. Open run-share-mac.command / run-share-windows.bat / run-share-linux.sh
+   instead of the normal file. Everything starts as usual, then a public
+   ngrok link is opened.
+2. First time only, paste your free ngrok token (account at
+   https://dashboard.ngrok.com, token at
+   https://dashboard.ngrok.com/get-started/your-authtoken) and press Enter.
+3. A QR code appears in the window and a page with a big QR code and the
+   link opens. Friends scan it or open the link ("Visit Site" on the ngrok page).
+4. The link works while the window stays open and changes at every start.
+   Friends press "Create account" and make their own student account: they
+   also get a UniSIS and a UniLearn account with the same email and
+   password, already connected. Everyone sees only their own data.
+5. Nobody can sign in as a lecturer through the public link, not even with
+   the right password, and no accounts or passwords are shown there.
+   Lecturers, Student Office and admin sign in only on this computer.

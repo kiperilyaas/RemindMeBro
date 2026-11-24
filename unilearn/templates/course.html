@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ course.fullname }}{% endblock %}
+{% block content %}
+<div><div class="eyebrow"><a href="/">Dashboard</a> / <span class="code">{{ course.shortname }}</span></div><h1>{{ course.fullname }}</h1>
+  <p class="muted" style="margin:6px 0 0">{{ course.summary }} · {{ course.teachers()|map(attribute='fullname')|join(', ') }} · {{ students }} students</p></div>
+<div class="grid-2">
+  <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+    <section class="card">
+      <div class="card-h"><h2>Announcements</h2><span class="sub">Forum · read by Remind Me Bro's AI</span></div>
+      {% if teacher %}
+      <details style="margin-bottom:14px"><summary>Post an announcement</summary>
+        <form class="form" method="post" action="/course/{{ course.id }}/announce"><input type="hidden" name="csrf" value="{{ csrf }}">
+          <label class="field">Subject<input name="subject" required placeholder="e.g. New deadline for the group project"></label>
+          <label class="field">Message<textarea name="message" required placeholder="e.g. Hi everyone, the group project deadline is moved to 25 October at 18:00."></textarea></label>
+          <div><button class="btn primary">Post to forum</button></div></form></details>
+      {% endif %}
+      {% if forum %}{% for d in forum.discussions %}
+      <div class="post"><b>{{ d.subject }}</b><div class="meta">by {{ d.user.fullname }} · {{ d.created|dt }}</div><p>{{ d.message }}</p></div>
+      {% else %}<p class="muted" style="margin:0">No announcements yet.</p>{% endfor %}{% endif %}
+    </section>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+    <section class="card">
+      <div class="card-h"><h2>Assignments</h2></div>
+      {% for a in course.assignments %}
+      <div class="item" style="align-items:start">
+        <div><div class="t">{{ a.name }}</div><div class="d">Due {{ a.duedate|dt }}</div><div class="d">{{ a.intro }}</div>
+          {% if teacher %}
+          <form class="inline" method="post" action="/assign/{{ a.id }}/duedate" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+            <input type="hidden" name="csrf" value="{{ csrf }}"><input type="datetime-local" name="duedate" value="{{ a.duedate.strftime('%Y-%m-%dT%H:%M') }}" style="border:1px solid var(--line);border-radius:7px;padding:4px 8px;font:inherit;font-size:13px">
+            <button class="btn">Change due date</button></form>
+          {% endif %}
+        </div>
+        <div style="text-align:right">
+          {% if teacher %}<span class="chip neutral">{{ counts[a.id] }} / {{ students }} submitted</span>
+          {% else %}
+            <form class="inline" method="post" action="/assign/{{ a.id }}/submit"><input type="hidden" name="csrf" value="{{ csrf }}">
+            {% if subs.get(a.id) %}<span class="chip ok">Submitted</span><br><button class="btn danger" style="margin-top:6px">Remove submission</button>
+            {% else %}<span class="chip warn">Not submitted</span><br><button class="btn primary" style="margin-top:6px">Submit</button>{% endif %}</form>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}<p class="muted" style="margin:0">No assignments.</p>{% endfor %}
+      {% if teacher %}
+      <details style="margin-top:14px"><summary>Add an assignment</summary>
+        <form class="form" method="post" action="/course/{{ course.id }}/assign"><input type="hidden" name="csrf" value="{{ csrf }}">
+          <label class="field">Name<input name="name" required placeholder="e.g. Problem Set 3"></label>
+          <label class="field">Description<textarea name="intro" style="min-height:60px"></textarea></label>
+          <label class="field">Due<input type="datetime-local" name="duedate" value="{{ default_due }}" required></label>
+          <div><button class="btn primary">Add assignment</button></div></form></details>
+      {% endif %}
+    </section>
+    <section class="card">
+      <div class="card-h"><h2>Calendar</h2></div>
+      {% for e in course.events %}<div class="item"><div><div class="t">{{ e.name }}</div><div class="d">{{ e.timestart|dt }} · {{ e.location }}</div></div><div></div></div>
+      {% else %}<p class="muted" style="margin:0">No events.</p>{% endfor %}
+    </section>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Connect {{ client.name }}{% endblock %}
+{% block content %}
+<div class="center">
+  <form class="box" method="post" action="/oauth/authorize">
+    <div class="app-id">
+      {% if client.client_id == "remind-me-bro" %}<img class="app-icon" src="/static/remindmebro-icon.png" alt="" style="background:none;object-fit:contain">{% else %}<div class="app-icon">R</div>{% endif %}
+      <div><h2>{{ client.name }}</h2><div class="fine">wants to access your UniSIS account</div></div>
+    </div>
+    <p style="margin:0" class="muted">{{ client.description }}</p>
+    <div>
+      <div class="eyebrow" style="margin-bottom:8px">{{ client.name }} will be able to</div>
+      <ul class="scopes">
+        {% for s in scopes %}<li><span>{{ scope_labels.get(s, s) }}<br><code>{{ s }}</code></span></li>{% endfor %}
+      </ul>
+    </div>
+    <div class="fine">Signed in as <b>{{ user.full_name }}</b> ({{ user.student_number }}). After you allow access you will be sent back to <span class="mono">{{ return_host }}</span>.
+      You can revoke access at any time from <b>My studies → Connected apps</b>.</div>
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {% for k, v in params.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+    <div class="actions">
+      <button class="btn" name="decision" value="deny">Deny</button>
+      <button class="btn primary big" name="decision" value="allow">Allow access</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

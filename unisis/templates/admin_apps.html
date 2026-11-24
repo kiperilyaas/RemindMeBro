@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% set active = "apps" %}
+{% block title %}Apps & keys{% endblock %}
+{% block content %}
+<div class="head"><div><div class="eyebrow">Integrations</div><h1>Apps &amp; keys</h1></div>
+  <a class="btn" href="/.well-known/oauth-authorization-server" target="_blank" rel="noopener">OAuth metadata</a></div>
+
+{% for c in clients %}
+<section class="card">
+  <div class="card-h"><h2>{{ c.name }}</h2><span class="chip ok">Active · {{ consents[c.id] }} student(s) connected</span></div>
+  <p class="muted" style="margin:0 0 12px">{{ c.description }}</p>
+  <dl class="kv">
+    <dt>Client ID</dt><dd class="mono">{{ c.client_id }}</dd>
+    <dt>Client secret</dt><dd><span class="mono">uss_••••••••{{ c.secret_hint }}</span> <span class="muted" style="font-weight:400">· rotated {{ c.secret_rotated_at|dt }}</span>
+      <form class="inline" method="post" action="/admin/apps/{{ c.client_id }}/rotate-secret"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn" style="margin-left:8px">Regenerate</button></form></dd>
+    <dt>API key</dt><dd><span class="mono">usk_••••••••{{ c.api_key_hint }}</span>
+      <form class="inline" method="post" action="/admin/apps/{{ c.client_id }}/rotate-key"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn" style="margin-left:8px">Regenerate</button></form></dd>
+    <dt>Redirect URIs</dt><dd class="mono" style="font-weight:400">{% for u in c.redirect_uris.splitlines() %}{{ u }}<br>{% endfor %}<span class="muted" style="font-family:var(--font)">Loopback URIs accept any port (RFC 8252).</span></dd>
+    <dt>Allowed scopes</dt><dd>{% for s in c.allowed_scopes.split() %}<span class="code" style="margin:0 4px 4px 0">{{ s }}</span>{% endfor %}</dd>
+    <dt>Issuer</dt><dd class="mono" style="font-weight:400">{{ issuer }}</dd>
+  </dl>
+  <p class="fine" style="margin:12px 0 0">Secrets are stored hashed. The plaintext credentials are exported to <span class="mono">{{ credentials_dir }}/{{ c.client_id }}.json</span>, the file the app reads.</p>
+</section>
+{% endfor %}
+
+<div style="display:flex;flex-direction:column;gap:18px">
+  <section class="card">
+    <div class="card-h"><h2>API audit log</h2><span class="sub">Last 40 calls · refresh to update</span></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Time</th><th>App</th><th>Student</th><th>Request</th><th class="num">Status</th></tr></thead>
+      <tbody>
+      {% for l in log %}
+      <tr><td class="mono">{{ l.at.strftime("%H:%M:%S") }}</td><td>{{ l.client_name or "—" }}</td><td class="mono">{{ l.username or "—" }}</td>
+          <td class="mono">{{ l.method }} {{ l.path }}</td>
+          <td class="num"><span class="chip {{ 'ok' if l.status_code < 300 else ('warn' if l.status_code < 500 else 'bad') }}">{{ l.status_code }}</span></td></tr>
+      {% else %}<tr><td colspan="5" class="muted">No API calls yet. Connect UniSIS from Remind Me Bro to see them here.</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+  <section class="card">
+    <div class="card-h"><h2>Active tokens</h2></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Student</th><th>Type</th><th>Expires</th><th></th></tr></thead>
+      <tbody>
+      {% for t in tokens %}
+      <tr><td>{{ t.user.full_name }}<br><span class="fine">{{ t.client.name }}</span></td><td><span class="chip {{ 'brand' if t.kind == 'access' else 'neutral' }}">{{ t.kind }}</span></td>
+          <td style="font-size:13px">{{ t.expires_at|dt }}</td>
+          <td><form class="inline" method="post" action="/admin/tokens/{{ t.id }}/revoke"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn danger">Revoke</button></form></td></tr>
+      {% else %}<tr><td colspan="4" class="muted">No active tokens.</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+</div>
+{% endblock %}

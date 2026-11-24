@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}UniSIS{% endblock %} · UniSIS</title>
+<link rel="stylesheet" href="/static/unisis.css">
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <a class="logo" href="/"><span class="logo-mark">US</span><span><b>UniSIS</b><small>{{ university }}</small></span></a>
+    {% if user %}
+    <nav>
+      {% if user.role == "registrar" %}
+        <a href="/admin" class="{{ 'on' if active == 'admin' }}">Dashboard</a>
+        <a href="/admin/courses" class="{{ 'on' if active == 'courses' }}">Courses</a>
+        <a href="/admin/students" class="{{ 'on' if active == 'students' }}">Students</a>
+        <a href="/admin/apps" class="{{ 'on' if active == 'apps' }}">Apps &amp; keys</a>
+      {% else %}
+        <a href="/student" class="{{ 'on' if active == 'student' }}">My studies</a>
+      {% endif %}
+      <a href="/docs" target="_blank" rel="noopener">API docs</a>
+    </nav>
+    <div class="who">
+      <span>{{ user.full_name }}{% if user.student_number %} · <span class="mono">{{ user.student_number }}</span>{% endif %}</span>
+      <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button>Sign out</button></form>
+    </div>
+    {% endif %}
+  </div>
+  <div class="ribbon"><div class="top-in">Demo system · today is {{ now.strftime("%A %d %B %Y, %H:%M") }}</div></div>
+</header>
+<main>
+  {% for kind, text in flashes %}<div class="flash {{ kind }}" role="status">{{ text }}</div>{% endfor %}
+  {% if reveal %}
+  <div class="reveal" role="alert"><b>{{ reveal.label }}</b> — copy it now, it will not be shown again.<code>{{ reveal.value }}</code>
+    <div class="fine" style="margin-top:6px">Also exported to the client's credentials file, so the connected app keeps working.</div></div>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

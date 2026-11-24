@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% set active = "students" %}
+{% block title %}Students{% endblock %}
+{% block content %}
+<div class="head">
+  <div><div class="eyebrow">Registry</div><h1>Students</h1></div>
+  <form method="get" action="/admin/students" style="display:flex;gap:8px"><input name="q" value="{{ q }}" placeholder="Name or student number" style="border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit"><button class="btn">Search</button></form>
+</div>
+<section class="card"><div class="table-wrap"><table>
+  <thead><tr><th>Name</th><th>Student number</th><th>Programme</th><th class="num">Year</th><th class="num">ECTS earned</th></tr></thead>
+  <tbody>
+  {% for s in students %}
+  <tr><td>{{ s.user.full_name }}</td><td class="mono">{{ s.user.student_number }}</td><td>{{ s.user.programme.degree }} {{ s.user.programme.name }}</td>
+      <td class="num">{{ s.user.year_of_study }}</td><td class="num">{{ s.credits }}</td></tr>
+  {% else %}<tr><td colspan="5" class="muted">No students found.</td></tr>{% endfor %}
+  </tbody>
+</table></div></section>
+{% endblock %}
