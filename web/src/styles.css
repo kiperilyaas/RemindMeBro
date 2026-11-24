@@ -347,13 +347,13 @@ pre{background:var(--surface-2);border-radius:12px;padding:12px;overflow:auto;fo
 }
 @media (max-width:900px){
   .toptabs{display:none}
-  .bottom{display:flex;position:fixed;inset:auto 0 0 0;background:var(--surface);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:25}
+  .bottom{display:flex;position:fixed;inset:auto 0 var(--screen-bottom,0px) 0;background:var(--surface);border-top:1px solid var(--line);padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:25}
   .bottom button{flex:1;display:grid;justify-items:center;gap:2px;border:0;background:none;font-size:11px;font-weight:600;color:var(--muted);min-height:52px;padding-top:6px}
   .bottom button[aria-current=page]{color:var(--acc)}
   .bi{position:relative}.bdot{position:absolute;top:-1px;right:-4px;width:8px;height:8px;border-radius:50%;background:var(--acc)}
-  .fab{bottom:84px}
-  .toasts{bottom:150px}
-  .layout{padding-bottom:120px}
+  .fab{bottom:calc(84px + var(--screen-bottom,0px) + env(safe-area-inset-bottom))}
+  .toasts{bottom:calc(150px + var(--screen-bottom,0px))}
+  .layout{padding-bottom:calc(120px + var(--screen-bottom,0px) + env(safe-area-inset-bottom))}
   .two-col,.two-col.wide-left,.two-col.studies{grid-template-columns:1fr}
   .login{grid-template-columns:1fr}.login-hero{padding:28px 20px}.login-hero h1{font-size:30px}.login-points{display:none}
   .conn{grid-template-columns:auto 1fr}.conn-act{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}
@@ -380,3 +380,12 @@ pre{background:var(--surface-2);border-radius:12px;padding:12px;overflow:auto;fo
 .hero-logo{height:auto;width:min(320px,70%);margin-bottom:8px}
 .boot-icon{width:64px;height:64px}
 @media (max-width:520px){.brand .brand-logo{display:none}.brand-icon{display:block}.hero-logo{width:200px}}
+
+/* Intro after sign-in (components/LoginIntro.tsx): video over the app, opened by the bell's wave */
+.intro{position:fixed;inset:0;z-index:1000;pointer-events:auto;transition:opacity .3s ease}
+.intro.leaving{opacity:0}
+.intro-stage{position:absolute;inset:0;background:#09070F}
+.intro-video{width:100%;height:100%;object-fit:cover;display:block;background:#09070F}
+.intro-ring{position:absolute;left:0;top:0;width:0;height:0;border-radius:50%;opacity:0;pointer-events:none;border:3px solid rgba(178,160,255,.9);box-shadow:0 0 24px 6px rgba(140,115,255,.55),inset 0 0 18px 4px rgba(140,115,255,.35)}
+.intro-skip{position:absolute;top:max(16px,env(safe-area-inset-top));right:16px;height:36px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#F1EEF8;font:600 13px/1 inherit;cursor:pointer}
+.intro-skip:hover{background:rgba(255,255,255,.16)}

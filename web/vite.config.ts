@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
     root: resolve(__dirname, dirname(target.input)),
     plugins: [react(), viteSingleFile()],
     build: { outDir: resolve(projectRoot, target.out), emptyOutDir: true, },
-    server: { proxy: { "/api": "http://127.0.0.1:8000" } },
+    server: { proxy: { "/api": "http://127.0.0.1:8000", "/media": "http://127.0.0.1:8000" } },
     test: { environment: "jsdom", globals: true, root: __dirname, setupFiles: [resolve(__dirname, "src/test/setup.ts")] },
   };
 });
