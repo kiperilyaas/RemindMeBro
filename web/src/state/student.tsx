@@ -9,6 +9,8 @@ import { useToast } from "./toast";
 interface StudentData {
   loading: boolean; courses: Course[]; deadlines: Deadline[]; inbox: InboxItem[]; events: ScheduleEvent[]; connections: Connection[];
   unread: number; isRead: (id: number) => boolean; markRead: (ids: number[]) => void;
+  /** messages that arrived while the app was open (live or after a Sync): marked "New" in the Inbox until it is left */
+  fresh: Set<number>; clearFresh: () => void;
   reload: () => Promise<void>; toggleDone: (d: Deadline) => Promise<void>;
   syncing: boolean; runSync: () => Promise<SyncSummary | null>;
   connection: (p: Connection["provider"]) => Connection | undefined;
@@ -51,7 +53,17 @@ export function StudentProvider({ children }: { children: ReactNode }) {
 
   // New messages arrive on their own: the server reads UniLearn every 30 s, the app asks the server every 30 s.
   const inboxIds = useRef<Set<number> | null>(null);
-  useEffect(() => { if (!loading) inboxIds.current = new Set(inbox.map((x) => x.id)); }, [inbox, loading]);
+  const [fresh, setFresh] = useState<Set<number>>(() => new Set());
+  const clearFresh = useCallback(() => setFresh((f) => (f.size ? new Set() : f)), []);
+  useEffect(() => {
+    if (loading) return;
+    const prev = inboxIds.current;
+    if (prev) {
+      const added = inbox.filter((x) => !prev.has(x.id)).map((x) => x.id);
+      if (added.length) setFresh((f) => new Set([...f, ...added]));
+    }
+    inboxIds.current = new Set(inbox.map((x) => x.id));
+  }, [inbox, loading]);
   useEffect(() => {
     const t = window.setInterval(async () => {
       if (!inboxIds.current || document.hidden) return;
@@ -60,7 +72,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
         if (!alive.current) return;
         const fresh = i.filter((x) => !inboxIds.current?.has(x.id));
         setInbox(i); setDeadlines(d);
-        fresh.slice(0, 2).forEach((x) => toast(`New message${x.course_name ? ` · ${x.course_name}` : ""}`, `${x.author}: ${x.subject}`));
+        fresh.slice(0, 2).forEach((x) => toast(`New message in your Inbox${x.course_name ? ` · ${x.course_name}` : ""}`, `${x.author}: ${x.subject}`));
         if (fresh.length > 2) toast(`${fresh.length - 2} more new messages`, "Open the Inbox to read them.");
       } catch { /* the offline banner handles it */ }
     }, 30000);
@@ -101,8 +113,13 @@ export function StudentProvider({ children }: { children: ReactNode }) {
 
   const connection = useCallback((p: Connection["provider"]) => connections.find((c) => c.provider === p), [connections]);
   const unread = useMemo(() => inbox.filter((m) => !read.has(m.id)).length, [inbox, read]);
-  const value = useMemo<StudentData>(() => ({ loading, courses, deadlines, inbox, events, connections, unread, isRead, markRead, reload, toggleDone, syncing, runSync, connection }),
-    [loading, courses, deadlines, inbox, events, connections, unread, isRead, markRead, reload, toggleDone, syncing, runSync, connection]);
+  // the browser tab shows the unread count too: "(2) Remind Me Bro"
+  useEffect(() => {
+    const base = document.title.replace(/^\(\d+\)\s*/, "");
+    document.title = unread > 0 ? `(${unread}) ${base}` : base;
+  }, [unread]);
+  const value = useMemo<StudentData>(() => ({ loading, courses, deadlines, inbox, events, connections, unread, isRead, markRead, fresh, clearFresh, reload, toggleDone, syncing, runSync, connection }),
+    [loading, courses, deadlines, inbox, events, connections, unread, isRead, markRead, fresh, clearFresh, reload, toggleDone, syncing, runSync, connection]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

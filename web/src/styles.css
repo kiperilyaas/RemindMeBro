@@ -507,3 +507,11 @@ pre{background:var(--surface-2);border-radius:12px;padding:12px;overflow:auto;fo
 .lesson-open:disabled{cursor:default;opacity:1}
 .lesson:has(.lesson-open:hover:not(:disabled)){border-color:var(--violet)}
 .lesson-make{margin-left:auto}
+/* Inbox: messages that just arrived */
+.inbox-new{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 14px;margin:0 0 12px;border-radius:var(--r);background:var(--acc-soft);font-size:14px}
+.inbox-new>svg{color:var(--acc);flex:none}.inbox-new span{flex:1;min-width:180px}
+.inbox-new.pulse>svg{animation:ring 1s ease 2}
+@keyframes ring{0%,100%{transform:rotate(0)}25%{transform:rotate(14deg)}75%{transform:rotate(-14deg)}}
+.new-pill{font-size:11px;font-weight:700;color:#fff;background:var(--acc);border-radius:99px;padding:1px 7px;margin:0 auto 0 8px;align-self:center}
+.mlist li.fresh{border-color:var(--acc);animation:fresh-in .6s ease}
+@keyframes fresh-in{from{transform:translateY(-6px);opacity:0}to{transform:none;opacity:1}}

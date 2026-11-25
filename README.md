@@ -121,7 +121,7 @@ La sezione **AI** dello studente contiene Ask Bro (la chat) e Smart Notes. Le du
 
 ## Avvisi dei docenti in tempo reale
 
-Un avviso pubblicato in UniLearn (**Post an announcement**) arriva nell'Inbox degli studenti iscritti a quel corso entro circa mezzo minuto, senza premere Sync: l'hub legge i forum Announcements ogni 30 secondi (`app/services/live_sync.py`, variabile `UNILEARN_POLL_SECONDS`, 0 = spento) e l'app chiede i nuovi messaggi ogni 30 secondi, con un avviso a schermo. Lo studente vede solo i messaggi dei corsi che segue: se il corso non ha iscritti, UniLearn lo segnala sopra il modulo.
+Un avviso pubblicato in UniLearn (**Post an announcement**) arriva nell'Inbox degli studenti iscritti a quel corso entro circa mezzo minuto, senza premere Sync: l'hub legge i forum Announcements ogni 30 secondi (`app/services/live_sync.py`, variabile `UNILEARN_POLL_SECONDS`, 0 = spento) e l'app chiede i nuovi messaggi ogni 30 secondi, con un avviso a schermo. Lo studente vede solo i messaggi dei corsi che segue: se il corso non ha iscritti, UniLearn lo segnala sopra il modulo. Nell'Inbox i messaggi appena arrivati hanno l'etichetta **New** e una barra in alto ("1 new message just arrived"); la barra avvisa anche quando un messaggio non letto è nascosto dal filtro (es. un avviso senza scadenza non è "Important") e lo mostra con *Show all*. Il numero dei non letti compare sulla voce Inbox e nel titolo della scheda del browser, es. "(2) Remind Me Bro".
 
 ## Tre programmi, un solo avvio (v0.5)
 
