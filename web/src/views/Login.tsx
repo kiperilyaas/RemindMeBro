@@ -64,9 +64,11 @@ export function Login() {
           {error && <p className="form-err" role="alert">{error}</p>}
           <button className="btn primary block" disabled={!!busy}>{busy === "form" ? "Please wait…" : tab === "login" ? "Sign in" : "Create account"}</button>
         </form>
-        {tab === "login" && local && demo && demo.accounts.length > 0 && (
+        {tab === "login" && demo && demo.accounts.length > 0 && (
           <div className="demo">
-            <p className="demo-h">On this computer only · lecturer passwords are in <code>{demo.staff_passwords_file ?? "data/STAFF-PASSWORDS.txt"}</code></p>
+            {local
+              ? <p className="demo-h">On this computer only · lecturer passwords are in <code>{demo.staff_passwords_file ?? "data/STAFF-PASSWORDS.txt"}</code></p>
+              : <p className="demo-h">Just looking around? Sign in as the demo student</p>}
             {students.map((a) => (
               <button key={a.email} className="demo-acc main" disabled={!!busy}
                 onClick={() => (a.password ? void run(a.email, () => login(a.email, a.password ?? "")) : (setEmail(a.email), setPassword("")))}>
@@ -75,11 +77,11 @@ export function Login() {
                 <Icon name="arrow" size={18} />
               </button>
             ))}
-            <div className="demo-grid">{lecturers.map((a) => (
+            {local && lecturers.length > 0 && <div className="demo-grid">{lecturers.map((a) => (
               <button key={a.email} className="demo-acc" disabled={!!busy} onClick={() => { setEmail(a.email); setPassword(""); setError(null); }}>
                 <span><b>{a.full_name}</b><small>Lecturer · type the password</small></span>
               </button>
-            ))}</div>
+            ))}</div>}
           </div>
         )}
       </section>

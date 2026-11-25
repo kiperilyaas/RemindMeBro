@@ -10,6 +10,7 @@ import { useSession } from "./state/session";
 import { StudentProvider, useStudent } from "./state/student";
 import { Account } from "./views/Account";
 import { Login } from "./views/Login";
+import { LoginIntro, wantsIntro } from "./components/LoginIntro";
 import { LecturerArea } from "./views/lecturer/LecturerArea";
 import { Connections } from "./views/student/Connections";
 import { Inbox } from "./views/student/Inbox";
@@ -53,12 +54,14 @@ function LecturerApp({ route, navigate }: { route: Route; navigate: (p: string) 
 }
 
 export function App() {
-  const { user, booting } = useSession();
+  const { user, booting, justSignedIn, introDone } = useSession();
   const [route, navigate, clearParams] = useHashRoute();
   if (booting) return <div className="boot"><img className="boot-icon" src={BRAND.icon} alt="" /><Spinner label="Starting Remind Me Bro" /></div>;
   if (!user) return <Login />;
   // key={user.id}: switching account resets all per-user state
-  return user.role === "professor"
+  const area = user.role === "professor"
     ? <LecturerProvider key={user.id}><LecturerApp route={route} navigate={navigate} /></LecturerProvider>
     : <StudentProvider key={user.id}><StudentApp route={route} navigate={navigate} clearParams={clearParams} /></StudentProvider>;
+  // right after signing in, the intro plays over the app, which loads underneath and opens with the bell's wave
+  return <>{area}{justSignedIn && wantsIntro() && <LoginIntro onDone={introDone} />}</>;
 }
