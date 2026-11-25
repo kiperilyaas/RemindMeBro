@@ -186,6 +186,48 @@ def _course(db: Session, shortname: str) -> Optional[Course]:
     return db.scalar(select(Course).where(Course.code == shortname))
 
 
+def sync_posts(db: Session, user: User, courses: Optional[List[Dict[str, Any]]] = None, run_ai: bool = True) -> Dict[str, Any]:
+    """
+    Announcement-forum posts of the student's courses -> hub announcements (Inbox). New or edited posts go
+    through the AI (hidden deadlines). Also called every minute by live_sync.py, so a lecturer's post shows up
+    without pressing Sync.
+    """
+    from app.services import sync_service  # local import: sync_service imports this module
+
+    if courses is None:
+        info = call(db, user, "core_webservice_get_site_info")
+        courses = call(db, user, "core_enrol_get_users_courses", userid=info["userid"])
+        for c in courses:
+            sync_service.ensure_course(db, c["shortname"], c.get("fullname") or c["shortname"])
+    by_id = {c["id"]: c for c in courses}
+    out: Dict[str, Any] = {"posts": 0, "new": 0, "ai_details": []}
+    if not by_id:
+        return out
+    forums = call(db, user, "mod_forum_get_forums_by_courses", courseids=list(by_id))
+    for f in forums:
+        if f.get("type") != "news":
+            continue
+        shortname = by_id.get(f["course"], {}).get("shortname")
+        for d in call(db, user, "mod_forum_get_forum_discussions", forumid=f["id"]).get("discussions", []):
+            text = _strip_html(d.get("message", ""))
+            subject = d.get("subject") or ""
+            content = text if text.lower().startswith(subject.lower()) else f"{subject}. {text}"
+            kwargs = dict(external_id=f"unilearn-post-{d['id']}", content=content, author=d.get("userfullname") or "Lecturer",
+                          created_at=datetime.fromtimestamp(d["created"]), course_code=shortname, source=SourceType.MOODLE)
+            known = db.scalar(select(Announcement).where(Announcement.source == SourceType.MOODLE,
+                                                         Announcement.external_id == kwargs["external_id"]))
+            if known is None:
+                out["new"] += 1
+            if run_ai and (known is None or known.content != content):   # the AI reads each post once
+                out["ai_details"].append(sync_service.process_informal_message(db, **kwargs))
+            else:
+                sync_service.upsert_announcement(db, external_id=kwargs["external_id"], source=SourceType.MOODLE, author=kwargs["author"],
+                                                 content=content, created_at=kwargs["created_at"], course=_course(db, shortname) if shortname else None)
+            db.commit()
+            out["posts"] += 1
+    return out
+
+
 def sync_user(db: Session, user: User, run_ai: bool = True) -> Dict[str, Any]:
     """
     Imports assignments (deadlines + submission status), course events and announcement-forum
@@ -270,26 +312,9 @@ def sync_user(db: Session, user: User, run_ai: bool = True) -> Dict[str, Any]:
     db.commit()
 
     # --- announcement forums -> announcements (+ AI deadline extraction) ---
-    forums = call(db, user, "mod_forum_get_forums_by_courses", courseids=course_ids)
-    for f in forums:
-        if f.get("type") != "news":
-            continue
-        shortname = by_id.get(f["course"], {}).get("shortname")
-        for d in call(db, user, "mod_forum_get_forum_discussions", forumid=f["id"]).get("discussions", []):
-            text = _strip_html(d.get("message", ""))
-            subject = d.get("subject") or ""
-            content = text if text.lower().startswith(subject.lower()) else f"{subject}. {text}"
-            kwargs = dict(external_id=f"unilearn-post-{d['id']}", content=content, author=d.get("userfullname") or "Lecturer",
-                          created_at=datetime.fromtimestamp(d["created"]), course_code=shortname, source=SourceType.MOODLE)
-            known = db.scalar(select(Announcement).where(Announcement.source == SourceType.MOODLE,
-                                                         Announcement.external_id == kwargs["external_id"]))
-            if run_ai and (known is None or known.content != content):   # the AI reads each post once
-                result["ai_details"].append(sync_service.process_informal_message(db, **kwargs))
-            else:
-                sync_service.upsert_announcement(db, external_id=kwargs["external_id"], source=SourceType.MOODLE, author=kwargs["author"],
-                                                 content=content, created_at=kwargs["created_at"], course=_course(db, shortname) if shortname else None)
-            db.commit()
-            result["posts"] += 1
+    posts = sync_posts(db, user, courses, run_ai=run_ai)
+    result["posts"] = posts["posts"]
+    result["ai_details"] += posts["ai_details"]
 
     conn = get_connection(db, user)
     conn.snapshot = json.dumps({"course_codes": sorted(c["shortname"] for c in courses if c.get("role", "student") == "student")})

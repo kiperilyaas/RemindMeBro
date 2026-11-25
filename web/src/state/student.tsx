@@ -49,6 +49,24 @@ export function StudentProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { void reload(); }, [reload]);
 
+  // New messages arrive on their own: the server reads UniLearn every 30 s, the app asks the server every 30 s.
+  const inboxIds = useRef<Set<number> | null>(null);
+  useEffect(() => { if (!loading) inboxIds.current = new Set(inbox.map((x) => x.id)); }, [inbox, loading]);
+  useEffect(() => {
+    const t = window.setInterval(async () => {
+      if (!inboxIds.current || document.hidden) return;
+      try {
+        const [i, d] = await Promise.all([api.inbox(), api.deadlines()]);
+        if (!alive.current) return;
+        const fresh = i.filter((x) => !inboxIds.current?.has(x.id));
+        setInbox(i); setDeadlines(d);
+        fresh.slice(0, 2).forEach((x) => toast(`New message${x.course_name ? ` · ${x.course_name}` : ""}`, `${x.author}: ${x.subject}`));
+        if (fresh.length > 2) toast(`${fresh.length - 2} more new messages`, "Open the Inbox to read them.");
+      } catch { /* the offline banner handles it */ }
+    }, 30000);
+    return () => clearInterval(t);
+  }, [toast]);
+
   const toggleDone = useCallback(async (d: Deadline) => {
     const next = !d.is_completed;
     setDeadlines((all) => all.map((x) => (x.id === d.id ? { ...x, is_completed: next } : x)));

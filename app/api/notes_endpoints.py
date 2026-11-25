@@ -5,14 +5,16 @@ Smart Notes (Premium): study notes made from the files lecturers upload to UniLe
   GET  /api/notes                    courses -> lessons with their status
   GET  /api/notes/{id}               one page of notes
   PUT  /api/notes/{id}               save the student's edits (Markdown)
-  POST /api/notes/{id}/regenerate    make the notes again from the files (drops the edits)
-  POST /api/notes/{id}/chat          ask the AI about this lesson only, or one of its files (RAG on the uploaded text)
+  POST /api/notes/{id}/regenerate    make the notes (only when the student asks: "Make notes"), or again (drops the edits)
+  GET  /api/notes/{id}/chat          saved conversation about the lesson (?source_id= for one file)
+  POST /api/notes/{id}/chat          ask the AI about this lesson only, or one of its files (RAG on the uploaded text); saved
+  DELETE /api/notes/{id}/chat        clear that conversation
 """
 from __future__ import annotations
 
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -21,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from app.api.premium import require_premium
 from app.database.db import get_db
-from app.database.models import ExtractedText, LessonNote, User
+from app.database.models import ExtractedText, LessonChatMessage, LessonNote, User
 from app.services.llm_extractor import LLMUnavailableError
 from app.services.notes import lesson_chat
 from app.services import unilearn_client
@@ -77,7 +79,7 @@ def list_notes(db: Session = Depends(get_db), user: User = Depends(require_premi
     }
 
 
-@router.post("/sync", summary="Look for new lessons and files in UniLearn")
+@router.post("/sync", summary="Look for new lessons and files in UniLearn (nothing is processed until Make notes)")
 def sync_notes(db: Session = Depends(get_db), user: User = Depends(require_premium)) -> Dict[str, Any]:
     try:
         result = sync_materials(db, user)
@@ -117,15 +119,32 @@ def regenerate(note_id: int, db: Session = Depends(get_db), user: User = Depends
     return _full(n)
 
 
-class ChatTurn(BaseModel):
-    role: Literal["user", "assistant"]
-    content: str = Field(..., max_length=4000)
-
-
 class LessonChatBody(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     source_id: Optional[int] = Field(None, description="Only this file of the lesson; empty = every file of the lesson")
-    history: List[ChatTurn] = Field(default_factory=list, max_length=12)
+
+
+def _scope(q, source_id: Optional[int]):
+    return q.where(LessonChatMessage.source_id.is_(None)) if source_id is None else q.where(LessonChatMessage.source_id == source_id)
+
+
+def _msg(m: LessonChatMessage) -> Dict[str, Any]:
+    return {"id": m.id, "role": m.role, "content": m.content, "sources": json.loads(m.sources or "[]"), "created_at": _iso(m.created_at)}
+
+
+@router.get("/{note_id}/chat", summary="Saved conversation about this lesson (or one file)")
+def lesson_chat_history(note_id: int, source_id: Optional[int] = None, db: Session = Depends(get_db), user: User = Depends(require_premium)) -> Dict[str, Any]:
+    n = _mine(db, user, note_id)
+    rows = db.scalars(_scope(select(LessonChatMessage).where(LessonChatMessage.note_id == n.id), source_id).order_by(LessonChatMessage.id))
+    return {"messages": [_msg(m) for m in rows]}
+
+
+@router.delete("/{note_id}/chat", status_code=204, summary="Clear the conversation about this lesson (or one file)")
+def lesson_chat_clear(note_id: int, source_id: Optional[int] = None, db: Session = Depends(get_db), user: User = Depends(require_premium)) -> None:
+    n = _mine(db, user, note_id)
+    for m in db.scalars(_scope(select(LessonChatMessage).where(LessonChatMessage.note_id == n.id), source_id)):
+        db.delete(m)
+    db.commit()
 
 
 @router.post("/{note_id}/chat", summary="Ask about this lesson (or one file) using only the uploaded material")
@@ -140,15 +159,24 @@ def lesson_chat_endpoint(note_id: int, body: LessonChatBody, db: Session = Depen
         if t is not None and t.text.strip():
             files.append((s.contenthash, s.filename, s.kind, t.text))
     if not files:
+        if n.status == "new":
+            raise HTTPException(409, "The files of this lesson have not been read yet. Press Make notes first.")
         busy = n.status in ("waiting", "syncing", "transcribing", "processing")
         raise HTTPException(409, "The files are still being read. Try again in a moment." if busy
                             else "No readable text in this material (a scanned PDF or a recording that could not be transcribed?).")
     scope = sources[0].filename if body.source_id is not None else f"{n.course_name} · {n.lesson_name} ({len(files)} file(s))"
+    past = list(db.scalars(_scope(select(LessonChatMessage).where(LessonChatMessage.note_id == n.id), body.source_id)
+                           .order_by(LessonChatMessage.id.desc()).limit(6)))[::-1]
     try:
-        result = lesson_chat.answer(body.question, files, [t.model_dump() for t in body.history], scope)
+        result = lesson_chat.answer(body.question, files, [{"role": m.role, "content": m.content} for m in past], scope)
     except LLMUnavailableError as exc:
         raise HTTPException(503, str(exc)) from exc
     except lesson_chat.LessonChatError as exc:
         raise HTTPException(409, str(exc)) from exc
+    q = LessonChatMessage(note_id=n.id, source_id=body.source_id, role="user", content=body.question.strip())
+    a = LessonChatMessage(note_id=n.id, source_id=body.source_id, role="assistant", content=result["answer"],
+                          sources=json.dumps(result["sources"], ensure_ascii=False))
+    db.add_all([q, a])
+    db.commit()
     skipped = [s.filename for s in sources if s.contenthash not in {f[0] for f in files}]
-    return {**result, "scope": scope, "skipped": skipped}
+    return {**result, "scope": scope, "skipped": skipped, "messages": [_msg(q), _msg(a)]}

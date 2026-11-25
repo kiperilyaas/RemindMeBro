@@ -8,6 +8,7 @@ import { useToast } from "../../state/toast";
 import { LessonChat } from "./LessonChat";
 
 export const STATUS: Record<NoteStatus, { label: string; tone: string; busy: boolean }> = {
+  new: { label: "Not made yet", tone: "", busy: false },
   waiting: { label: "Queued", tone: "", busy: true },
   syncing: { label: "Syncing…", tone: "plan", busy: true },
   transcribing: { label: "Transcribing…", tone: "plan", busy: true },
@@ -23,18 +24,23 @@ export function StatusPill({ status }: { status: NoteStatus }) {
   return <span className={`pill ${s.tone}`} aria-live="polite">{s.busy && status !== "waiting" && <span className="dot-pulse" aria-hidden />}{s.label}</span>;
 }
 
-function LessonCard({ l, onOpen }: { l: LessonRow; onOpen: () => void }) {
+function LessonCard({ l, onOpen, onMake }: { l: LessonRow; onOpen: () => void; onMake: () => void }) {
+  const media = l.sources.some((x) => x.kind === "audio" || x.kind === "video");
   return (
-    <button className="lesson" onClick={onOpen} disabled={STATUS[l.status].busy} aria-label={`${l.lesson}, ${STATUS[l.status].label}`}>
-      <span className="lesson-h"><b>{l.lesson}</b><StatusPill status={l.status} /></span>
-      {l.status === "ready" && l.summary && <span className="lesson-s">{l.summary}</span>}
-      {l.status === "error" && l.error && <span className="lesson-err">{l.error}</span>}
+    <div className="lesson">
+      <button className="lesson-open" onClick={onOpen} disabled={STATUS[l.status].busy} aria-label={`${l.lesson}, ${STATUS[l.status].label}`}>
+        <span className="lesson-h"><b>{l.lesson}</b><StatusPill status={l.status} /></span>
+        {l.status === "ready" && l.summary && <span className="lesson-s">{l.summary}</span>}
+        {l.status === "error" && l.error && <span className="lesson-err">{l.error}</span>}
+      </button>
       <span className="lesson-f">
         {l.sources.map((s) => <span key={s.filename} className="kind" title={s.filename}>{KIND[s.kind]}</span>)}
         {l.edited && <span className="kind ed">Edited</span>}
         {l.new_material && <span className="kind new">New material</span>}
+        {l.status === "new" && <button className="btn primary sm lesson-make" onClick={onMake} title={media ? "Reads the files and transcribes the recording on this computer" : "Reads the files on this computer"}>
+          <Icon name="sparkle" size={15} /> Make notes</button>}
       </span>
-    </button>
+    </div>
   );
 }
 
@@ -75,7 +81,8 @@ function NoteView({ id, onBack }: { id: number; onBack: () => void }) {
   };
   const regenerate = async () => {
     setBusy(true);
-    try { setNote(await api.regenerateNote(note.id)); setDraft(null); toast("Making the notes again", "The local AI reads the lesson files again."); }
+    const first = note.status === "new";
+    try { setNote(await api.regenerateNote(note.id)); setDraft(null); toast(first ? "Making the notes" : "Making the notes again", first ? "The local AI reads the lesson files. You can leave this page." : "The local AI reads the lesson files again."); }
     catch (e) { toast("Couldn't start it", (e as Error).message, "error"); }
     setBusy(false);
   };
@@ -110,7 +117,10 @@ function NoteView({ id, onBack }: { id: number; onBack: () => void }) {
           <button className="btn sm" onClick={() => void regenerate()} disabled={busy}>Make notes again</button></div>
       )}
       {note.error && note.status === "ready" && <div className="note-alert warn"><Icon name="alert" size={18} /><span>{note.error}</span></div>}
-      {note.status === "error" ? (
+      {note.status === "new" ? (
+        <div className="note-alert"><Icon name="info" size={18} /><span>These notes are not made yet. <b>Make notes</b> reads the slides and documents{note.sources.some((x) => x.kind === "audio" || x.kind === "video") ? " and transcribes the recording" : ""} on this computer. It can take a few minutes.</span>
+          <button className="btn primary sm" onClick={() => void regenerate()} disabled={busy}><Icon name="sparkle" size={15} /> Make notes</button></div>
+      ) : note.status === "error" ? (
         <div className="note-alert warn"><Icon name="alert" size={18} /><span>{note.error ?? "The notes could not be made."}</span>
           <button className="btn sm" onClick={() => void regenerate()} disabled={busy}>Try again</button></div>
       ) : working ? (
@@ -142,9 +152,16 @@ export function SmartNotes({ noteId, openNote }: { noteId: number | null; openNo
     try {
       const r = await api.syncNotes();
       setData(r);
-      if (!quiet) toast("Materials checked", r.queued ? `${r.queued} lesson(s) being processed` : `${r.lessons} lesson(s), nothing new`, "ok");
+      if (!quiet) toast("Materials checked", `${r.lessons} lesson(s)${r.not_made ? `, ${r.not_made} without notes yet: press Make notes when you want them` : ""}`, "ok");
     } catch (e) { if (!quiet) toast("Couldn't sync the materials", (e as Error).message, "error"); else void load(); }
     setSyncing(false);
+  }, [toast, load]);
+  const make = useCallback(async (l: LessonRow) => {
+    try {
+      await api.regenerateNote(l.id);
+      toast("Making the notes", `${l.lesson}: the local AI reads the files. The status updates here.`);
+      void load();
+    } catch (e) { toast("Couldn't start it", (e as Error).message, "error"); }
   }, [toast, load]);
   // first visit: look for new files right away
   useEffect(() => { if (first.current) { first.current = false; void sync(true); } }, [sync]);
@@ -159,7 +176,7 @@ export function SmartNotes({ noteId, openNote }: { noteId: number | null; openNo
   return (
     <section aria-label="Smart Notes">
       <div className="notes-h">
-        <p className="panel-sub">Slides, documents and lesson recordings from UniLearn become study notes: summary, key points and definitions. Everything runs on this computer.</p>
+        <p className="panel-sub">Lessons from UniLearn appear here. Press <b>Make notes</b> on a lesson when you want it: the slides, documents and recordings become study notes (summary, key points, definitions). Everything runs on this computer.</p>
         <button className="btn sm" onClick={() => void sync()} disabled={syncing}><Icon name="sync" size={16} /> {syncing ? "Checking…" : "Sync materials"}</button>
       </div>
       {data && !data.transcription && <div className="note-alert warn"><Icon name="alert" size={18} /><span>Speech-to-text is not installed, so recordings are skipped. Start the app with Run &amp; Go to install it.</span></div>}
@@ -174,7 +191,7 @@ export function SmartNotes({ noteId, openNote }: { noteId: number | null; openNo
       ) : data.courses.map((c) => (
         <div key={c.code} className="notes-course">
           <h3><CourseChip code={c.code} name={c.name} /> {c.name}</h3>
-          <div className="lessons">{c.lessons.map((l) => <LessonCard key={l.id} l={l} onOpen={() => openNote(l.id)} />)}</div>
+          <div className="lessons">{c.lessons.map((l) => <LessonCard key={l.id} l={l} onOpen={() => openNote(l.id)} onMake={() => void make(l)} />)}</div>
         </div>
       ))}
     </section>

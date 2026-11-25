@@ -6,7 +6,7 @@ export type Plan = "free" | "premium";
 export interface User { id: number; email: string; full_name: string; role: Role; created_at: string; plan?: Plan }
 /** Premium plan (payment is simulated in the prototype). Price comes from app/config.py. */
 export interface Billing { plan: Plan; price: string; currency: string; period: string; features: string[]; since: string | null; simulated: boolean }
-export type NoteStatus = "waiting" | "syncing" | "transcribing" | "processing" | "ready" | "error";
+export type NoteStatus = "new" | "waiting" | "syncing" | "transcribing" | "processing" | "ready" | "error";
 export type SourceKind = "pdf" | "slides" | "document" | "text" | "audio" | "video";
 export interface LessonRow {
   id: number; course_code: string; course_name: string; lesson: string; position: number; status: NoteStatus; error: string | null;
@@ -14,14 +14,13 @@ export interface LessonRow {
   sources: { id: number; filename: string; kind: SourceKind; size: number }[];
 }
 /** Chat on one lesson or one of its files: answers only from the uploaded material, with the excerpts used. */
-export interface LessonChatTurn { role: "user" | "assistant"; content: string }
-export interface LessonChatAnswer {
-  answer: string; scope: string; skipped: string[];
-  sources: { n: number; filename: string; kind: SourceKind; label: string; excerpt: string }[];
-}
+export interface ChatSource { n: number; filename: string; kind: SourceKind; label: string; excerpt: string }
+/** Saved message of "Ask the material" (one conversation per lesson and one per file). */
+export interface LessonChatMessage { id: number; role: "user" | "assistant"; content: string; sources: ChatSource[]; created_at: string | null }
+export interface LessonChatAnswer { answer: string; scope: string; skipped: string[]; sources: ChatSource[]; messages: LessonChatMessage[] }
 export interface LessonNote extends LessonRow { body_md: string; key_points: string[]; definitions: { term: string; definition: string }[] }
 export interface NotesList { connected: boolean; transcription: boolean; courses: { code: string; name: string; lessons: LessonRow[] }[] }
-export interface NotesSync extends NotesList { lessons: number; files: number; queued: number }
+export interface NotesSync extends NotesList { lessons: number; files: number; queued: number; not_made: number }
 export interface TokenResponse { access_token: string; token_type: string; expires_in: number; user: User }
 /** Demo accounts: only returned on the computer that runs the demo (never through the public link). */
 export interface DemoAccounts { password: string | null; local?: boolean; staff_passwords_file?: string; accounts: { email: string; full_name: string; role: Role; password?: string | null }[] }

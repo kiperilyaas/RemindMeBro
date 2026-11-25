@@ -185,7 +185,7 @@ function CoursePage({ id, go }: { id: number; go: (p: string) => void }) {
   };
   const post = async (e: FormEvent) => {
     e.preventDefault();
-    try { await staffFetch(`/staff/api/courses/${id}/announcements`, { method: "POST", body: { subject, message } }); setSubject(""); setMessage(""); toast("Announcement posted", "Remind Me Bro's AI reads it at the next sync."); void load(); }
+    try { await staffFetch(`/staff/api/courses/${id}/announcements`, { method: "POST", body: { subject, message } }); setSubject(""); setMessage(""); toast("Announcement posted", c && c.students > 0 ? `Sent to ${c.students} student(s): it reaches their Remind Me Bro Inbox within a minute.` : "Nobody is enrolled in this course, so no student receives it."); void load(); }
     catch (e2) { toast("Couldn't post", (e2 as Error).message, true); }
   };
   const addAssign = async (e: FormEvent) => {
@@ -271,6 +271,7 @@ function CoursePage({ id, go }: { id: number; go: (p: string) => void }) {
           )}
           <form className="st-card st-pad st-form" onSubmit={post}>
             <h2 style={{ fontSize: 15 }}>Post an announcement</h2>
+            {c.students === 0 && <p className="st-warn" role="note">No student is enrolled in this course yet: nobody will receive this announcement. Students join in UniSIS (course registration), or you enrol them in the Students list.</p>}
             <label className="st-field">Subject<input value={subject} onChange={(e) => setSubject(e.target.value)} required minLength={2} /></label>
             <label className="st-field">Message<textarea value={message} onChange={(e) => setMessage(e.target.value)} required placeholder="Dates in plain words are fine: “by next Friday at noon”." /></label>
             <button className="st-btn primary">Post to Announcements</button>
