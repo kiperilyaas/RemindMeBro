@@ -22,6 +22,7 @@ class UserOut(BaseModel):
     full_name: str
     role: UserRole
     created_at: datetime
+    plan: str = "free"
 
 
 class RegisterRequest(BaseModel):

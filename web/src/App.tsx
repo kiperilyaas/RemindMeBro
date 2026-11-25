@@ -1,6 +1,4 @@
 import { BRAND } from "./components/Brand";
-import { useCallback, useState } from "react";
-import { Assistant } from "./components/Assistant";
 import { Icon } from "./components/Icon";
 import { Shell, type NavItem } from "./components/Shell";
 import { Spinner } from "./components/ui";
@@ -9,6 +7,7 @@ import { LecturerProvider } from "./state/lecturer";
 import { useSession } from "./state/session";
 import { StudentProvider, useStudent } from "./state/student";
 import { Account } from "./views/Account";
+import { AI } from "./views/student/AI";
 import { Login } from "./views/Login";
 import { LoginIntro, wantsIntro } from "./components/LoginIntro";
 import { LecturerArea } from "./views/lecturer/LecturerArea";
@@ -18,30 +17,29 @@ import { Semester } from "./views/student/Semester";
 import { Studies } from "./views/student/Studies";
 import { Timeline } from "./views/student/Timeline";
 
-const STUDENT_PATHS = ["", "inbox", "studies", "semester", "connections", "account"];
+const STUDENT_PATHS = ["", "inbox", "studies", "semester", "ai", "connections", "account"];
 const LECTURER_PATHS = ["", "announce", "extracted", "cases"];
 
 function StudentApp({ route, navigate, clearParams }: { route: Route; navigate: (p: string) => void; clearParams: () => void }) {
   const { unread, syncing, runSync } = useStudent();
-  const [chat, setChat] = useState(false);
-  const closeChat = useCallback(() => setChat(false), []);
   const path = STUDENT_PATHS.includes(route.path) ? route.path : "";
   const nav: NavItem[] = [
     { path: "", label: "Timeline", icon: "calendar" },
     { path: "inbox", label: "Inbox", icon: "inbox", badge: unread },
     { path: "studies", label: "Studies", icon: "cap" },
     { path: "semester", label: "Semester", icon: "map" },
+    { path: "ai", label: "AI", icon: "sparkle" },
     { path: "connections", label: "Connect", icon: "link" },
   ];
   return (
     <Shell nav={nav} current={path} onNavigate={navigate}
       actions={<button className={`icon-btn sync ${syncing ? "spin" : ""}`} onClick={() => void runSync()} disabled={syncing} aria-label={syncing ? "Syncing" : "Sync all sources"} title="Sync all sources"><Icon name="sync" /></button>}
-      aside={<Assistant open={chat} onClose={closeChat} />}
-      fab={<button className="fab" onClick={() => setChat(true)} aria-label="Open Ask Bro"><Icon name="sparkle" /></button>}>
+      fab={path !== "ai" && <button className="fab" onClick={() => navigate("ai")} aria-label="Open Ask Bro"><Icon name="sparkle" /></button>}>
       {path === "" && <Timeline onNavigate={navigate} />}
       {path === "inbox" && <Inbox />}
       {path === "studies" && <Studies onNavigate={navigate} />}
       {path === "semester" && <Semester />}
+      {path === "ai" && <AI route={route} navigate={navigate} />}
       {path === "connections" && <Connections route={route} clearParams={clearParams} />}
       {path === "account" && <Account />}
     </Shell>

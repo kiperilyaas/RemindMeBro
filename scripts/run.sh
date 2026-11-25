@@ -47,6 +47,7 @@ die()  {
 cleanup() {
   trap - EXIT INT TERM HUP
   echo
+  [ -n "${WHISPER_PID:-}" ] && kill "$WHISPER_PID" 2>/dev/null
   if [ -n "$BACKEND_PID" ] && kill -0 "$BACKEND_PID" 2>/dev/null; then
     echo "Stopping the app..."; kill "$BACKEND_PID" 2>/dev/null; wait "$BACKEND_PID" 2>/dev/null
   fi
@@ -196,13 +197,25 @@ if ! "$VENV/bin/python" -c "import sys" >/dev/null 2>&1; then
 fi
 # Reinstall when requirements.txt changed or a package is missing (the stamp alone can lie)
 if [ "$(cat "$RT/.req_stamp" 2>/dev/null)" != "$REQ_STAMP" ] \
-   || ! "$VENV/bin/python" -c "import uvicorn, fastapi, sqlalchemy, chromadb, ollama, jose, passlib, jinja2, httpx" >/dev/null 2>&1; then
+   || ! "$VENV/bin/python" -c "import uvicorn, fastapi, sqlalchemy, chromadb, ollama, jose, passlib, jinja2, httpx, pypdf, pptx, docx" >/dev/null 2>&1; then
   echo "    Installing packages (first time only, ~1-3 min)..."
   "$UV" pip install --python "$VENV/bin/python" -r requirements.txt > "$LOGS/pip.log" 2>&1 \
     || { tail -n 20 "$LOGS/pip.log"; die "Package installation failed"; }
   echo "$REQ_STAMP" > "$RT/.req_stamp"
 fi
 ok "$("$VENV/bin/python" --version)"
+# Smart Notes: speech-to-text for lesson recordings (optional: the app starts even if this fails)
+WHISPER_STAMP="$(cksum < requirements-whisper.txt | awk '{print $1}')"
+if [ "$(cat "$RT/.whisper_stamp" 2>/dev/null)" != "$WHISPER_STAMP" ] \
+   || ! "$VENV/bin/python" -c "import faster_whisper" >/dev/null 2>&1; then
+  echo "    Installing speech-to-text for Smart Notes (first time only)..."
+  if "$UV" pip install --python "$VENV/bin/python" -r requirements-whisper.txt > "$LOGS/pip-whisper.log" 2>&1; then
+    echo "$WHISPER_STAMP" > "$RT/.whisper_stamp"
+    ok "Speech-to-text ready (faster-whisper)"
+  else
+    warn "Speech-to-text could not be installed (see $LOGS/pip-whisper.log): Smart Notes will skip audio and video"
+  fi
+fi
 
 # ---------- 3. Ollama ----------
 step "3/5  Local AI (Ollama + $MODEL)"
@@ -324,6 +337,11 @@ http_ok "http://127.0.0.1:$PORT/api/health" || { tail -n 25 "$LOGS/backend.log";
 
 URL="http://127.0.0.1:$PORT/"
 ok "Running at $URL"
+# Smart Notes: download the Whisper model in the background (once, ~150 MB), so the first recording is quick
+if "$VENV/bin/python" -c "import faster_whisper" >/dev/null 2>&1; then
+  "$VENV/bin/python" -m app.services.notes.transcribe --download > "$LOGS/whisper.log" 2>&1 &
+  WHISPER_PID=$!
+fi
 # every staff password in one file (the services write their own part at start-up)
 STAFF_FILE="$APP_DIR/data/STAFF-PASSWORDS.txt"
 { echo "# Staff passwords of the demo. Only on this computer: never share this file or show it on screen."; echo

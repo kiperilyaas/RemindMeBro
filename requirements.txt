@@ -17,3 +17,7 @@ httpx>=0.27
 cryptography>=42.0
 # QR code for the share link (run-share-*)
 qrcode>=7.4
+# Smart Notes: text from slides and documents (speech-to-text is in requirements-whisper.txt)
+pypdf>=4.2
+python-pptx>=0.6.23
+python-docx>=1.1

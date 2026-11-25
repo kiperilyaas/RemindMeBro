@@ -17,7 +17,7 @@ from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Header, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, or_, select
@@ -25,7 +25,8 @@ from sqlalchemy.orm import Session
 
 from unilearn.config import settings
 from unilearn.db import get_db
-from unilearn.models import Assignment, CalendarEvent, Course, Discussion, Enrolment, ExternalToken, Forum, Submission, User, WSLog
+from unilearn.config import FILES_DIR
+from unilearn.models import Assignment, CalendarEvent, Course, CourseSection, Discussion, Enrolment, ExternalToken, Forum, Resource, Submission, User, WSLog
 
 router = APIRouter(tags=["Moodle-compatible web services"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -229,11 +230,39 @@ def local_unilearn_self_unenrol(db: Session, user: User, p: Dict[str, str]) -> A
     return {"status": True, "warnings": []}
 
 
+def _file_url(r: Resource) -> str:
+    # Same shape as Moodle: <site>/webservice/pluginfile.php/<context>/mod_resource/content/0/<file>; the client adds ?token=
+    return f"{settings.public_url()}/webservice/pluginfile.php/{r.id}/mod_resource/content/0/{r.filename}"
+
+
+def core_course_get_contents(db: Session, user: User, p: Dict[str, str]) -> Any:
+    """Course page: sections (lessons/modules) with their resources and files (Moodle core_course_get_contents)."""
+    cid = _ids([p.get("courseid", "")])[0]
+    course = db.get(Course, cid)
+    if course is None:
+        raise WSException("invalidrecord", "Can't find data record in database table course.", "dml_missing_record_exception")
+    if user.role != "admin" and cid not in _my_course_ids(db, user):
+        raise WSException("requireloginerror", "Course or activity not accessible. (Not enrolled)", "require_login_exception")
+    out = []
+    for sec in course.sections:
+        out.append({
+            "id": sec.id, "name": sec.name, "visible": 1, "summary": sec.summary, "summaryformat": 1, "section": sec.position,
+            "modules": [{
+                "id": r.id, "name": r.name, "modname": "resource", "visible": 1, "url": _file_url(r),
+                "contents": [{"type": "file", "filename": r.filename, "filepath": "/", "filesize": r.filesize, "fileurl": _file_url(r),
+                              "timecreated": ts(r.timemodified), "timemodified": ts(r.timemodified), "mimetype": r.mimetype,
+                              "contenthash": r.contenthash}],
+            } for r in sec.resources],
+        })
+    return out
+
+
 FUNCTIONS: Dict[str, Callable] = {
     f.__name__: f for f in (
         core_webservice_get_site_info, core_enrol_get_users_courses, mod_assign_get_assignments,
         mod_assign_get_submission_status, core_calendar_get_calendar_events, mod_forum_get_forums_by_courses,
         mod_forum_get_forum_discussions, core_course_get_courses_by_field, enrol_self_enrol_user, local_unilearn_self_unenrol,
+        core_course_get_contents,
     )
 }
 
@@ -314,3 +343,20 @@ async def server_php(request: Request, db: Session = Depends(get_db)):
         return JSONResponse({"exception": exc.exception, "errorcode": exc.errorcode, "message": exc.message})
     _log(db, tok.user.username, fn_name, "ok")
     return JSONResponse(result)
+
+
+@router.get("/webservice/pluginfile.php/{resource_id}/mod_resource/content/{revision}/{filename}", summary="Download a course file (Moodle webservice/pluginfile.php)")
+def pluginfile(resource_id: int, revision: int, filename: str, token: str = "", db: Session = Depends(get_db)):
+    tok = db.scalar(select(ExternalToken).where(ExternalToken.token_hash == sha256(token)))
+    if tok is None:
+        return JSONResponse({"error": "Invalid token - token not found", "errorcode": "invalidtoken"}, status_code=403)
+    r = db.get(Resource, resource_id)
+    if r is None or r.filename != filename:
+        return JSONResponse({"error": "File not found", "errorcode": "filenotfound"}, status_code=404)
+    if tok.user.role != "admin" and r.section.course_id not in _my_course_ids(db, tok.user):
+        return JSONResponse({"error": "Course or activity not accessible.", "errorcode": "requireloginerror"}, status_code=403)
+    path = FILES_DIR / r.contenthash[:2] / r.contenthash
+    if not path.is_file():
+        return JSONResponse({"error": "File not found", "errorcode": "filenotfound"}, status_code=404)
+    _log(db, tok.user.username, "pluginfile.php", "ok")
+    return FileResponse(path, media_type=r.mimetype, filename=r.filename)
