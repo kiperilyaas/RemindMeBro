@@ -107,8 +107,8 @@ describe("Ask the material", () => {
     expect(screen.getByText(/Answers use only rec\.mp3/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Question about the material"), { target: { value: "Who monitors managers?" } });
     fireEvent.click(screen.getByRole("button", { name: "Send question" }));
-    expect(await screen.findByLabelText("source 1")).toBeInTheDocument();
-    expect(screen.getByText(/1 source: rec\.mp3 · 1:02/)).toBeInTheDocument();
+    expect(await screen.findByLabelText("source: rec.mp3, 1:02")).toHaveTextContent("1:02");
+    expect(screen.getByText(/See in the material: rec\.mp3, 1:02/)).toBeInTheDocument();
     const sent = JSON.parse(calls.find((c) => c.url.endsWith("/notes/1/chat") && c.method === "POST")!.body!);
     expect(sent).toEqual({ question: "Who monitors managers?", source_id: 8 });
     expect(screen.getByRole("button", { name: "Delete this conversation" })).toBeInTheDocument();
