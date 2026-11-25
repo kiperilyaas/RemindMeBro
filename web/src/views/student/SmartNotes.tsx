@@ -5,6 +5,7 @@ import { Icon } from "../../components/Icon";
 import { CourseChip, Empty, Skeleton, Spinner } from "../../components/ui";
 import { Markdown } from "../../lib/markdown";
 import { useToast } from "../../state/toast";
+import { LessonChat } from "./LessonChat";
 
 export const STATUS: Record<NoteStatus, { label: string; tone: string; busy: boolean }> = {
   waiting: { label: "Queued", tone: "", busy: true },
@@ -42,6 +43,7 @@ function NoteView({ id, onBack }: { id: number; onBack: () => void }) {
   const [note, setNote] = useState<LessonNote | null>(null);
   const [draft, setDraft] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<"notes" | "ask">("notes");
   const load = useCallback(() => api.note(id).then(setNote).catch((e: Error) => toast("Couldn't open the notes", e.message, "error")), [id, toast]);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {   // follow a regeneration until it is done
@@ -83,7 +85,7 @@ function NoteView({ id, onBack }: { id: number; onBack: () => void }) {
       <div className="note-bar">
         <button className="btn ghost sm" onClick={onBack}><Icon name="chev-left" size={16} /> All lessons</button>
         <span className="grow" />
-        {draft === null ? (
+        {view === "ask" ? null : draft === null ? (
           <>
             <button className="btn sm" onClick={() => setDraft(note.body_md)} disabled={note.status !== "ready"}><Icon name="edit" size={16} /> Edit</button>
             <button className="btn sm" onClick={() => void copy()} disabled={note.status !== "ready"}>Copy text</button>
@@ -98,6 +100,11 @@ function NoteView({ id, onBack }: { id: number; onBack: () => void }) {
       </div>
       <p className="note-meta"><CourseChip code={note.course_code} name={note.course_name} /> {note.course_name} · {note.lesson}
         {note.generated_at && <> · made {fmtWhen(note.generated_at)}</>}{note.edited && <> · edited by you</>}</p>
+      <div className="seg" role="tablist" aria-label="Notes or questions">
+        <button role="tab" aria-selected={view === "notes"} onClick={() => setView("notes")}><Icon name="book" size={16} /> Notes</button>
+        <button role="tab" aria-selected={view === "ask"} onClick={() => { setDraft(null); setView("ask"); }}><Icon name="chat" size={16} /> Ask the material</button>
+      </div>
+      {view === "ask" ? <LessonChat note={note} /> : <>
       {note.new_material && (
         <div className="note-alert"><Icon name="info" size={18} /><span>The lecturer added or changed files in this lesson. {note.edited ? "Your edits are kept until you make the notes again." : ""}</span>
           <button className="btn sm" onClick={() => void regenerate()} disabled={busy}>Make notes again</button></div>
@@ -118,6 +125,7 @@ function NoteView({ id, onBack }: { id: number; onBack: () => void }) {
       {note.status === "ready" && draft === null && (
         <p className="note-foot"><button className="as-clear" onClick={() => void regenerate()} disabled={busy}>Make the notes again from the lesson files{note.edited ? " (drops your edits)" : ""}</button></p>
       )}
+      </>}
     </article>
   );
 }
