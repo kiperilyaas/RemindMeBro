@@ -32,7 +32,7 @@ export function Timeline({ onNavigate }: { onNavigate: (p: string) => void }) {
   const courses = useMemo(() => {
     const m = new Map<string, string>();
     [...events, ...deadlines].forEach((x) => { if (x.course_code) m.set(x.course_code, x.course_name ?? x.course_code); });
-    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [events, deadlines]);
   const items = useMemo(() => buildItems(events, deadlines, blocks, course), [events, deadlines, blocks, course]);
 
@@ -60,7 +60,7 @@ export function Timeline({ onNavigate }: { onNavigate: (p: string) => void }) {
               const due = parse(d.due_date);
               return (
                 <button key={d.id} className={`next u-${urgency(due, now)}`} onClick={() => showDay(due)}>
-                  <span>{relative(due, now)}</span><b>{d.title}</b><small>{shortCode(d.course_code) || "UniSIS"}{d.extracted_by_ai ? " · found by AI" : ""}</small>
+                  <span>{relative(due, now)}</span><b>{d.title}</b><small>{d.course_name ?? (shortCode(d.course_code) || "UniSIS")}{d.extracted_by_ai ? " · found by AI" : ""}</small>
                 </button>
               );
             })}
@@ -103,7 +103,7 @@ export function Timeline({ onNavigate }: { onNavigate: (p: string) => void }) {
         <div className="filters" role="group" aria-label="Filter by course">
           <button aria-pressed={course === null} onClick={() => setCourse(null)}>All courses</button>
           {courses.map(([code, name]) => (
-            <button key={code} aria-pressed={course === code} title={name} onClick={() => setCourse(course === code ? null : code)} style={{ ["--c" as string]: courseColor(code) }}><i />{shortCode(code)}</button>
+            <button key={code} aria-pressed={course === code} title={code} onClick={() => setCourse(course === code ? null : code)} style={{ ["--c" as string]: courseColor(code) }}><i />{name}</button>
           ))}
         </div>
       )}
