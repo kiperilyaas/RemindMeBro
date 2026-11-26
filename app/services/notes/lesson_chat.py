@@ -19,10 +19,8 @@ import unicodedata
 from collections import Counter
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-import ollama
-
 from app.config import settings
-from app.services.llm_extractor import LLMUnavailableError, get_ollama_client
+from app.services.llm_extractor import LLMUnavailableError, chat_long
 
 logger = logging.getLogger(__name__)
 
@@ -172,14 +170,7 @@ def answer(question: str, files: Sequence[Tuple[str, str, str, str]], history: S
             # old answers cite old source numbers: without them the model does not mix them up with the new SOURCES
             messages.append({"role": t["role"], "content": CITE.sub("", str(t["content"]))[:1500].strip()})
     messages.append({"role": "user", "content": f"MATERIAL: {scope_label}\n\nSOURCES:\n{excerpts}\n\nQUESTION: {question}"})
-    try:
-        res = get_ollama_client().chat(model=settings.OLLAMA_MODEL, messages=messages,
-                                       options={"temperature": 0.1, "num_ctx": settings.NOTES_NUM_CTX})
-        text = (res["message"]["content"] or "").strip()
-    except ollama.ResponseError as exc:
-        raise LLMUnavailableError(f"Ollama returned an error ({exc.status_code}): {exc.error}") from exc
-    except Exception as exc:
-        raise LLMUnavailableError(f"The local AI is not running (Ollama at {settings.OLLAMA_HOST}): {exc}") from exc
+    text = chat_long(messages, {"temperature": 0.1, "num_ctx": settings.NOTES_NUM_CTX}).strip()
     text, used = check_citations(text, found, [p["filename"] for p in pieces])
     sources = [{"n": n, "filename": found[n - 1]["filename"], "kind": found[n - 1]["kind"], "label": found[n - 1]["label"],
                 "excerpt": snippet(found[n - 1]["text"], claim)} for n, claim in used]

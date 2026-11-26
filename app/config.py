@@ -84,6 +84,9 @@ class Settings:
     WHISPER_DIR: str = os.getenv("WHISPER_DIR", str(DATA_DIR / "whisper"))
     # Context window asked of Ollama when it writes the notes (llama3.2 supports much more than the default 2048)
     NOTES_NUM_CTX: int = int(os.getenv("NOTES_NUM_CTX", "8192"))
+    # Notes and "Ask the material" read long texts: on a slow computer the model can think for minutes before the
+    # first word. The answer is streamed, and this is the longest wait (seconds) without any new word from Ollama.
+    NOTES_TIMEOUT: float = float(os.getenv("NOTES_TIMEOUT", "1800"))
 
     # --- Frontend ---
     # Se il file esiste, viene servito su http://127.0.0.1:8000/ (stessa origine, niente CORS)

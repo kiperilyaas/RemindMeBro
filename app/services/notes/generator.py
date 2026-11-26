@@ -11,10 +11,8 @@ import logging
 import re
 from typing import Any, Dict, List, Sequence, Tuple
 
-import ollama
-
 from app.config import settings
-from app.services.llm_extractor import LLMUnavailableError, get_ollama_client, parse_llm_json
+from app.services.llm_extractor import LLMUnavailableError, chat_long, parse_llm_json
 
 logger = logging.getLogger(__name__)
 
@@ -51,18 +49,8 @@ PART_FORMAT = (
 
 
 def _ask(prompt: str) -> Dict[str, Any]:
-    try:
-        response = get_ollama_client().chat(
-            model=settings.OLLAMA_MODEL,
-            messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}],
-            format="json",
-            options={"temperature": 0.2, "num_ctx": settings.NOTES_NUM_CTX},
-        )
-        raw = response["message"]["content"] or ""
-    except ollama.ResponseError as exc:
-        raise LLMUnavailableError(f"Ollama returned an error ({exc.status_code}): {exc.error}") from exc
-    except Exception as exc:
-        raise LLMUnavailableError(f"The local AI is not running (Ollama at {settings.OLLAMA_HOST}): {exc}") from exc
+    raw = chat_long([{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}],
+                    {"temperature": 0.2, "num_ctx": settings.NOTES_NUM_CTX}, json_mode=True)
     try:
         data = parse_llm_json(raw)
     except Exception as exc:
