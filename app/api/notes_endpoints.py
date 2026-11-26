@@ -6,12 +6,13 @@ Smart Notes (Premium): study notes made from the files lecturers upload to UniLe
   GET  /api/notes/{id}               one page of notes
   PUT  /api/notes/{id}               save the student's edits (Markdown)
   POST /api/notes/{id}/regenerate    make the notes again from the files (drops the edits)
+  POST /api/notes/{id}/chat          ask the AI about this lesson only, or one of its files (RAG on the uploaded text)
 """
 from __future__ import annotations
 
 import json
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -20,7 +21,9 @@ from sqlalchemy.orm import Session
 
 from app.api.premium import require_premium
 from app.database.db import get_db
-from app.database.models import LessonNote, User
+from app.database.models import ExtractedText, LessonNote, User
+from app.services.llm_extractor import LLMUnavailableError
+from app.services.notes import lesson_chat
 from app.services import unilearn_client
 from app.services.my_courses import student_course_codes
 from app.services.notes import worker
@@ -41,7 +44,7 @@ def _row(n: LessonNote) -> Dict[str, Any]:
         "status": n.status, "error": n.error, "title": n.title, "summary": n.summary, "edited": n.edited,
         "new_material": n.status == "ready" and bool(n.generated_hash) and n.generated_hash != n.sources_hash,
         "updated_at": _iso(n.updated_at), "generated_at": _iso(n.generated_at),
-        "sources": [{"filename": s.filename, "kind": s.kind, "size": s.filesize} for s in n.sources],
+        "sources": [{"id": s.id, "filename": s.filename, "kind": s.kind, "size": s.filesize} for s in n.sources],
     }
 
 
@@ -112,3 +115,40 @@ def regenerate(note_id: int, db: Session = Depends(get_db), user: User = Depends
     db.commit()
     worker.enqueue(n.id)
     return _full(n)
+
+
+class ChatTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(..., max_length=4000)
+
+
+class LessonChatBody(BaseModel):
+    question: str = Field(..., min_length=1, max_length=2000)
+    source_id: Optional[int] = Field(None, description="Only this file of the lesson; empty = every file of the lesson")
+    history: List[ChatTurn] = Field(default_factory=list, max_length=12)
+
+
+@router.post("/{note_id}/chat", summary="Ask about this lesson (or one file) using only the uploaded material")
+def lesson_chat_endpoint(note_id: int, body: LessonChatBody, db: Session = Depends(get_db), user: User = Depends(require_premium)) -> Dict[str, Any]:
+    n = _mine(db, user, note_id)
+    sources = [s for s in n.sources if body.source_id is None or s.id == body.source_id]
+    if not sources:
+        raise HTTPException(404, "This file is no longer in the lesson.")
+    files = []
+    for s in sources:
+        t = db.get(ExtractedText, s.contenthash)
+        if t is not None and t.text.strip():
+            files.append((s.contenthash, s.filename, s.kind, t.text))
+    if not files:
+        busy = n.status in ("waiting", "syncing", "transcribing", "processing")
+        raise HTTPException(409, "The files are still being read. Try again in a moment." if busy
+                            else "No readable text in this material (a scanned PDF or a recording that could not be transcribed?).")
+    scope = sources[0].filename if body.source_id is not None else f"{n.course_name} · {n.lesson_name} ({len(files)} file(s))"
+    try:
+        result = lesson_chat.answer(body.question, files, [t.model_dump() for t in body.history], scope)
+    except LLMUnavailableError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    except lesson_chat.LessonChatError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    skipped = [s.filename for s in sources if s.contenthash not in {f[0] for f in files}]
+    return {**result, "scope": scope, "skipped": skipped}

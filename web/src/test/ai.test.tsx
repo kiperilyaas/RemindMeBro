@@ -12,7 +12,7 @@ const billing = (plan: string) => ({ plan, price: "79", currency: "CZK", period:
 const user = (plan: string) => ({ id: 1, email: "student@demo.it", full_name: "Giulia Esposito", role: "student", created_at: "2026-11-01T00:00:00", plan });
 const row = (id: number, lesson: string, status: string) => ({
   id, course_code: "2PR515", course_name: "Corporate Governance", lesson, position: id, status, error: null, title: "", summary: status === "ready" ? "Who controls a company." : "",
-  edited: false, new_material: false, updated_at: null, generated_at: "2026-11-25T09:00:00", sources: [{ filename: "l1.pptx", kind: "slides", size: 10 }],
+  edited: false, new_material: false, updated_at: null, generated_at: "2026-11-25T09:00:00", sources: [{ id: 7, filename: "l1.pptx", kind: "slides", size: 10 }, { id: 8, filename: "rec.mp3", kind: "audio", size: 10 }],
 });
 const route = (q = "") => ({ path: "ai", params: new URLSearchParams(q) });
 
@@ -74,6 +74,28 @@ describe("AI section", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByRole("heading", { name: "Mine" })).toBeInTheDocument();
     expect(calls.some((c) => c.method === "PUT" && c.body === JSON.stringify({ body_md: "# Mine" }))).toBe(true);
+  });
+});
+
+describe("Ask the material", () => {
+  it("asks only about the chosen file and shows the cited excerpts", async () => {
+    const note = { ...row(1, "Lesson 1", "ready"), body_md: "# Governance\n", key_points: [], definitions: [] };
+    const { calls } = mount("premium", "tab=notes&note=1", (url) => {
+      if (url.endsWith("/notes/1/chat")) return json({ answer: "The board **monitors** managers [1].", scope: "rec.mp3", skipped: [],
+        sources: [{ n: 1, filename: "rec.mp3", kind: "audio", label: "1:02", excerpt: "The board monitors managers." }] });
+      if (url.endsWith("/notes/1")) return json(note);
+      if (url.endsWith("/notes/sync")) return json({ connected: true, transcription: true, courses: [], lessons: 0, files: 0, queued: 0 });
+      return null;
+    });
+    fireEvent.click(await screen.findByRole("tab", { name: /Ask the material/ }));
+    fireEvent.change(screen.getByLabelText("Ask about"), { target: { value: "8" } });
+    expect(screen.getByText(/Answers use only rec\.mp3/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Question about the material"), { target: { value: "Who monitors managers?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send question" }));
+    expect(await screen.findByLabelText("source 1")).toBeInTheDocument();
+    expect(screen.getByText(/1 source: rec\.mp3 · 1:02/)).toBeInTheDocument();
+    const sent = JSON.parse(calls.find((c) => c.url.endsWith("/notes/1/chat"))!.body!);
+    expect(sent).toEqual({ question: "Who monitors managers?", source_id: 8, history: [] });
   });
 });
 

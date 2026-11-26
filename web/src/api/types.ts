@@ -11,7 +11,13 @@ export type SourceKind = "pdf" | "slides" | "document" | "text" | "audio" | "vid
 export interface LessonRow {
   id: number; course_code: string; course_name: string; lesson: string; position: number; status: NoteStatus; error: string | null;
   title: string; summary: string; edited: boolean; new_material: boolean; updated_at: string | null; generated_at: string | null;
-  sources: { filename: string; kind: SourceKind; size: number }[];
+  sources: { id: number; filename: string; kind: SourceKind; size: number }[];
+}
+/** Chat on one lesson or one of its files: answers only from the uploaded material, with the excerpts used. */
+export interface LessonChatTurn { role: "user" | "assistant"; content: string }
+export interface LessonChatAnswer {
+  answer: string; scope: string; skipped: string[];
+  sources: { n: number; filename: string; kind: SourceKind; label: string; excerpt: string }[];
 }
 export interface LessonNote extends LessonRow { body_md: string; key_points: string[]; definitions: { term: string; definition: string }[] }
 export interface NotesList { connected: boolean; transcription: boolean; courses: { code: string; name: string; lessons: LessonRow[] }[] }

@@ -46,12 +46,30 @@ def get_model():
         return _model
 
 
+def _clock(seconds: float) -> str:
+    s = int(seconds)
+    return f"{s // 3600}:{s % 3600 // 60:02d}:{s % 60:02d}" if s >= 3600 else f"{s // 60}:{s % 60:02d}"
+
+
 def transcribe(path: Path) -> Tuple[str, Optional[str]]:
     """Returns (text, language code)."""
     model = get_model()
     try:
         segments, info = model.transcribe(str(path), beam_size=1, vad_filter=True)
-        text = " ".join(s.text.strip() for s in segments if s.text.strip())
+        # one paragraph per minute or so, each with its time: "[12:30]", so answers can say where it was said
+        parts, cur, start = [], [], None
+        for s in segments:
+            if not s.text.strip():
+                continue
+            if start is None:
+                start = s.start
+            cur.append(s.text.strip())
+            if s.end - start >= 60:
+                parts.append(f"[{_clock(start)}]\n" + " ".join(cur))
+                cur, start = [], None
+        if cur:
+            parts.append(f"[{_clock(start or 0)}]\n" + " ".join(cur))
+        text = "\n\n".join(parts)
     except Exception as exc:
         raise TranscribeError(f"Could not transcribe {path.name}: {exc}") from exc
     return text, getattr(info, "language", None)
