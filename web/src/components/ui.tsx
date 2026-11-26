@@ -12,9 +12,15 @@ export function AiTag({ title }: { title?: string }) {
   return <span className="ai" title={title}><Icon name="sparkle" size={12} /> found by AI</span>;
 }
 
-export function CourseChip({ code, name }: { code: string | null; name?: string | null }) {
+/** Course colour dot + code; with showName the course name is shown (the code stays in the tooltip). */
+export function CourseChip({ code, name, showName = false }: { code: string | null; name?: string | null; showName?: boolean }) {
   if (!code) return <span className="cchip" style={{ ["--c" as string]: "#64748B" }}>{name ?? "University"}</span>;
-  return <span className="cchip" style={{ ["--c" as string]: courseColor(code) }}><i aria-hidden />{shortCode(code)}</span>;
+  const named = showName && !!name;
+  return (
+    <span className={`cchip ${named ? "named" : ""}`} title={named ? shortCode(code) : name ?? undefined} style={{ ["--c" as string]: courseColor(code) }}>
+      <i aria-hidden />{named ? <span className="cchip-n">{name}</span> : shortCode(code)}
+    </span>
+  );
 }
 
 export function PageHeader({ eyebrow, title, actions }: { eyebrow?: ReactNode; title: string; actions?: ReactNode }) {

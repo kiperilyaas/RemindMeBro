@@ -34,6 +34,9 @@ describe("Inbox: new messages", () => {
     await waitFor(() => expect(document.title).toMatch(/^\(1\) /));
     fireEvent.click(screen.getByRole("button", { name: "Show all" }));
     expect(screen.getByText("workhome", { selector: ".msub" })).toBeInTheDocument();
+    // the course is shown by name, the code stays in the tooltip
+    expect(screen.getByText("Growth strategies", { selector: ".cchip-n" }).closest(".cchip")).toHaveAttribute("title", "3SG712");
+    expect(screen.queryByText("3SG712")).toBeNull();
     // a lecturer posts: the next check (30 s) brings it in, marked New, with a notification
     inbox = [msg(2, "Room change"), ...inbox];
     await act(async () => { await vi.advanceTimersByTimeAsync(31000); });

@@ -68,7 +68,7 @@ export function Inbox() {
                   <span className="mtxt">
                     <span className="mline"><b>{m.author}</b>{fresh.has(m.id) && <span className="new-pill">New</span>}<time dateTime={m.created_at} title={`${fmtDay(at)} ${fmtTime(at)}`}>{timeAgo(at, now)}</time></span>
                     <span className="msub">{m.subject}</span>
-                    <span className="mmeta"><SourceTag source={m.source} />{m.course_code && <CourseChip code={m.course_code} />}
+                    <span className="mmeta"><SourceTag source={m.source} />{m.course_code && <CourseChip code={m.course_code} name={m.course_name} showName />}
                       {m.deadline_id && m.deadline_due && <span className="ai"><Icon name="sparkle" size={12} /> date found · {fmtDay(parse(m.deadline_due))}</span>}</span>
                   </span>
                   {unread && <span className="udot" aria-label="Unread" />}

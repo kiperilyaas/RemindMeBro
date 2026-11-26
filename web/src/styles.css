@@ -517,3 +517,7 @@ pre{background:var(--surface-2);border-radius:12px;padding:12px;overflow:auto;fo
 .new-pill{font-size:11px;font-weight:700;color:#fff;background:var(--acc);border-radius:99px;padding:1px 7px;margin:0 auto 0 8px;align-self:center}
 .mlist li.fresh{border-color:var(--acc);animation:fresh-in .6s ease}
 @keyframes fresh-in{from{transform:translateY(-6px);opacity:0}to{transform:none;opacity:1}}
+
+/* course chip with the course name (Inbox) */
+.cchip.named{letter-spacing:0;min-width:0;max-width:100%}
+.cchip-n{overflow:hidden;text-overflow:ellipsis}
