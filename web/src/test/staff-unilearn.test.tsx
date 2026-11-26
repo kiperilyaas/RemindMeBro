@@ -43,4 +43,22 @@ describe("UniLearn staff", () => {
     expect(await screen.findByText("Add a calendar event")).toBeInTheDocument();
     expect(screen.getByText("Giulia Esposito")).toBeInTheDocument();
   });
+
+  it("on this computer the staff accounts sign in with one click", async () => {
+    const me = { id: 2, username: "marco.rossi", fullname: "Marco Rossi", role: "teacher", hub_url: "http://127.0.0.1:8000/", now: "2026-11-24T10:00" };
+    let signedIn = false;
+    mockServer((url, init) => {
+      if (url.endsWith("/staff/api/session")) return { user: null };
+      if (url.endsWith("/staff/api/demo-accounts")) return { password: null, local: true, accounts: [{ id: 2, username: "marco.rossi", fullname: "Marco Rossi", role: "teacher" }] };
+      if (url.endsWith("/staff/api/quick-login") && init?.method === "POST") { signedIn = true; return me; }
+      if (url.endsWith("/staff/api/me")) return signedIn ? me : json({ detail: "no" }, 401);
+      if (url.endsWith("/staff/api/courses")) return [];
+      return {};
+    });
+    await act(async () => { await import("../staff/unilearn/main"); });
+    expect(await screen.findByText(/Quick sign-in · only on this computer/)).toBeInTheDocument();
+    await act(async () => { fireEvent.click(screen.getByText("Marco Rossi")); });
+    await waitFor(() => expect(calls.find((c) => c.url.endsWith("/staff/api/quick-login"))?.body).toEqual({ uid: 2 }));
+    expect(await screen.findByText("No courses yet. Create the first one above.")).toBeInTheDocument();
+  });
 });

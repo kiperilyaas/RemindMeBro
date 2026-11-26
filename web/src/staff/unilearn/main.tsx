@@ -333,10 +333,10 @@ function WebServices() {
 }
 
 function App() {
-  const { user, booting, demo, login, logout } = useStaffSession<Me>();
+  const { user, booting, demo, login, quickLogin, logout } = useStaffSession<Me>();
   const [path, go] = useHashPath();
   if (booting) return <div className="st"><div className="st-boot">Loading…</div></div>;
-  if (!user) return <StaffLogin system={SYSTEM} intro="Teachers and the site admin. Students use the UniLearn dashboard." demo={demo} onLogin={login} />;
+  if (!user) return <StaffLogin system={SYSTEM} intro="Teachers and the site admin. Students use the UniLearn dashboard." demo={demo} onLogin={login} onQuick={quickLogin} />;
   const admin = user.role === "admin";
   const nav = [{ id: "", label: "Courses" }, ...(admin ? [{ id: "webservices", label: "Web services" }] : [])];
   const page = path[0] ?? "";

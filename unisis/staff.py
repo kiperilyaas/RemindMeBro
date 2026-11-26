@@ -23,6 +23,7 @@ from unisis.config import settings
 from unisis.db import get_db
 from unisis.models import AuditLog, Consent, Course, Enrollment, ExamTerm, GradeRecord, OAuthClient, Term, TimetableSlot, Token, User
 from unisis.seed import public_url
+from app.api.access import is_local_request
 
 router = APIRouter(include_in_schema=False)
 STAFF_PAGE = Path(__file__).parent / "static" / "staff" / "index.html"
@@ -101,9 +102,28 @@ def session(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/staff/api/demo-accounts")
-def demo_accounts(db: Session = Depends(get_db)):
+def demo_accounts(request: Request, db: Session = Depends(get_db)):
+    """Student Office accounts for the sign-in page. On the computer that runs the demo they sign in with one click."""
     rows = db.scalars(select(User).where(User.role == "registrar"))
-    return {"password": None, "accounts": [_me(u) for u in rows], "passwords_file": "data/STAFF-PASSWORDS.txt"}
+    return {"password": None, "accounts": [_me(u) for u in rows], "passwords_file": "data/STAFF-PASSWORDS.txt",
+            "local": is_local_request(request)}
+
+
+class QuickLoginBody(BaseModel):
+    uid: int
+
+
+@router.post("/staff/api/quick-login")
+def quick_login(body: QuickLoginBody, request: Request, db: Session = Depends(get_db)):
+    """One-click sign-in for debugging: only on the computer that runs the demo, never through a public link."""
+    _guard(request)
+    if not is_local_request(request):
+        raise HTTPException(403, "Quick sign-in works only on the computer that runs the demo.")
+    user = db.get(User, body.uid)
+    if user is None or user.role != "registrar":
+        raise HTTPException(404, "No such Student Office account.")
+    request.session["uid"] = user.id
+    return _me(user)
 
 
 # ---------------------------------------------------------------------------

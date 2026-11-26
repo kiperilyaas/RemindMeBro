@@ -2,6 +2,7 @@
 {% block title %}Sign in{% endblock %}
 {% block content %}
 <div class="center">
+ <div class="login-stack">
   <form class="box" method="post" action="/login">
     <div>
       <div class="eyebrow">{{ university }}</div>
@@ -15,5 +16,19 @@
     <button class="btn primary big" type="submit">Sign in</button>
     <div class="fine">Students sign in with the email and password they chose in Remind Me Bro. The Student Office password is in <span class="mono">data/STAFF-PASSWORDS.txt</span> on the computer that runs the demo.</div>
   </form>
+  {% if quick %}
+  <section class="box quick" aria-label="Quick sign-in">
+    <div><div class="eyebrow">Quick sign-in · only on this computer</div><p class="fine" style="margin:4px 0 0">For debugging: one click, no password. Not shown through the public link.</p></div>
+    <div class="quick-list">
+      {% for a in quick %}
+      <form method="post" action="/login/quick">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="next" value="{{ next }}"><input type="hidden" name="uid" value="{{ a.id }}">
+        <button class="btn quick-btn" type="submit"><span><b>{{ a.name }}</b><small>{{ a.username }}</small></span><span class="quick-role">{{ a.role }}</span></button>
+      </form>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+ </div>
 </div>
 {% endblock %}
