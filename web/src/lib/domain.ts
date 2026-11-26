@@ -6,7 +6,7 @@ export const SOURCES: Record<Source, { label: string; color: string }> = {
   moodle: { label: "UniLearn", color: "#B5651D" },
   unisis: { label: "UniSIS", color: "#2F855A" },
   teams: { label: "Teams", color: "#5B5FC7" },
-  email: { label: "Email", color: "#2F69A3" },
+  email: { label: "Outlook", color: "#2F69A3" },
 };
 
 const KNOWN: Record<string, string> = {

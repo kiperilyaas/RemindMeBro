@@ -21,19 +21,26 @@ Regola: dopo ogni modifica (codice, rami, decisioni) questo documento va aggiorn
   - `make-zip.sh` con il nome del ramo nello zip.
 - `f1891e7` (25 novembre): PR #2 `feature/calendar` unita da Illia. Calendario della proposta A nella Timeline dello studente. `web/src/views/student/Calendar.tsx`: Agenda (oggi con linea dell'ora, poi 21 giorni, solo quelli con qualcosa), Week (frecce, settimana ISO, striscia di 7 giorni con pallini, tocco = scorre al giorno), Month (griglia 6 settimane, pallini lezione per corso / scadenza / esame, legenda, giorno scelto sotto). Tasto Today, filtro corsi, Plan my week, Mark as done in tutte le viste; vista scelta salvata nel browser; le scadenze in alto aprono il mese sul giorno. Eventi caricati dall'inizio del mese. Filtri e scadenze in alto mostrano il nome del corso.
 
-## Rami aperti (una catena: ognuno nasce dal precedente)
-- `feature/smart-notes` (commit `03c417e`, 25 novembre, da `main` aggiornato), PR #3 https://github.com/kiperilyaas/RemindMeBro/pull/3. Prossimo passo: Illia prova l'app (alla prima registrazione Whisper scarica il modello) e unisce la PR #3.
-- `feature/lesson-chat` (commit `71b92d9`, nato da `feature/smart-notes`), PR #4. Contiene anche il commit della #3: va unita dopo la #3, poi mostra solo il suo commit.
-- `feature/notes-on-demand` (commit `b3916e5`, nato da `feature/lesson-chat`), PR #5.
-- `feature/inbox-new` (commit `81d0f5d`, nato da `feature/notes-on-demand`), PR #6.
-- `feature/better-answers` (commit `1058d2b`, 26 novembre, nato da `feature/inbox-new`), PR #7.
-- `feature/quick-login` (commit `aedd993`, 26 novembre, nato da `feature/better-answers`), PR #8.
-- `fix/db-locked` (commit `370f91f`, 26 novembre, nato da `feature/quick-login`), PR #9.
-- `fix/notes-timeout` (commit `c981d44`, 26 novembre, nato da `fix/db-locked`), PR #10.
-- `fix/inbox-course-names` (commit `54e13f2`, 26 novembre, nato da `fix/notes-timeout`), PR #11.
-- `feature/notes-stop` (commit `5b73702`, 26 novembre, nato da `fix/inbox-course-names`), PR #12.
-- `chore/claude-code` (26 novembre, nato da `feature/notes-stop`), PR #13: `CLAUDE.md` e questo documento in `docs/`, per lavorare con Claude Code.
-- Tutte verso `main`, senza conflitti al momento della consegna. Ordine di unione: #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #13.
+## Stato delle PR (26 novembre, sera)
+- Unite da Illia in `main`: #3 `feature/smart-notes`, #4 `feature/lesson-chat`, #5 `feature/notes-on-demand`, #6 `feature/inbox-new`, #7 `feature/better-answers`, #8 `feature/quick-login`, #9 `fix/db-locked` (`main` = `db81b84`).
+- Aperte, una catena (ognuna nasce dalla precedente), da unire in quest'ordine:
+  - #10 `fix/notes-timeout` (`c981d44`)
+  - #11 `fix/inbox-course-names` (`54e13f2`)
+  - #12 `feature/notes-stop` (`5b73702`)
+  - #13 `chore/claude-code` (`1d6fb32`): `CLAUDE.md` e questo documento in `docs/`
+  - `feature/outlook-teams` (nato da `chore/claude-code`): Inbox svuotata, corsi divisi tra i cinque docenti, messaggi da Outlook e Teams. PR da aprire dal sito (su questo computer `gh` non è installato).
+- Tutte verso `main`. Una PR della catena mostra anche i commit delle precedenti finché quelle non sono unite.
+
+## Inbox, docenti, Outlook e Teams (26 novembre, ramo `feature/outlook-teams`)
+- Inbox svuotata su richiesta di Illia (dati, non codice): cancellati gli 11 avvisi dell'hub e gli 8 post rimasti nei forum Announcements di UniLearn, con le 9 scadenze che l'AI ci aveva trovato. Restano le 3 scadenze ufficiali (compiti UniLearn). Copia di prima in `.runtime/backup-before-clear-inbox-2026-11-26/`. L'indice di Ask Bro (ChromaDB) si ripulisce al prossimo avvio (`prune_vector_store`), perché l'app era accesa.
+- Bug trovato: un post cancellato in UniLearn restava nell'Inbox (in UniLearn c'erano 8 post, nell'hub 11). Ora `unilearn_client.sync_posts` (Sync e controllo ogni 30 s) cancella dall'hub i post spariti dai forum letti, con le loro scadenze AI (`sync_service.delete_announcement`, che toglie anche il documento da ChromaDB e rimette visibile una data ufficiale nascosta da quel messaggio).
+- Corsi divisi tra i cinque docenti (prima solo Neri e Rossi): Chiara Neri 2PR515 e 2IB468; Laura Bianchi 2MO522 e 2IB421; Marco Rossi 3SG712 e 3PA662; Giovanni Verdi 3MA674; Paolo Conti 3PO643. Cambiati `unilearn/seed.py`, `unisis/seed.py`, `app/mocks/moodle_mock.py`; per i dati già esistenti `move_demo_courses` (a ogni avvio dei tre servizi) sposta un corso solo se ha ancora il docente vecchio della demo: un docente scelto a mano resta.
+- Messaggi da Outlook e Teams (richiesta di Illia). Un collegamento vero (Microsoft Graph) chiede un'app registrata in Azure e il consenso dell'amministratore dell'università: per la demo lo studente li aggiunge lui. Inbox → "Add message": Outlook o Teams, mittente, oggetto, corso (o "Let the AI guess"), testo incollato; per Outlook si può trascinare un'email salvata come `.eml` (Outlook: … → Download / Save as; il `.msg` del vecchio Outlook non si legge).
+  - Backend: `app/services/personal_messages.py` (`parse_eml` con la libreria `email`, testo da HTML, data in ora locale; `add_message` → `process_informal_message` con `owner_id`). Endpoint `POST /api/inbox/messages`, `POST /api/inbox/parse-eml`, `DELETE /api/inbox/messages/{id}` (solo i propri).
+  - Messaggi personali: colonna `announcements.user_id`; li vede solo chi li ha aggiunti (anche se il corso non è tra i suoi), e la scadenza trovata ha `user_id` dello studente. Un messaggio personale non sposta né nasconde le scadenze del corso degli altri; i docenti non lo vedono (né in "extracted deadlines" né nel conteggio avvisi); Ask Bro filtra in ChromaDB i messaggi di altri studenti (`owner_id` nei metadati).
+  - Frontend: `views/student/AddMessage.tsx`, tasto "Add message" e "Delete" sui propri messaggi in `Inbox.tsx`; la fonte `email` ora si chiama "Outlook". CSS `.add-msg`, `.drop` in fondo a `styles.css`.
+- Prove: API su una copia del database (aggiunta con e senza scadenza, fonte non ammessa 422, visibilità per un docente, cancellazione propria e altrui, `.eml` HTML con oggetto codificato, file non email 422); spostamento dei corsi su copie di UniLearn e UniSIS (4 spostati, la seconda volta 0); rimozione dei post cancellati con UniLearn acceso; 34 Vitest.
+- Test su Node 26: Node 26 ha un suo `localStorage` che copre quello di jsdom e 6 test falliscono con `npm test`. Con `NODE_OPTIONS=--no-experimental-webstorage npm test` passano tutti. Da sistemare nella configurazione di Vitest (Illia ha detto "non ora").
 
 ## Smart Notes: Stop, Elimina, niente ripartenze da sole (26 novembre, ramo `feature/notes-stop`)
 - Problema di Illia: una lezione (2PR515 "Lesson 1", un PDF di 11.567 caratteri, 2 parti) restava "AI processing" a lungo, ripartiva a ogni avvio dell'app e anche dopo aver tolto il PDF da UniLearn; nessun modo di fermarla. Cause: `main.py` rimetteva in coda all'avvio le lezioni a metà; `sync.py` non cancellava le lezioni in lavorazione; nessuno Stop. Nel F12 si vedevano `GET /api/notes` ogni 3 s (controllo stato mentre una lezione lavora) e Inbox/scadenze ogni 30 s: normale.
@@ -110,8 +117,12 @@ Regola: dopo ogni modifica (codice, rami, decisioni) questo documento va aggiorn
 ## Dati di partenza
 - Account: studentessa demo `student@demo.it` / `demo1234` (UniLearn e UniSIS: `giulia.esposito`); staff con password in `data/STAFF-PASSWORDS.txt`; UniSIS ha il corso di laurea BSc Economics and Finance e i due semestri dell'anno accademico in corso (calcolati dalla data di oggi).
 - Otto corsi della demo (codici VŠE), 6 ECTS, semestre in corso, a scelta, senza lezioni, compiti o esami:
-  - Chiara Neri: 2PR515 Corporate Governance (SB 408, creato da Illia), 2IB468 Ethics in Finance (SB 410), 2MO522 Financial Strategies in International Business (SB 411), 2IB421 Global ESG and Implications for Sustainable Business (SB 412).
-  - Marco Rossi: 3SG712 Growth strategies (SB 413), 3PA662 Human Resource Management Seminar (SB 414), 3MA674 International Management (SB 415), 3PO643 Social Entrepreneurship: Innovation and Impact (SB 416).
+  - Chiara Neri: 2PR515 Corporate Governance (SB 408, creato da Illia), 2IB468 Ethics in Finance (SB 410).
+  - Laura Bianchi: 2MO522 Financial Strategies in International Business (SB 411), 2IB421 Global ESG and Implications for Sustainable Business (SB 412).
+  - Marco Rossi: 3SG712 Growth strategies (SB 413), 3PA662 Human Resource Management Seminar (SB 414).
+  - Giovanni Verdi: 3MA674 International Management (SB 415).
+  - Paolo Conti: 3PO643 Social Entrepreneurship: Innovation and Impact (SB 416).
+  - Fino al 26 novembre tutti e otto erano di Neri e Rossi (ramo `feature/outlook-teams`).
   - Elenco in `unilearn/seed.py`, `unisis/seed.py`, `app/mocks/moodle_mock.py` (`seed_courses` aggiunge solo i corsi mancanti).
 - Orologio: `DEMO_REFERENCE_DATE=now` di default nei tre servizi e nel frontend. I dati di UniSIS usano l'ora locale del computer che fa girare l'app.
 - I dati restano in `data/`. Per ripartire: cancellare `data/` (si ricreano account, password staff e otto corsi). Colonne nuove nei modelli vengono aggiunte alle tabelle esistenti all'avvio (`_add_missing_columns`).
@@ -144,5 +155,7 @@ Regola: dopo ogni modifica (codice, rami, decisioni) questo documento va aggiorn
 - Un sync alla volta (`SYNC_LOCK`): il Sync premuto aspetta il controllo automatico, che salta il giro se un Sync è in corso.
 - I lavori lunghi dell'AI (appunti, Ask the material) non hanno un limite di tempo totale: si fermano solo se Ollama tace per `NOTES_TIMEOUT` (30 min) o con Stop.
 - Allo studente si mostra il nome del corso, non il codice (calendario, Inbox).
+- Outlook e Teams: niente collegamento Microsoft Graph nella demo; lo studente aggiunge i messaggi (testo o `.eml`), che restano personali.
+- Un avviso cancellato in UniLearn sparisce anche dall'Inbox, con le scadenze trovate dall'AI.
 - Dal 26 novembre il codice si fa con Claude Code (regole in `CLAUDE.md`); il design (canvas) resta su claude.ai.
-- Test: 26 Vitest su `main`, 30 su `feature/smart-notes`, 31 su `feature/lesson-chat` e `feature/notes-on-demand`, 32 su `feature/inbox-new` e `feature/better-answers`, 33 da `feature/quick-login` in poi; prove complete via API sui tre servizi.
+- Test: 26 Vitest su `main`, 30 su `feature/smart-notes`, 31 su `feature/lesson-chat` e `feature/notes-on-demand`, 32 su `feature/inbox-new` e `feature/better-answers`, 33 da `feature/quick-login` in poi, 34 su `feature/outlook-teams` (con Node 26: `NODE_OPTIONS=--no-experimental-webstorage`); prove complete via API sui tre servizi.

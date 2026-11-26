@@ -17,7 +17,7 @@ from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api import schemas
@@ -27,7 +27,7 @@ from app.api.premium import require_premium
 from app.config import settings
 from app.database.db import get_db
 from app.database.models import Announcement, Course, Deadline, DeadlineDone, Event, SourceType, User
-from app.services import llm_extractor, sync_service, vector_store
+from app.services import llm_extractor, personal_messages, sync_service, vector_store
 from app.services.my_courses import course_filter
 
 router = APIRouter(prefix="/api", tags=["Academic Hub"])
@@ -74,6 +74,12 @@ def visible_deadlines(user: User):
 
 def visible_events(user: User):
     return or_(Event.user_id.is_(None), Event.user_id == user.id)
+
+
+def visible_announcements(db: Session, user: User):
+    """Shared messages of the student's courses + the Outlook/Teams messages the student added (whatever their course)."""
+    return or_(Announcement.user_id == user.id,
+               and_(Announcement.user_id.is_(None), course_filter(db, user, Announcement.course_id)))
 
 
 def _subject_from_content(text: str, limit: int = 80) -> str:
@@ -134,7 +140,7 @@ def list_deadlines(
         .options(selectinload(Deadline.course), selectinload(Deadline.announcement))
         .order_by(Deadline.due_date)
     )
-    stmt = stmt.where(visible_deadlines(user), course_filter(db, user, Deadline.course_id))
+    stmt = stmt.where(or_(Deadline.user_id == user.id, and_(Deadline.user_id.is_(None), course_filter(db, user, Deadline.course_id))))
     if not include_superseded:
         stmt = stmt.where(Deadline.superseded_by_id.is_(None))
     if source:
@@ -179,37 +185,69 @@ def inbox(limit: int = Query(50, ge=1, le=200), db: Session = Depends(get_db), u
     rows = db.scalars(
         select(Announcement)
         .options(selectinload(Announcement.course), selectinload(Announcement.deadlines))
-        .where(course_filter(db, user, Announcement.course_id))
+        .where(visible_announcements(db, user))
         .order_by(Announcement.created_at.desc())
         .limit(limit)
     )
     now = settings.reference_now()
-    items: List[schemas.InboxItem] = []
-    for a in rows:
-        dl = next(iter(sorted(a.deadlines, key=lambda d: d.due_date)), None)
-        if dl:
-            summary = f"AI-detected deadline: {dl.title} — {_fmt_short(dl.due_date)}."
-        else:
-            summary = "No deadline detected. Informational message."
-        recent = (now - a.created_at) <= timedelta(days=2)
-        items.append(
-            schemas.InboxItem(
-                id=a.id,
-                source=a.source,
-                course_id=a.course_id,
-                course_code=a.course.code if a.course else None,
-                course_name=a.course.name if a.course else None,
-                author=a.author,
-                created_at=a.created_at,
-                subject=_subject_from_content(a.content),
-                content=a.content,
-                ai_summary=summary,
-                important=bool(dl) or recent,
-                deadline_id=dl.id if dl else None,
-                deadline_due=dl.due_date if dl else None,
-            )
-        )
-    return items
+    return [_inbox_item(a, now) for a in rows]
+
+
+def _inbox_item(a: Announcement, now: datetime) -> schemas.InboxItem:
+    dl = next(iter(sorted(a.deadlines, key=lambda d: d.due_date)), None)
+    if dl:
+        summary = f"AI-detected deadline: {dl.title} — {_fmt_short(dl.due_date)}."
+    else:
+        summary = "No deadline detected. Informational message."
+    recent = (now - a.created_at) <= timedelta(days=2)
+    return schemas.InboxItem(
+        id=a.id,
+        source=a.source,
+        course_id=a.course_id,
+        course_code=a.course.code if a.course else None,
+        course_name=a.course.name if a.course else None,
+        author=a.author,
+        created_at=a.created_at,
+        subject=_subject_from_content(a.content),
+        content=a.content,
+        ai_summary=summary,
+        important=bool(dl) or recent,
+        deadline_id=dl.id if dl else None,
+        deadline_due=dl.due_date if dl else None,
+        personal=a.user_id is not None,
+    )
+
+
+@router.post("/inbox/messages", response_model=schemas.AddMessageResponse, status_code=201,
+             summary="Add an Outlook email or a Teams message (only the student sees it)")
+def add_inbox_message(payload: schemas.AddMessageRequest, db: Session = Depends(get_db), user: User = Authenticated) -> schemas.AddMessageResponse:
+    """The AI looks for a deadline in it, like in the lecturers' announcements. The deadline is personal too."""
+    if payload.course_code and db.scalar(select(Course.id).where(Course.code == payload.course_code)) is None:
+        raise HTTPException(status_code=404, detail="Course not found.")
+    detail = personal_messages.add_message(db, user, source=payload.source, author=payload.author, subject=payload.subject,
+                                           content=payload.content, course_code=payload.course_code, sent_at=payload.sent_at)
+    ann = db.get(Announcement, detail["announcement_id"])
+    db.refresh(ann)
+    return schemas.AddMessageResponse(item=_inbox_item(ann, settings.reference_now()), ai_status=detail.get("status", "no_deadline"),
+                                      ai_error=detail.get("error"))
+
+
+@router.post("/inbox/parse-eml", response_model=schemas.ParsedEmail, summary="Read an email saved from Outlook (.eml)")
+def parse_eml(payload: schemas.ParseEmlRequest, user: User = Authenticated) -> schemas.ParsedEmail:
+    try:
+        return schemas.ParsedEmail(**personal_messages.parse_eml(payload.eml.encode("utf-8", "surrogateescape")))
+    except personal_messages.EmlError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.delete("/inbox/messages/{message_id}", summary="Delete a message the student added")
+def delete_inbox_message(message_id: int, db: Session = Depends(get_db), user: User = Authenticated) -> Dict[str, bool]:
+    ann = db.get(Announcement, message_id)
+    if ann is None or ann.user_id != user.id:   # course announcements are deleted by the lecturer in UniLearn
+        raise HTTPException(status_code=404, detail="Message not found.")
+    sync_service.delete_announcement(db, ann)
+    db.commit()
+    return {"deleted": True}
 
 
 @router.get("/schedule", response_model=List[schemas.ScheduleEvent], summary="Timetable/events in a date range")
@@ -253,7 +291,7 @@ def schedule(
 def list_announcements(
     limit: int = Query(20, ge=1, le=200), db: Session = Depends(get_db), user: User = Authenticated
 ) -> List[Announcement]:
-    return list(db.scalars(select(Announcement).where(course_filter(db, user, Announcement.course_id)).order_by(Announcement.created_at.desc()).limit(limit)))
+    return list(db.scalars(select(Announcement).where(visible_announcements(db, user)).order_by(Announcement.created_at.desc()).limit(limit)))
 
 
 @router.get("/events", response_model=List[schemas.EventOut], summary="All calendar events")

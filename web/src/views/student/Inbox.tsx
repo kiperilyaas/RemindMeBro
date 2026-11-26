@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { api } from "../../api/client";
 import type { InboxItem, Source } from "../../api/types";
 import { Icon } from "../../components/Icon";
 import { CourseChip, Empty, PageHeader, Skeleton, SourceTag } from "../../components/ui";
@@ -6,9 +7,11 @@ import { SOURCES } from "../../lib/domain";
 import { fmtDay, fmtTime, parse, timeAgo } from "../../lib/time";
 import { useSession } from "../../state/session";
 import { useStudent } from "../../state/student";
+import { useToast } from "../../state/toast";
+import { AddMessage } from "./AddMessage";
 
 type Filter = "important" | "all" | Source;
-const FILTERS: [Filter, string][] = [["important", "Important"], ["all", "All"], ["teams", "Teams"], ["moodle", "UniLearn"], ["email", "Email"]];
+const FILTERS: [Filter, string][] = [["important", "Important"], ["all", "All"], ["teams", "Teams"], ["moodle", "UniLearn"], ["email", "Outlook"]];
 
 function Avatar({ m }: { m: InboxItem }) {
   const letter = m.author.replace(/^Prof\.?\s+/i, "").trim()[0] ?? "?";
@@ -17,7 +20,9 @@ function Avatar({ m }: { m: InboxItem }) {
 
 export function Inbox() {
   const { now } = useSession();
-  const { loading, inbox, isRead, markRead, fresh, clearFresh } = useStudent();
+  const { loading, inbox, isRead, markRead, fresh, clearFresh, reload } = useStudent();
+  const toast = useToast();
+  const [adding, setAdding] = useState(false);
   // open on "All" when an unread message is not "Important" (a plain announcement), so new messages are never hidden
   const [filter, setFilter] = useState<Filter>(() => (inbox.some((m) => !isRead(m.id) && !(m.important || m.deadline_id)) ? "all" : "important"));
   useEffect(() => clearFresh, [clearFresh]);   // "New" lasts until the student leaves the Inbox
@@ -30,12 +35,21 @@ export function Inbox() {
   const unreadAll = inbox.filter((m) => !isRead(m.id));
   const hidden = unreadAll.filter((m) => !listIds.has(m.id));   // e.g. a plain announcement is not "Important"
   const freshCount = inbox.filter((m) => fresh.has(m.id)).length;
+  const remove = async (m: InboxItem) => {
+    if (!window.confirm("Delete this message? The deadline the AI found in it is deleted too.")) return;
+    try { await api.deleteMessage(m.id); setOpenId(null); await reload(); toast("Message deleted", undefined, "ok"); }
+    catch (e) { toast("Could not delete the message", (e as Error).message, "error"); }
+  };
   const count = (f: Filter) => inbox.filter((m) => !isRead(m.id) && (f === "all" || (f === "important" ? m.important || !!m.deadline_id : m.source === f))).length;
 
   return (
     <>
-      <PageHeader eyebrow="Teams · UniLearn · Email" title="Inbox"
-        actions={unreadHere.length > 0 && <button className="btn" onClick={() => markRead(unreadHere.map((m) => m.id))}><Icon name="check" size={16} /> Mark all as read</button>} />
+      <PageHeader eyebrow="Teams · UniLearn · Outlook" title="Inbox"
+        actions={<>
+          {unreadHere.length > 0 && <button className="btn" onClick={() => markRead(unreadHere.map((m) => m.id))}><Icon name="check" size={16} /> Mark all as read</button>}
+          <button className="btn primary" onClick={() => setAdding(true)}><Icon name="plus" size={16} /> Add message</button>
+        </>} />
+      {adding && <AddMessage onClose={() => setAdding(false)} onAdded={(item) => { setAdding(false); markRead([item.id]); setFilter("all"); setOpenId(item.id); }} />}
       <div className="seg scroll" role="tablist" aria-label="Filter messages">
         {FILTERS.map(([f, label]) => (
           <button key={f} role="tab" aria-selected={filter === f} onClick={() => { setFilter(f); setOpenId(null); }}>
@@ -53,7 +67,7 @@ export function Inbox() {
       )}
       {loading ? <Skeleton lines={5} /> : list.length === 0 ? (
         <Empty icon="inbox" title={inbox.length ? "No messages here" : "No messages yet"}>
-          {inbox.length ? "Try another filter." : "Press Sync: Remind Me Bro reads Teams, UniLearn announcements and email for you."}
+          {inbox.length ? "Try another filter." : "Your lecturers' UniLearn announcements arrive here by themselves. Add an Outlook email or a Teams message with Add message."}
         </Empty>
       ) : (
         <ul className="mlist">
@@ -77,7 +91,8 @@ export function Inbox() {
                   <div className="mbody" id={`msg-${m.id}`}>
                     <p>{m.content}</p>
                     <div className={`ai-sum ${m.deadline_id ? "hit" : ""}`}><Icon name="sparkle" size={16} /><span><b>AI summary</b> {m.ai_summary}</span></div>
-                    <p className="mfoot">{m.course_name ?? "University"} · {fmtDay(at)} {fmtTime(at)}</p>
+                    <p className="mfoot">{m.course_name ?? "University"} · {fmtDay(at)} {fmtTime(at)}{m.personal && " · added by you, only you see it"}</p>
+                    {m.personal && <button className="btn sm ghost" onClick={() => void remove(m)}><Icon name="trash" size={14} /> Delete</button>}
                   </div>
                 )}
               </li>

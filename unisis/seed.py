@@ -38,13 +38,35 @@ COURSES = [
     # code, name, lecturer, room
     ("2PR515", "Corporate Governance", "Chiara Neri", "SB 408"),
     ("2IB468", "Ethics in Finance", "Chiara Neri", "SB 410"),
-    ("2MO522", "Financial Strategies in International Business", "Chiara Neri", "SB 411"),
-    ("2IB421", "Global ESG and Implications for Sustainable Business", "Chiara Neri", "SB 412"),
+    ("2MO522", "Financial Strategies in International Business", "Laura Bianchi", "SB 411"),
+    ("2IB421", "Global ESG and Implications for Sustainable Business", "Laura Bianchi", "SB 412"),
     ("3SG712", "Growth strategies", "Marco Rossi", "SB 413"),
     ("3PA662", "Human Resource Management Seminar", "Marco Rossi", "SB 414"),
-    ("3MA674", "International Management", "Marco Rossi", "SB 415"),
-    ("3PO643", "Social Entrepreneurship: Innovation and Impact", "Marco Rossi", "SB 416"),
+    ("3MA674", "International Management", "Giovanni Verdi", "SB 415"),
+    ("3PO643", "Social Entrepreneurship: Innovation and Impact", "Paolo Conti", "SB 416"),
 ]
+
+# Until 26 November 2026 Chiara Neri and Marco Rossi taught all eight courses: (code, old lecturer, new lecturer).
+MOVED_COURSES = [
+    ("2MO522", "Chiara Neri", "Laura Bianchi"),
+    ("2IB421", "Chiara Neri", "Laura Bianchi"),
+    ("3MA674", "Marco Rossi", "Giovanni Verdi"),
+    ("3PO643", "Marco Rossi", "Paolo Conti"),
+]
+
+
+def move_demo_courses(db: Session) -> int:
+    """Existing data: a course still taught by its old demo lecturer goes to the new one (a lecturer set in /staff is kept)."""
+    moved = 0
+    for code, old, new in MOVED_COURSES:
+        course = db.scalar(select(Course).where(Course.code == code))
+        if course is not None and course.lecturer_name == old:
+            course.lecturer_name = new
+            moved += 1
+    if moved:
+        db.flush()
+        logger.info("%s demo course(s) moved to their new lecturers", moved)
+    return moved
 
 
 def seed_courses(db: Session) -> int:

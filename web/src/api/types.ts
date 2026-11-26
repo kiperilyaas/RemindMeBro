@@ -36,7 +36,11 @@ export interface InboxItem {
   id: number; source: Source; course_id: number | null; course_code: string | null; course_name: string | null;
   author: string; created_at: string; subject: string; content: string; ai_summary: string; important: boolean;
   deadline_id: number | null; deadline_due: string | null;
+  personal?: boolean;   // added by the student from Outlook or Teams: only they see it
 }
+export interface NewMessage { source: "email" | "teams"; author: string; subject: string; content: string; course_code: string | null; sent_at: string | null }
+export interface AddMessageResult { item: InboxItem; ai_status: string; ai_error: string | null }
+export interface ParsedEmail { author: string; subject: string; content: string; sent_at: string | null }
 export interface ScheduleEvent {
   id: number; course_id: number | null; course_code: string | null; course_name: string | null;
   title: string; start_time: string; end_time: string; location: string | null; source: string; kind: string;

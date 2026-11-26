@@ -66,7 +66,7 @@ def my_courses(db: Session = Depends(get_db), user: User = Depends(require_profe
         item = schemas.CourseWithStats.model_validate(c)
         item.deadline_count = len(active)
         item.ai_deadline_count = sum(1 for d in active if d.extracted_by_ai)
-        item.announcement_count = len(c.announcements)
+        item.announcement_count = sum(1 for a in c.announcements if a.user_id is None)
         item.next_deadline = serialize_deadlines(db, upcoming[:1])[0] if upcoming else None
         out.append(item)
     return out
@@ -193,7 +193,7 @@ def extracted_deadlines(db: Session = Depends(get_db), user: User = Depends(requ
     rows = db.scalars(
         select(Deadline)
         .options(selectinload(Deadline.course), selectinload(Deadline.announcement))
-        .where(Deadline.extracted_by_ai.is_(True))
+        .where(Deadline.extracted_by_ai.is_(True), Deadline.user_id.is_(None))   # not the students' own Outlook/Teams messages
         .where(or_(Deadline.course_id.in_(own_course_ids), Deadline.announcement_id.in_(own_announcement_ids)))
         .order_by(Deadline.created_at.desc(), Deadline.id.desc())
     )

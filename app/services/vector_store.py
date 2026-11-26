@@ -133,6 +133,16 @@ def query_relevant_context(query_text: str, n_results: int = 3) -> List[Dict[str
     return hits
 
 
+def delete_documents(ids: List[str]) -> None:
+    """Toglie dall'indice gli avvisi cancellati (non devono più arrivare all'assistente)."""
+    if ids:
+        get_collection().delete(ids=[str(i) for i in ids])
+
+
+def all_ids() -> List[str]:
+    return list(get_collection().get(include=[]).get("ids") or [])
+
+
 def reset_collection() -> None:
     """Svuota la collezione (usato quando il DB demo viene rigenerato)."""
     global _collection

@@ -126,9 +126,11 @@ class Announcement(Base):
     external_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     # Docente registrato che ha pubblicato l'avviso dall'app (None per i dati sincronizzati)
     author_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    # Personal message (Outlook email or Teams chat added by a student) visible only to this user; None = shared
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
 
     course: Mapped[Optional[Course]] = relationship(back_populates="announcements")
-    author_user: Mapped[Optional[User]] = relationship()
+    author_user: Mapped[Optional[User]] = relationship(foreign_keys=[author_id])
     deadlines: Mapped[List["Deadline"]] = relationship(back_populates="announcement")
 
 

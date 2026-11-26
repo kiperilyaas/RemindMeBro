@@ -515,6 +515,7 @@ def save_extracted_deadline(
     fallback_course_code: Optional[str] = None,
     force_course_code: Optional[str] = None,
     announcement_id: Optional[int] = None,
+    owner_id: Optional[int] = None,
 ) -> tuple[Optional[Deadline], Optional[Course], Optional[Dict[str, Any]]]:
     """
     Salva la scadenza estratta in SQLite (upsert su source+external_id).
@@ -522,6 +523,8 @@ def save_extracted_deadline(
     - `force_course_code`: corso certo (es. avviso pubblicato dal docente nel suo corso):
       ha la precedenza sul nome di corso proposto dall'LLM.
     - `announcement_id`: collega la scadenza all'avviso da cui è stata estratta.
+    - `owner_id`: messaggio personale (Outlook/Teams aggiunto da uno studente): la scadenza è solo sua
+      e non sposta né nasconde le scadenze del corso viste dagli altri.
 
     Ritorna (deadline salvata o None, corso associato, info su eventuale scadenza Moodle spostata).
     """
@@ -555,6 +558,7 @@ def save_extracted_deadline(
     deadline.extracted_by_ai = True
     if announcement_id is not None:
         deadline.announcement_id = announcement_id
+    deadline.user_id = owner_id
     db.flush()
 
     update_info = None
@@ -563,6 +567,8 @@ def save_extracted_deadline(
     newer = _newer_official_deadline(db, course, extraction, message_time)
     if newer is not None and newer.superseded_by_id != deadline.id:
         deadline.superseded_by_id = newer.id   # hide the outdated date found in the message
+    if owner_id is not None:
+        return deadline, course, None   # a personal message never changes the shared course deadlines
     superseded = _find_superseded_moodle_deadline(db, course, extraction, message_time)
     if superseded and deadline.superseded_by_id == superseded.id:
         superseded = None   # the lecturer set a newer official date in the LMS afterwards: that one wins
@@ -619,6 +625,7 @@ def extract_and_save_deadline(
     fallback_course_code: Optional[str] = None,
     force_course_code: Optional[str] = None,
     announcement_id: Optional[int] = None,
+    owner_id: Optional[int] = None,
 ) -> ExtractionResult:
     """Pipeline completa per un singolo messaggio: LLM -> parsing JSON -> SQLite."""
     known = [c.name for c in db.scalars(select(Course))]
@@ -637,6 +644,7 @@ def extract_and_save_deadline(
         fallback_course_code,
         force_course_code=force_course_code,
         announcement_id=announcement_id,
+        owner_id=owner_id,
     )
     return ExtractionResult(
         extraction=extraction,
@@ -747,7 +755,8 @@ def build_rag_context(db: Session, user_query: str, n_results: int = 4, user: An
 
     # 3) Avvisi semanticamente rilevanti (ChromaDB)
     try:
-        hits = vector_store.query_relevant_context(user_query, n_results=n_results)
+        hits = vector_store.query_relevant_context(user_query, n_results=n_results * 2)
+        hits = [h for h in hits if h["metadata"].get("owner_id") in (None, user_id)][:n_results]   # other students' Outlook/Teams messages stay private
     except Exception as exc:  # il vector DB non deve mai bloccare la chat
         logger.warning("Ricerca vettoriale non disponibile: %s", exc)
         hits = []
