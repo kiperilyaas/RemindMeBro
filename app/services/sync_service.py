@@ -26,6 +26,7 @@ from app.services import llm_extractor, unilearn_client, unisis_client, vector_s
 
 # Import ritardato per evitare cicli: auth dipende solo da DB/schemi
 from app.api.auth import link_all_professors, seed_demo_users  # noqa: E402
+from app.services.sync_lock import exclusive
 
 logger = logging.getLogger(__name__)
 
@@ -236,6 +237,7 @@ def sync_emails(db: Session) -> List[Dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+@exclusive
 def run_sync_pipeline(db: Session, user: Optional[Any] = None) -> Dict[str, Any]:
     """Esegue l'intera pipeline e ritorna un riepilogo per la demo (+ UniSIS dell'utente, se collegato)."""
     started = time.perf_counter()

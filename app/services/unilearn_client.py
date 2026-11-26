@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database.models import Announcement, Connection, Course, Deadline, DeadlineDone, Event, SourceType, User
 from app.services.unisis_client import decrypt, encrypt
+from app.services.sync_lock import exclusive
 
 logger = logging.getLogger(__name__)
 PROVIDER = "moodle"
@@ -228,6 +229,7 @@ def sync_posts(db: Session, user: User, courses: Optional[List[Dict[str, Any]]] 
     return out
 
 
+@exclusive
 def sync_user(db: Session, user: User, run_ai: bool = True) -> Dict[str, Any]:
     """
     Imports assignments (deadlines + submission status), course events and announcement-forum

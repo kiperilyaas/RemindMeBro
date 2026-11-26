@@ -16,12 +16,29 @@ logger = logging.getLogger(__name__)
 DATA_VERSION = "empty-start-1"
 DATA_VERSION_FILE = DATA_DIR / ".data_version"
 
-# check_same_thread=False: FastAPI può usare la stessa connessione da thread diversi
+# check_same_thread=False: FastAPI può usare la stessa connessione da thread diversi.
+# timeout=30: a writer waits up to 30 s for the lock (Python's default is 5 s) before "database is locked".
+_SQLITE = settings.DATABASE_URL.startswith("sqlite")
 engine = create_engine(
     settings.DATABASE_URL,
-    connect_args={"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {},
+    connect_args={"check_same_thread": False, "timeout": 30} if _SQLITE else {},
     echo=False,
 )
+
+if _SQLITE:
+    from sqlalchemy import event
+
+    @event.listens_for(engine, "connect")
+    def _sqlite_pragmas(dbapi_conn, _record) -> None:
+        """WAL: pages keep loading (reads) while a sync writes; busy_timeout: writers queue instead of failing."""
+        cur = dbapi_conn.cursor()
+        try:
+            cur.execute("PRAGMA journal_mode=WAL")
+        except Exception:   # some network/virtual file systems refuse WAL: the timeout alone still helps
+            pass
+        cur.execute("PRAGMA busy_timeout=30000")
+        cur.execute("PRAGMA synchronous=NORMAL")
+        cur.close()
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
 

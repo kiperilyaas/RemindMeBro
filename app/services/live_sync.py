@@ -14,6 +14,7 @@ from sqlalchemy import select
 
 from app.database.db import SessionLocal
 from app.database.models import Connection, User
+from app.services.sync_lock import try_exclusive
 
 logger = logging.getLogger(__name__)
 POLL_SECONDS = int(os.getenv("UNILEARN_POLL_SECONDS", "30"))
@@ -21,6 +22,13 @@ _started = False
 
 
 def poll_once() -> int:
+    with try_exclusive() as free:
+        if not free:          # a Sync is running: it imports the same posts, skip this round
+            return 0
+        return _poll()
+
+
+def _poll() -> int:
     from app.services import unilearn_client
     new = 0
     db = SessionLocal()
