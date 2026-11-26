@@ -116,10 +116,13 @@ export function Stat({ label, value }: { label: string; value: ReactNode }) {
 // ---------------------------------------------------------------------------
 // Login
 // ---------------------------------------------------------------------------
-export interface DemoAccount { username: string; fullname: string; role: string }
+export interface DemoAccount { id?: number; username: string; fullname: string; role: string }
+export interface DemoAccounts { password: string | null; passwords_file?: string; local?: boolean; accounts: DemoAccount[] }
 
-export function StaffLogin({ system, intro, demo, onLogin }: {
-  system: SystemInfo; intro: string; demo: { password: string | null; passwords_file?: string; accounts: DemoAccount[] } | null; onLogin: (u: string, p: string) => Promise<void>;
+export function StaffLogin({ system, intro, demo, onLogin, onQuick }: {
+  system: SystemInfo; intro: string; demo: DemoAccounts | null; onLogin: (u: string, p: string) => Promise<void>;
+  /** one-click sign-in, offered only on the computer that runs the demo (demo.local) */
+  onQuick?: (uid: number) => Promise<void>;
 }) {
   const [u, setU] = useState("");
   const [p, setP] = useState("");
@@ -130,6 +133,11 @@ export function StaffLogin({ system, intro, demo, onLogin }: {
     try { await onLogin(user, pass); } catch (e) { setErr((e as Error).message); setBusy(false); }
   };
   const submit = (e: FormEvent) => { e.preventDefault(); void go(u.trim(), p); };
+  const quick = !!(demo?.local && onQuick);
+  const goQuick = async (uid: number) => {
+    setBusy(true); setErr(null);
+    try { await onQuick?.(uid); } catch (e) { setErr((e as Error).message); setBusy(false); }
+  };
   return (
     <div className="st" style={{ ["--accent" as string]: system.accent }}>
       <div className="st-login">
@@ -145,10 +153,12 @@ export function StaffLogin({ system, intro, demo, onLogin }: {
           </form>
           {demo && demo.accounts.length > 0 && (
             <div className="st-demo">
-              <p>Staff accounts — passwords in <span className="st-code">{demo.passwords_file ?? "data/STAFF-PASSWORDS.txt"}</span> on this computer</p>
+              {quick
+                ? <p>Quick sign-in · only on this computer, no password (for debugging)</p>
+                : <p>Staff accounts — passwords in <span className="st-code">{demo.passwords_file ?? "data/STAFF-PASSWORDS.txt"}</span> on this computer</p>}
               <div className="st-demo-grid">
                 {demo.accounts.map((a) => (
-                  <button key={a.username} disabled={busy} onClick={() => (demo.password ? void go(a.username, demo.password) : (setU(a.username), setP(""), setErr(null)))}>
+                  <button key={a.username} disabled={busy} onClick={() => (quick && a.id != null ? void goQuick(a.id) : demo.password ? void go(a.username, demo.password) : (setU(a.username), setP(""), setErr(null)))}>
                     <b>{a.fullname}</b><small>{a.role} · {a.username}</small>
                   </button>
                 ))}
@@ -228,19 +238,23 @@ export function useServerScenarios() {
 export function useStaffSession<T extends { fullname: string; role: string }>() {
   const [user, setUser] = useState<T | null>(null);
   const [booting, setBooting] = useState(true);
-  const [demo, setDemo] = useState<{ password: string | null; passwords_file?: string; accounts: DemoAccount[] } | null>(null);
+  const [demo, setDemo] = useState<DemoAccounts | null>(null);
   useEffect(() => {
     let alive = true;
     staffFetch<{ user: T | null }>("/staff/api/session").then((s) => alive && setUser(s.user)).catch(() => undefined).finally(() => alive && setBooting(false));
-    staffFetch<{ password: string | null; passwords_file?: string; accounts: DemoAccount[] }>("/staff/api/demo-accounts").then((d) => alive && setDemo(d)).catch(() => undefined);
+    staffFetch<DemoAccounts>("/staff/api/demo-accounts").then((d) => alive && setDemo(d)).catch(() => undefined);
     return () => { alive = false; };
   }, []);
   const login = useCallback(async (username: string, password: string) => {
     await staffFetch("/staff/api/login", { method: "POST", body: { username, password } });
     setUser(await staffFetch<T>("/staff/api/me"));
   }, []);
+  const quickLogin = useCallback(async (uid: number) => {
+    await staffFetch("/staff/api/quick-login", { method: "POST", body: { uid } });
+    setUser(await staffFetch<T>("/staff/api/me"));
+  }, []);
   const logout = useCallback(async () => { await staffFetch("/staff/api/logout", { method: "POST" }).catch(() => undefined); setUser(null); location.hash = ""; }, []);
-  return { user, booting, demo, login, logout };
+  return { user, booting, demo, login, quickLogin, logout };
 }
 
 /** Tiny hash router: "#course/3" -> ["course", "3"]. */

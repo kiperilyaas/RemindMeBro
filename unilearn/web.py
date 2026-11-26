@@ -18,6 +18,7 @@ from unilearn.config import settings
 from unilearn.db import get_db
 from unilearn.models import Assignment, CalendarEvent, Course, Discussion, Enrolment, ExternalToken, Submission, User, WSLog
 from unilearn.ws import FUNCTIONS, pwd_context
+from app.api.access import is_local_request
 
 router = APIRouter(include_in_schema=False)
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -68,9 +69,37 @@ def _enrolled(db: Session, user: User, course: Course) -> bool:
 # ---------------------------------------------------------------------------
 # Sign-in
 # ---------------------------------------------------------------------------
+QUICK_ROLES = {"admin": "Admin", "teacher": "Teacher", "student": "Student"}
+
+
+def quick_accounts(request: Request, db: Session) -> list:
+    """Every account, for one-click sign-in while debugging. Only on the computer that runs the demo."""
+    if not is_local_request(request):
+        return []
+    order = {"teacher": 0, "admin": 1, "student": 2}
+    users = sorted(db.scalars(select(User)).all(), key=lambda u: (order.get(u.role, 3), u.lastname.lower(), u.firstname.lower()))
+    return [{"id": u.id, "name": u.fullname, "role": QUICK_ROLES.get(u.role, u.role), "username": u.username} for u in users]
+
+
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, next: str = "/", db: Session = Depends(get_db)):
-    return render(request, "login.html", me(request, db), next=next if next.startswith("/") and not urlsplit(next).netloc else "/")
+    return render(request, "login.html", me(request, db), next=next if next.startswith("/") and not urlsplit(next).netloc else "/",
+                  quick=quick_accounts(request, db))
+
+
+@router.post("/login/quick")
+def login_quick(request: Request, uid: int = Form(...), next: str = Form("/"), csrf_token: str = Form("", alias="csrf"),
+                db: Session = Depends(get_db)):
+    """One-click sign-in for debugging, only on the computer that runs the demo."""
+    target = next if next.startswith("/") and not urlsplit(next).netloc else "/"
+    user = db.get(User, uid)
+    if not csrf_ok(request, csrf_token) or not is_local_request(request) or user is None:
+        flash(request, "error", "Quick sign-in works only on the computer that runs the demo.")
+        return redirect("/login?" + urlencode({"next": target}))
+    request.session["uid"] = user.id
+    if user.role in {"teacher", "admin"} and target == "/":
+        return redirect("/staff")
+    return redirect(target)
 
 
 @router.post("/login")

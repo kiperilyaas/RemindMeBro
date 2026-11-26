@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from unisis import security, services
 from unisis.api import revoke_all
 from unisis.config import settings
+from app.api.access import is_local_request
 from unisis.db import get_db
 from unisis.models import (
     AuditLog,
@@ -120,9 +121,35 @@ def home(request: Request, db: Session = Depends(get_db)):
     return redirect("/staff" if user.role == "registrar" else "/student")
 
 
+def quick_accounts(request: Request, db: Session) -> list:
+    """Every account, for one-click sign-in while debugging. Only on the computer that runs the demo."""
+    if not is_local_request(request):
+        return []
+    users = sorted(db.scalars(select(User)).all(), key=lambda u: (u.role != "registrar", u.full_name.lower()))
+    return [{"id": u.id, "name": u.full_name, "role": "Student Office" if u.role == "registrar" else "Student",
+             "username": u.username} for u in users]
+
+
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, next: Optional[str] = None, db: Session = Depends(get_db)):
-    return render(request, "login.html", current_user(request, db), next=safe_next(next), oauth="oauth/authorize" in (next or ""))
+    return render(request, "login.html", current_user(request, db), next=safe_next(next), oauth="oauth/authorize" in (next or ""),
+                  quick=quick_accounts(request, db))
+
+
+@router.post("/login/quick")
+def login_quick(request: Request, uid: int = Form(...), next: str = Form("/"), csrf: str = Form(""), db: Session = Depends(get_db)):
+    """One-click sign-in for debugging, only on the computer that runs the demo (also inside the OAuth flow)."""
+    target = safe_next(next)
+    if not check_csrf(request, csrf):
+        return redirect(f"/login?{urlencode({'next': target})}")
+    user = db.get(User, uid)
+    if not is_local_request(request) or user is None:
+        flash(request, "error", "Quick sign-in works only on the computer that runs the demo.")
+        return redirect(f"/login?{urlencode({'next': target})}")
+    request.session["uid"] = user.id
+    if user.role == "registrar" and target == "/":
+        return redirect("/staff")
+    return redirect(target)
 
 
 @router.post("/login")

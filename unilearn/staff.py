@@ -27,6 +27,7 @@ from unilearn.config import FILES_DIR, settings
 from unilearn.db import get_db
 from unilearn.models import Assignment, CalendarEvent, Course, CourseSection, Discussion, Resource, Enrolment, ExternalToken, Forum, Submission, User, WSLog
 from unilearn.ws import FUNCTIONS, pwd_context
+from app.api.access import is_local_request
 
 router = APIRouter(include_in_schema=False)
 STAFF_PAGE = Path(__file__).parent / "static" / "staff" / "index.html"
@@ -122,9 +123,28 @@ def session(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/staff/api/demo-accounts")
-def demo_accounts(db: Session = Depends(get_db)):
+def demo_accounts(request: Request, db: Session = Depends(get_db)):
+    """Staff accounts for the sign-in page. On the computer that runs the demo they sign in with one click (quick-login)."""
     rows = db.scalars(select(User).where(User.role.in_(STAFF_ROLES)).order_by(User.role.desc(), User.lastname))
-    return {"password": None, "accounts": [_me(u) for u in rows], "passwords_file": "data/STAFF-PASSWORDS.txt"}
+    return {"password": None, "accounts": [_me(u) for u in rows], "passwords_file": "data/STAFF-PASSWORDS.txt",
+            "local": is_local_request(request)}
+
+
+class QuickLoginBody(BaseModel):
+    uid: int
+
+
+@router.post("/staff/api/quick-login")
+def quick_login(body: QuickLoginBody, request: Request, db: Session = Depends(get_db)):
+    """One-click sign-in for debugging: only on the computer that runs the demo, never through a public link."""
+    _guard(request)
+    if not is_local_request(request):
+        raise HTTPException(403, "Quick sign-in works only on the computer that runs the demo.")
+    user = db.get(User, body.uid)
+    if user is None or user.role not in STAFF_ROLES:
+        raise HTTPException(404, "No such teacher or admin.")
+    request.session["uid"] = user.id
+    return _me(user)
 
 
 # ---------------------------------------------------------------------------

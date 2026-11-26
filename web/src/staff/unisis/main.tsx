@@ -426,10 +426,10 @@ function AppsKeys() {
 }
 
 function App() {
-  const { user, booting, demo, login, logout } = useStaffSession<Me>();
+  const { user, booting, demo, login, quickLogin, logout } = useStaffSession<Me>();
   const [path, go] = useHashPath();
   if (booting) return <div className="st"><div className="st-boot">Loading…</div></div>;
-  if (!user) return <StaffLogin system={SYSTEM} intro="Student Office staff. Students sign in to the UniSIS student portal." demo={demo} onLogin={login} />;
+  if (!user) return <StaffLogin system={SYSTEM} intro="Student Office staff. Students sign in to the UniSIS student portal." demo={demo} onLogin={login} onQuick={quickLogin} />;
   const nav = [{ id: "", label: "Exams" }, { id: "courses", label: "Courses" }, { id: "students", label: "Students" }, { id: "apps", label: "Apps & keys" }];
   const page = path[0] ?? "";
   return (
