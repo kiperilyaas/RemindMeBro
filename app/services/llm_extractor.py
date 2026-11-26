@@ -12,7 +12,7 @@ import json
 import logging
 import re
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import ollama
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -33,6 +33,10 @@ WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", 
 # ---------------------------------------------------------------------------
 class LLMUnavailableError(RuntimeError):
     """Ollama non raggiungibile o modello non disponibile."""
+
+
+class LLMStopped(RuntimeError):
+    """The student pressed Stop: the answer was dropped and Ollama was told to stop."""
 
 
 class LLMParsingError(ValueError):
@@ -124,43 +128,93 @@ def get_ollama_client() -> ollama.Client:
     return _client
 
 
-_slow_client: Optional[ollama.Client] = None
-
-
-def get_slow_ollama_client() -> ollama.Client:
-    """Client for long jobs (Smart Notes, Ask the material): quick to say Ollama is off, patient while it works."""
-    global _slow_client
-    if _slow_client is None:
-        import httpx
-        _slow_client = ollama.Client(host=settings.OLLAMA_HOST,
-                                     timeout=httpx.Timeout(settings.NOTES_TIMEOUT, connect=10.0))
-    return _slow_client
-
-
-def chat_long(messages: List[Dict[str, str]], options: Dict[str, Any], json_mode: bool = False) -> str:
+def chat_long(messages: List[Dict[str, str]], options: Dict[str, Any], json_mode: bool = False,
+              should_stop: Optional[Callable[[], bool]] = None) -> str:
     """
-    One chat for a long job. The answer is streamed: the wait limit (NOTES_TIMEOUT) counts from the last word
-    received, so a slow computer that keeps writing is never cut off. Errors say what happened.
+    One chat for a long job (Smart Notes, Ask the material), straight on Ollama's HTTP API.
+    - Streamed: the wait limit (NOTES_TIMEOUT) counts from the last word received, so a slow computer that keeps
+      writing is never cut off.
+    - should_stop: checked twice a second, also while Ollama is still reading the text and has sent nothing yet.
+      When it returns True the socket is shut down: the request ends here, Ollama sees the client leave and stops
+      working on it, and LLMStopped is raised.
     """
+    import json as _json
+    import socket as _socket
+    import threading
     import httpx
-    kwargs: Dict[str, Any] = {"model": settings.OLLAMA_MODEL, "messages": messages, "options": options, "stream": True}
+    body: Dict[str, Any] = {"model": settings.OLLAMA_MODEL, "messages": messages, "options": options, "stream": True}
     if json_mode:
-        kwargs["format"] = "json"
+        body["format"] = "json"
+    socks: List[Any] = []
+    done, stopped = threading.Event(), threading.Event()
+
+    def trace(event: str, info: Dict[str, Any]) -> None:   # httpcore tells us the socket as soon as it connects
+        if event == "connection.connect_tcp.complete" and info.get("return_value") is not None:
+            sock = info["return_value"].get_extra_info("socket")
+            if sock is not None:
+                socks.append(sock)
+
+    def watch() -> None:
+        while not done.wait(0.5):
+            if should_stop and should_stop():
+                stopped.set()
+                for sock in socks:
+                    try:
+                        sock.shutdown(_socket.SHUT_RDWR)   # wakes up the blocked read in the other thread
+                    except OSError:
+                        pass
+                return
+
+    if should_stop:
+        threading.Thread(target=watch, name="ollama-stop-watch", daemon=True).start()
     parts: List[str] = []
+    url = settings.OLLAMA_HOST.rstrip("/") + "/api/chat"
     try:
-        for chunk in get_slow_ollama_client().chat(**kwargs):
-            parts.append((chunk.get("message") or {}).get("content") or "")
-    except ollama.ResponseError as exc:
+        with httpx.Client(timeout=httpx.Timeout(settings.NOTES_TIMEOUT, connect=10.0)) as client:
+            with client.stream("POST", url, json=body, extensions={"trace": trace}) as r:
+                if r.status_code != 200:
+                    r.read()
+                    try:
+                        err = r.json().get("error") or r.text
+                    except Exception:
+                        err = r.text
+                    raise ollama.ResponseError(err, r.status_code)
+                for line in r.iter_lines():
+                    if stopped.is_set():
+                        raise LLMStopped("Stopped.")
+                    if not line.strip():
+                        continue
+                    chunk = _json.loads(line)
+                    if chunk.get("error"):
+                        raise ollama.ResponseError(chunk["error"], 500)
+                    parts.append((chunk.get("message") or {}).get("content") or "")
+                    if chunk.get("done"):
+                        break
+    except LLMStopped:
+        raise
+    except Exception as exc:
+        if stopped.is_set():
+            raise LLMStopped("Stopped.") from exc
+        _raise_long(exc)
+    finally:
+        done.set()
+    if stopped.is_set():
+        raise LLMStopped("Stopped.")
+    return "".join(parts)
+
+
+def _raise_long(exc: Exception) -> None:
+    """Turns what went wrong in a long chat into a message the student can act on."""
+    import httpx
+    if isinstance(exc, ollama.ResponseError):
         raise LLMUnavailableError(f"Ollama returned an error ({exc.status_code}): {exc.error}") from exc
-    except (httpx.ConnectError, ConnectionError) as exc:
+    if isinstance(exc, (httpx.ConnectError, ConnectionError)):
         raise LLMUnavailableError(f"The local AI is not running (Ollama at {settings.OLLAMA_HOST}). Start it and try again.") from exc
-    except httpx.TimeoutException as exc:
+    if isinstance(exc, httpx.TimeoutException):
         minutes = round(settings.NOTES_TIMEOUT / 60)
         raise LLMUnavailableError(f"The local AI gave no answer for {minutes} minutes ({settings.OLLAMA_MODEL}). "
                                   "The file may be too long for this computer: try again, or set NOTES_TIMEOUT higher.") from exc
-    except Exception as exc:
-        raise LLMUnavailableError(f"The local AI stopped with an error: {exc}") from exc
-    return "".join(parts)
+    raise LLMUnavailableError(f"The local AI stopped with an error: {exc}") from exc
 
 
 def _chat(messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.0) -> str:

@@ -3,6 +3,8 @@ Background queue for Smart Notes: one thread, one lesson at a time (Whisper and 
 
 Steps and the status the app shows: syncing (download + read files) -> transcribing (recordings)
 -> processing (the AI writes the notes) -> ready, or error with a message.
+stop(note_id) ends a lesson that is waiting or being made: the AI request is closed (Ollama stops too) and the
+lesson goes back to "Not made yet" (or to its previous notes). Nothing starts again on its own.
 """
 from __future__ import annotations
 
@@ -20,15 +22,20 @@ from app.config import settings
 from app.database.db import SessionLocal
 from app.database.models import ExtractedText, LessonNote, NoteSource, User
 from app.services import unilearn_client
-from app.services.llm_extractor import LLMUnavailableError
+from app.services.llm_extractor import LLMStopped, LLMUnavailableError
 from app.services.notes.extract import MEDIA_KINDS, ExtractError, extract_text
 from app.services.notes.generator import NotesError, generate, to_markdown
-from app.services.notes.transcribe import TranscribeError, transcribe
+from app.services.notes.transcribe import TranscribeError, TranscribeStopped, transcribe
 
 logger = logging.getLogger(__name__)
 _q: "queue.Queue[int]" = queue.Queue()
 _pending: Set[int] = set()
+_stopping: Set[int] = set()
 _lock = threading.Lock()
+
+
+class Stopped(Exception):
+    """The student pressed Stop."""
 _thread: Optional[threading.Thread] = None
 
 
@@ -49,6 +56,25 @@ def is_queued(note_id: int) -> bool:
         return note_id in _pending
 
 
+def stop(note_id: int) -> bool:
+    """Ask the worker to drop this lesson (waiting or running). True if it was queued or running."""
+    with _lock:
+        if note_id not in _pending:
+            return False
+        _stopping.add(note_id)
+        return True
+
+
+def _should_stop(note_id: int) -> bool:
+    with _lock:
+        return note_id in _stopping
+
+
+def _check(note_id: int) -> None:
+    if _should_stop(note_id):
+        raise Stopped()
+
+
 def _run() -> None:
     while True:
         note_id = _q.get()
@@ -59,6 +85,7 @@ def _run() -> None:
         finally:
             with _lock:
                 _pending.discard(note_id)
+                _stopping.discard(note_id)
 
 
 def _download(db, user: User, src: NoteSource) -> Path:
@@ -101,17 +128,20 @@ def process(note_id: int) -> None:
             return
         user = db.get(User, note.user_id)
         target_hash = note.sources_hash
+        halt = lambda: _should_stop(note_id)   # noqa: E731
         try:
+            _check(note_id)
             _set(db, note, "syncing")
             texts, warnings = [], []
             for src in list(note.sources):
+                _check(note_id)
                 cached = db.get(ExtractedText, src.contenthash)
                 if cached is None:
                     try:
                         path = _download(db, user, src)
                         if src.kind in MEDIA_KINDS:
                             _set(db, note, "transcribing")
-                            text, lang = transcribe(path)
+                            text, lang = transcribe(path, should_stop=halt)
                         else:
                             text, lang = extract_text(path, src.kind), None
                     except (ExtractError, TranscribeError) as exc:
@@ -127,8 +157,10 @@ def process(note_id: int) -> None:
                     texts.append((src.filename, src.kind, cached.text))
             if not texts and warnings:
                 raise ExtractError(" ".join(warnings))
+            _check(note_id)
             _set(db, note, "processing")
-            result = generate(note.course_name, note.lesson_name, texts)
+            result = generate(note.course_name, note.lesson_name, texts, should_stop=halt)
+            _check(note_id)
             db.refresh(note)
             note.title, note.summary = result["title"], result["summary"]
             note.key_points = json.dumps(result["key_points"], ensure_ascii=False)
@@ -138,6 +170,13 @@ def process(note_id: int) -> None:
             note.error = ("Some files were skipped: " + " ".join(warnings)) if warnings else None
             note.generated_hash, note.generated_at = target_hash, datetime.now()   # skipped files are tried again with Regenerate
             _set(db, note, "ready")
+        except (Stopped, LLMStopped, TranscribeStopped):
+            db.rollback()
+            note = db.get(LessonNote, note_id)
+            if note is not None:   # back to the old notes if there were any, else "Not made yet"
+                note.error = None
+                _set(db, note, "ready" if note.generated_hash else "new")
+            logger.info("Smart Notes: lesson %s stopped by the student", note_id)
         except (ExtractError, TranscribeError, NotesError, LLMUnavailableError) as exc:
             db.rollback()
             note = db.get(LessonNote, note_id)

@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.database.models import LessonNote, NoteSource, User, UserRole
 from app.services import unilearn_client
 from app.services.my_courses import student_course_codes
+from app.services.notes import worker
 from app.services.notes.extract import kind_of
 
 logger = logging.getLogger(__name__)
@@ -79,7 +80,8 @@ def sync_materials(db: Session, user: User) -> Dict[str, Any]:
             # nothing starts on its own: the student presses "Make notes" (or "Make notes again" when files changed)
             seen.add(note.id)
     for note in mine.values():   # lessons or files removed by the lecturer; notes the student edited stay
-        if note.id not in seen and not note.edited and note.status not in BUSY - {"waiting"}:
+        if note.id not in seen and not note.edited:
+            worker.stop(note.id)     # the lesson is gone: stop making notes for it
             db.delete(note)
     db.commit()
     new = sum(1 for n in mine.values() if n.id in seen and n.status == "new")
@@ -89,3 +91,18 @@ def sync_materials(db: Session, user: User) -> Dict[str, Any]:
 
 def busy_note_ids(db: Session) -> List[int]:
     return list(db.scalars(select(LessonNote.id).where(LessonNote.status.in_(BUSY))))
+
+
+def reset_interrupted(db: Session) -> int:
+    """At start-up: lessons left half-made when the app closed go back to their last notes or to "Not made yet".
+    They used to start again by themselves at every start; now only "Make notes" starts them."""
+    n = 0
+    for note in db.scalars(select(LessonNote).where(LessonNote.status.in_(BUSY))):
+        note.status = "ready" if note.generated_hash else "new"
+        note.error = "Stopped when the app was closed. Press Make notes to start again." if note.status == "new" else None
+        note.updated_at = datetime.now()
+        n += 1
+    db.commit()
+    if n:
+        logger.info("Smart Notes: %d lesson(s) left half-made were reset (not restarted)", n)
+    return n

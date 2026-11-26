@@ -6,6 +6,9 @@ Smart Notes (Premium): study notes made from the files lecturers upload to UniLe
   GET  /api/notes/{id}               one page of notes
   PUT  /api/notes/{id}               save the student's edits (Markdown)
   POST /api/notes/{id}/regenerate    make the notes (only when the student asks: "Make notes"), or again (drops the edits)
+  POST /api/notes/{id}/stop          stop making these notes (waiting or running): back to the old notes or "Not made yet"
+  DELETE /api/notes/{id}             stop and delete these notes and their chat (the lesson comes back as "Not made yet"
+                                     at the next sync if its files are still in UniLearn)
   GET  /api/notes/{id}/chat          saved conversation about the lesson (?source_id= for one file)
   POST /api/notes/{id}/chat          ask the AI about this lesson only, or one of its files (RAG on the uploaded text); saved
   DELETE /api/notes/{id}/chat        clear that conversation
@@ -117,6 +120,26 @@ def regenerate(note_id: int, db: Session = Depends(get_db), user: User = Depends
     db.commit()
     worker.enqueue(n.id)
     return _full(n)
+
+
+@router.post("/{note_id}/stop", summary="Stop making these notes")
+def stop_notes(note_id: int, db: Session = Depends(get_db), user: User = Depends(require_premium)) -> Dict[str, Any]:
+    n = _mine(db, user, note_id)
+    if not worker.stop(n.id) and n.status in ("waiting", "syncing", "transcribing", "processing"):
+        # nothing is running for it (e.g. left over from an old start): just put it back
+        n.status, n.error, n.updated_at = ("ready" if n.generated_hash else "new"), None, datetime.now()
+        db.commit()
+    db.refresh(n)
+    return _full(n)
+
+
+@router.delete("/{note_id}", summary="Delete these notes and their chat")
+def delete_notes(note_id: int, db: Session = Depends(get_db), user: User = Depends(require_premium)) -> Dict[str, bool]:
+    n = _mine(db, user, note_id)
+    worker.stop(n.id)
+    db.delete(n)   # sources and saved chat go with it (cascade)
+    db.commit()
+    return {"deleted": True}
 
 
 class LessonChatBody(BaseModel):

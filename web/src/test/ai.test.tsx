@@ -55,7 +55,9 @@ describe("AI section", () => {
     const list = { connected: true, transcription: true, courses: [{ code: "2PR515", name: "Corporate Governance", lessons: [row(1, "Lesson 1", "ready"), row(2, "Lesson 2", "processing"), row(3, "Lesson 3", "new")] }] };
     const { navigate, calls } = mount("premium", "tab=notes", (url) => (url.endsWith("/notes/sync") ? json({ ...list, lessons: 3, files: 2, queued: 0, not_made: 1 })
       : url.endsWith("/notes/3/regenerate") ? json({ ...row(3, "Lesson 3", "waiting"), body_md: "", key_points: [], definitions: [] }) : url.endsWith("/notes") ? json(list) : null));
-    expect(await screen.findByRole("button", { name: "Lesson 2, AI processing…" })).toBeDisabled();
+    // a lesson being made can be opened and has a Stop button
+    expect(await screen.findByRole("button", { name: "Lesson 2, AI processing…" })).toBeEnabled();
+    expect(screen.getAllByRole("button", { name: /Stop/ })).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "Lesson 1, Ready" }));
     expect(navigate).toHaveBeenCalledWith("ai?tab=notes&note=1");
     // nothing starts by itself: only one lesson has a Make notes button, and only a click starts it
@@ -64,6 +66,8 @@ describe("AI section", () => {
     expect(make).toHaveLength(1);
     fireEvent.click(make[0]);
     await waitFor(() => expect(calls.some((c) => c.url.endsWith("/notes/3/regenerate") && c.method === "POST")).toBe(true));
+    fireEvent.click(screen.getByRole("button", { name: /Stop/ }));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/notes/2/stop") && c.method === "POST")).toBe(true));
   });
 
   it("Premium: a note is shown as formatted text and can be edited", async () => {
