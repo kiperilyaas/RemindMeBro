@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database.models import Connection, Course, Deadline, Event, OAuthState, SourceType, User
+from app.services.sync_lock import exclusive
 
 logger = logging.getLogger(__name__)
 PROVIDER = "unisis"
@@ -318,6 +319,7 @@ def mirror_to_unilearn(db: Session, user: User, data: Optional[Dict[str, Any]] =
         return {"error": str(exc)}
 
 
+@exclusive
 def sync_user(db: Session, user: User) -> Dict[str, Any]:
     """Imports timetable, exam dates and registration windows as personal events and deadlines."""
     conn = get_connection(db, user)
