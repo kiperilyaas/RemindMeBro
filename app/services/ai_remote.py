@@ -2,12 +2,14 @@
 External AI through any OpenAI-compatible API (/chat/completions): Google Gemini, OpenRouter, OmniRoute, OpenAI...
 
 Chosen in data/ai.env (see ai.env.example): AI_PROVIDER, AI_API_KEY, optionally AI_MODEL, AI_MODEL_FAST, AI_BASE_URL.
-llm_extractor.py calls chat() and chat_stream(); when the external AI cannot answer it falls back to Ollama.
+llm_extractor.py calls chat() and chat_stream(). A busy service (503, 429...) is asked again after a few seconds,
+then its backup model is used; only when all of that fails does llm_extractor fall back to Ollama.
 """
 from __future__ import annotations
 
 import json
 import logging
+import re
 import socket
 import threading
 import time
@@ -21,16 +23,27 @@ logger = logging.getLogger(__name__)
 
 
 class RemoteAIError(RuntimeError):
-    """The external AI answered with an error. `retry_local` = worth trying Ollama instead (network, quota, server)."""
+    """
+    The external AI answered with an error.
+    - retry_local: worth trying Ollama when everything else failed (network, quota, server);
+    - transient: busy or rate-limited (429, 500, 502, 503, 504, network): worth trying again in a few seconds;
+    - retry_after: seconds the service asked to wait, if it said so.
+    """
 
-    def __init__(self, message: str, retry_local: bool = True, status: int = 0):
+    def __init__(self, message: str, retry_local: bool = True, status: int = 0, transient: bool = False,
+                 retry_after: Optional[float] = None):
         super().__init__(message)
         self.retry_local = retry_local
         self.status = status
+        self.transient = transient
+        self.retry_after = retry_after
 
 
 class RemoteStopped(RuntimeError):
     pass
+
+
+TRANSIENT_STATUS = {408, 429, 500, 502, 503, 504}
 
 
 def _headers() -> Dict[str, str]:
@@ -42,9 +55,9 @@ def _headers() -> Dict[str, str]:
     return h
 
 
-def _body(messages: List[Dict[str, str]], json_mode: bool, temperature: Optional[float], fast: bool,
+def _body(messages: List[Dict[str, str]], model: str, json_mode: bool, temperature: Optional[float],
           stream: bool, extras: bool) -> Dict[str, Any]:
-    body: Dict[str, Any] = {"model": settings.AI_MODEL_FAST if fast else settings.AI_MODEL, "messages": messages, "stream": stream}
+    body: Dict[str, Any] = {"model": model, "messages": messages, "stream": stream}
     if temperature is not None:
         body["temperature"] = temperature
     if extras:   # optional fields: some services refuse them, then the request is sent again without
@@ -55,7 +68,18 @@ def _body(messages: List[Dict[str, str]], json_mode: bool, temperature: Optional
     return body
 
 
-def _error(status: int, text: str) -> RemoteAIError:
+def _retry_after(headers: Any, text: str) -> Optional[float]:
+    """Seconds to wait, from the Retry-After header or Gemini's "retryDelay": "12s" in the error body."""
+    try:
+        if headers is not None and headers.get("retry-after"):
+            return float(headers["retry-after"])
+    except (TypeError, ValueError):
+        pass
+    m = re.search(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"', text or "")
+    return float(m.group(1)) if m else None
+
+
+def _error(status: int, text: str, model: str = "", headers: Any = None) -> RemoteAIError:
     try:
         data = json.loads(text)
         data = data[0] if isinstance(data, list) and data else data
@@ -67,44 +91,105 @@ def _error(status: int, text: str) -> RemoteAIError:
     if status in (401, 403):
         return RemoteAIError(f"{who} refused the API key ({status}). Check AI_API_KEY in data/ai.env. {msg}", retry_local=True, status=status)
     if status == 404:
-        return RemoteAIError(f"{who} does not know the model '{settings.AI_MODEL}' (404). Check AI_MODEL in data/ai.env. {msg}", status=status)
+        return RemoteAIError(f"{who} does not know the model '{model or settings.AI_MODEL}' (404). Check AI_MODEL in data/ai.env. {msg}", status=status)
+    transient = status in TRANSIENT_STATUS
     if status == 429:
-        return RemoteAIError(f"{who}: too many requests or the free quota is used up (429). {msg}", status=status)
-    return RemoteAIError(f"{who} answered with an error ({status}): {msg}", status=status)
+        return RemoteAIError(f"{who}: too many requests or the free quota is used up (429). {msg}", status=status,
+                             transient=True, retry_after=_retry_after(headers, text))
+    return RemoteAIError(f"{who} answered with an error ({status}): {msg}", status=status, transient=transient,
+                         retry_after=_retry_after(headers, text))
 
 
-def chat(messages: List[Dict[str, str]], json_mode: bool = False, temperature: Optional[float] = 0.0, fast: bool = False) -> str:
-    """One answer, not streamed (deadlines in messages, Ask Bro)."""
+def _models(fast: bool) -> List[str]:
+    """Models to try, in order: the one for this job, the other one (main <-> fast), then AI_MODEL_BACKUP (comma list)."""
+    first, other = (settings.AI_MODEL_FAST, settings.AI_MODEL) if fast else (settings.AI_MODEL, settings.AI_MODEL_FAST)
+    out: List[str] = []
+    for m in [first, other] + [x.strip() for x in settings.AI_MODEL_BACKUP.split(",")]:
+        if m and m not in out:
+            out.append(m)
+    return out
+
+
+# A model that answered "busy" (503, 429, ...) is tried last for a few minutes, so the next requests do not lose time on it
+_busy_until: Dict[str, float] = {}
+
+
+def _wait(seconds: float, should_stop: Optional[Callable[[], bool]]) -> None:
+    end = time.time() + seconds
+    while time.time() < end:
+        if should_stop and should_stop():
+            raise RemoteStopped("Stopped.")
+        time.sleep(min(0.5, max(0.0, end - time.time())))
+
+
+def _with_retries(call: Callable[[str], str], fast: bool, should_stop: Optional[Callable[[], bool]] = None) -> str:
+    """
+    Busy service (503 "high demand"), rate limit (429), server or network error: the next model of the chain is
+    tried at once (Gemini: 3.8-flash -> 3.5-flash-lite -> flash-lite-latest). If every model is busy, the whole chain
+    is tried again after AI_RETRY_WAITS (default 10, 30 s; or the time the service asks). Only then does the caller
+    fall back to Ollama. Other errors (wrong key, bad request) stop at once; an unknown model (404) is skipped.
+    """
+    chain = _models(fast)
+    last: Optional[RemoteAIError] = None
+    for round_no, delay in enumerate([0.0] + settings.AI_RETRY_WAITS):
+        if round_no:
+            wait = min(max(delay, (last.retry_after or 0.0) if last else 0.0), 90.0)
+            logger.warning("%s: every model is busy, trying again in %.0f s", settings.AI_LABEL, wait)
+            _wait(wait, should_stop)
+        now = time.time()
+        for model in sorted(chain, key=lambda m: _busy_until.get(m, 0) > now):   # busy ones last (stable order)
+            if should_stop and should_stop():
+                raise RemoteStopped("Stopped.")
+            try:
+                answer = call(model)
+                _busy_until.pop(model, None)
+                if model != chain[0]:
+                    logger.info("%s: answered by %s (%s was busy)", settings.AI_LABEL, model, chain[0])
+                return answer
+            except RemoteAIError as exc:
+                last = exc
+                if exc.status == 404:
+                    chain = [m for m in chain if m != model] or chain
+                    continue
+                if not exc.transient:
+                    raise
+                _busy_until[model] = time.time() + settings.AI_BUSY_SKIP
+                logger.warning("%s: %s busy (%s), trying the next model", settings.AI_LABEL, model, exc.status)
+    assert last is not None
+    raise last
+
+
+def _chat_once(messages: List[Dict[str, str]], model: str, json_mode: bool, temperature: Optional[float]) -> str:
     url = f"{settings.AI_BASE_URL}/chat/completions"
     for extras in (True, False):
         try:
-            r = httpx.post(url, headers=_headers(), json=_body(messages, json_mode, temperature, fast, False, extras),
+            r = httpx.post(url, headers=_headers(), json=_body(messages, model, json_mode, temperature, False, extras),
                            timeout=httpx.Timeout(settings.AI_TIMEOUT, connect=10.0))
         except httpx.TimeoutException as exc:
-            raise RemoteAIError(f"{settings.AI_LABEL} gave no answer in {int(settings.AI_TIMEOUT)} s.") from exc
+            raise RemoteAIError(f"{settings.AI_LABEL} gave no answer in {int(settings.AI_TIMEOUT)} s.", transient=True) from exc
         except httpx.HTTPError as exc:
-            raise RemoteAIError(f"{settings.AI_LABEL} is not reachable ({settings.AI_BASE_URL}): {exc}") from exc
+            raise RemoteAIError(f"{settings.AI_LABEL} is not reachable ({settings.AI_BASE_URL}): {exc}", transient=True) from exc
         if r.status_code == 400 and extras:
             logger.info("%s refused an optional field, sending again without: %s", settings.AI_LABEL, r.text[:200])
             continue
         if r.status_code != 200:
-            raise _error(r.status_code, r.text)
+            raise _error(r.status_code, r.text, model, r.headers)
         data = r.json()
         data = data[0] if isinstance(data, list) and data else data
         try:
             return (data["choices"][0]["message"].get("content") or "").strip()
         except (KeyError, IndexError, TypeError) as exc:
-            raise RemoteAIError(f"{settings.AI_LABEL} sent an answer without text.") from exc
+            raise RemoteAIError(f"{settings.AI_LABEL} sent an answer without text.", transient=True) from exc
     raise RemoteAIError(f"{settings.AI_LABEL} refused the request (400).")
 
 
-def chat_stream(messages: List[Dict[str, str]], json_mode: bool = False, temperature: Optional[float] = None,
-                should_stop: Optional[Callable[[], bool]] = None) -> str:
-    """
-    A long job (Smart Notes, Ask the material), streamed. The wait limit (NOTES_TIMEOUT) counts from the last
-    piece received. should_stop is checked twice a second: when it returns True the socket is shut down and
-    RemoteStopped is raised (same mechanism as for Ollama).
-    """
+def chat(messages: List[Dict[str, str]], json_mode: bool = False, temperature: Optional[float] = 0.0, fast: bool = False) -> str:
+    """One answer, not streamed (deadlines in messages, Ask Bro). Busy service: tries again, then the backup model."""
+    return _with_retries(lambda model: _chat_once(messages, model, json_mode, temperature), fast)
+
+
+def _stream_once(messages: List[Dict[str, str]], model: str, json_mode: bool, temperature: Optional[float],
+                 should_stop: Optional[Callable[[], bool]]) -> str:
     url = f"{settings.AI_BASE_URL}/chat/completions"
     socks: List[Any] = []
     done, stopped = threading.Event(), threading.Event()
@@ -133,13 +218,13 @@ def chat_stream(messages: List[Dict[str, str]], json_mode: bool = False, tempera
             parts: List[str] = []
             try:
                 with httpx.Client(timeout=httpx.Timeout(settings.NOTES_TIMEOUT, connect=10.0)) as client:
-                    with client.stream("POST", url, headers=_headers(), json=_body(messages, json_mode, temperature, False, True, extras),
+                    with client.stream("POST", url, headers=_headers(), json=_body(messages, model, json_mode, temperature, True, extras),
                                        extensions={"trace": trace}) as r:
                         if r.status_code != 200:
                             text = r.read().decode("utf-8", "replace")
                             if r.status_code == 400 and extras:
                                 continue
-                            raise _error(r.status_code, text)
+                            raise _error(r.status_code, text, model, r.headers)
                         for line in r.iter_lines():
                             if stopped.is_set():
                                 raise RemoteStopped("Stopped.")
@@ -150,10 +235,17 @@ def chat_stream(messages: List[Dict[str, str]], json_mode: bool = False, tempera
                             if payload == "[DONE]":
                                 break
                             chunk = json.loads(payload)
+                            chunk = chunk[0] if isinstance(chunk, list) and chunk else chunk
                             if chunk.get("error"):
-                                raise _error(500, json.dumps(chunk))
+                                err = chunk["error"]
+                                code = err.get("code") if isinstance(err, dict) else None
+                                raise _error(code if isinstance(code, int) else 503, json.dumps(chunk), model)
                             for ch in chunk.get("choices") or []:
                                 parts.append((ch.get("delta") or {}).get("content") or "")
+                                if ch.get("finish_reason") and ch["finish_reason"] != "stop":
+                                    logger.warning("%s (%s) stopped writing: finish_reason=%s", settings.AI_LABEL, model, ch["finish_reason"])
+                if not "".join(parts).strip():
+                    raise RemoteAIError(f"{settings.AI_LABEL} sent an empty answer.", transient=True)
                 return "".join(parts)
             except (RemoteStopped, RemoteAIError):
                 raise
@@ -161,13 +253,25 @@ def chat_stream(messages: List[Dict[str, str]], json_mode: bool = False, tempera
                 if stopped.is_set():
                     raise RemoteStopped("Stopped.") from exc
                 if isinstance(exc, httpx.TimeoutException):
-                    raise RemoteAIError(f"{settings.AI_LABEL} gave no answer for {round(settings.NOTES_TIMEOUT / 60)} minutes.") from exc
-                raise RemoteAIError(f"{settings.AI_LABEL} is not reachable ({settings.AI_BASE_URL}): {exc}") from exc
+                    raise RemoteAIError(f"{settings.AI_LABEL} gave no answer for {round(settings.NOTES_TIMEOUT / 60)} minutes.",
+                                        transient=True) from exc
+                raise RemoteAIError(f"{settings.AI_LABEL} is not reachable or broke the connection ({settings.AI_BASE_URL}): {exc}",
+                                    transient=True) from exc
         raise RemoteAIError(f"{settings.AI_LABEL} refused the request (400).")
     finally:
         done.set()
         if stopped.is_set():
             raise RemoteStopped("Stopped.")
+
+
+def chat_stream(messages: List[Dict[str, str]], json_mode: bool = False, temperature: Optional[float] = None,
+                should_stop: Optional[Callable[[], bool]] = None) -> str:
+    """
+    A long job (Smart Notes, Ask the material), streamed. The wait limit (NOTES_TIMEOUT) counts from the last
+    piece received. should_stop is checked twice a second (also while waiting to try again): when it returns True
+    the socket is shut down and RemoteStopped is raised. Busy service: tries again, then the backup model.
+    """
+    return _with_retries(lambda model: _stream_once(messages, model, json_mode, temperature, should_stop), False, should_stop)
 
 
 _status_cache: Dict[str, Any] = {"at": 0.0, "value": None}

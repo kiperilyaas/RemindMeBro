@@ -36,7 +36,7 @@ _load_env_file(AI_ENV_FILE)
 # A provider that is not here: AI_PROVIDER=custom + AI_BASE_URL + AI_MODEL.
 AI_PRESETS = {
     "gemini": {"label": "Google Gemini", "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
-               "model": "gemini-3.8-flash", "fast": "gemini-3.5-flash-lite"},
+               "model": "gemini-3.8-flash", "fast": "gemini-3.5-flash-lite", "backup": "gemini-flash-lite-latest"},
     "openrouter": {"label": "OpenRouter", "base_url": "https://openrouter.ai/api/v1", "model": "", "fast": ""},
     "omniroute": {"label": "OmniRoute", "base_url": "http://127.0.0.1:20128/v1", "model": "", "fast": ""},
     "openai": {"label": "OpenAI", "base_url": "https://api.openai.com/v1", "model": "", "fast": ""},
@@ -84,6 +84,13 @@ class Settings:
     # "low" = quicker answers on thinking models; empty = do not send it
     AI_REASONING_EFFORT: str = os.getenv("AI_REASONING_EFFORT", "low").strip()
     AI_TIMEOUT: float = float(os.getenv("AI_TIMEOUT", "120"))
+    # Busy service (503 "high demand"), rate limit (429), network error: seconds to wait before each new try
+    # (when every model of the chain is busy: the chain is tried again after these waits)
+    AI_RETRY_WAITS: list = [float(x) for x in os.getenv("AI_RETRY_WAITS", "10,30").split(",") if x.strip()]
+    # More models of the same service to try when the main and fast ones are busy (comma list)
+    AI_MODEL_BACKUP: str = os.getenv("AI_MODEL_BACKUP", "").strip() or AI_PRESETS.get(AI_PROVIDER, AI_PRESETS["custom"]).get("backup", "")
+    # A busy model is tried last for this many seconds
+    AI_BUSY_SKIP: float = float(os.getenv("AI_BUSY_SKIP", "300"))
 
     @property
     def ai_remote(self) -> bool:
