@@ -21,8 +21,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database.models import Announcement, Course, Deadline, DeadlineDone, Event, SourceType
-from app.mocks import moodle_mock, teams_mock
-from app.services import llm_extractor, unilearn_client, unisis_client, vector_store
+from app.mocks import moodle_mock
+from app.services import llm_extractor, unicomms_client, unilearn_client, unisis_client, vector_store
 
 # Import ritardato per evitare cicli: auth dipende solo da DB/schemi
 from app.api.auth import link_all_professors, seed_demo_users  # noqa: E402
@@ -223,42 +223,6 @@ def process_informal_message(
     return detail
 
 
-def sync_teams(db: Session) -> List[Dict[str, Any]]:
-    details = []
-    for m in teams_mock.get_channel_messages():
-        details.append(
-            process_informal_message(
-                db,
-                external_id=m["id"],
-                content=m["content"],
-                author=m["author"],
-                created_at=_parse_dt(m["created"]),
-                course_code=m.get("channel_course_code"),
-            )
-        )
-        db.commit()  # commit per messaggio: un errore LLM non annulla il lavoro precedente
-    return details
-
-
-def sync_emails(db: Session) -> List[Dict[str, Any]]:
-    """Email istituzionali: stesso trattamento dei messaggi Teams (ChromaDB + estrazione AI)."""
-    details = []
-    for m in teams_mock.get_emails():
-        details.append(
-            process_informal_message(
-                db,
-                external_id=m["id"],
-                content=m["content"],
-                author=m["author"],
-                created_at=_parse_dt(m["created"]),
-                course_code=m.get("course_code"),
-                source=SourceType.EMAIL,
-            )
-        )
-        db.commit()
-    return details
-
-
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
@@ -303,21 +267,16 @@ def run_sync_pipeline(db: Session, user: Optional[Any] = None) -> Dict[str, Any]
             summary["unilearn"] = {"status": "error", "error": str(exc)}
             summary["errors"].append(f"UniLearn: {exc}")
 
-    # --- Teams + Email: ChromaDB + estrazione AI ---
+    # --- UniComms: lecturers' Teams posts and Outlook emails -> ChromaDB + estrazione AI ---
+    teams_details: List[Dict[str, Any]] = []
+    email_details: List[Dict[str, Any]] = []
     try:
-        teams_details = sync_teams(db)
-    except Exception as exc:
+        uc = unicomms_client.sync_messages(db, run_ai=True)
+        for d in uc["ai_details"]:
+            (email_details if d.get("source") == SourceType.EMAIL.value else teams_details).append(d)
+    except unicomms_client.UniCommsError as exc:
         db.rollback()
-        logger.exception("Errore sincronizzazione Teams")
-        teams_details = []
-        summary["errors"].append(f"Teams: {exc}")
-    try:
-        email_details = sync_emails(db)
-    except Exception as exc:
-        db.rollback()
-        logger.exception("Errore sincronizzazione email")
-        email_details = []
-        summary["errors"].append(f"Email: {exc}")
+        summary["errors"].append(f"UniComms: {exc}")
 
     all_details = forum_details + teams_details + email_details
     summary["teams_messages_processed"] = len(teams_details)

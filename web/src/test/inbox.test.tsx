@@ -45,41 +45,4 @@ describe("Inbox: new messages", () => {
     expect(screen.getByText(/New message in your Inbox/)).toBeInTheDocument();
     await waitFor(() => expect(document.title).toMatch(/^\(2\) /));
   });
-
-  it("adds a Teams message: only the student sees it, the AI date is shown, and it can be deleted", async () => {
-    let inbox: Record<string, unknown>[] = [];
-    const posted: unknown[] = [];
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-    vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
-      const url = String(input);
-      if (url.endsWith("/health")) return json({ status: "ok", app: "x", version: "1", reference_date: "2026-11-25T12:00:00", ollama: { model: "llama3.2", model_available: true }, vector_documents: 0 });
-      if (url.endsWith("/demo-accounts")) return json({ password: null, accounts: [] });
-      if (url.endsWith("/auth/me")) return json({ id: 1, email: "s@x", full_name: "Giulia", role: "student", created_at: "", plan: "premium" });
-      if (url.endsWith("/courses")) return json([{ id: 1, code: "3SG712", name: "Growth strategies", professor: "Prof. Marco Rossi" }]);
-      if (url.endsWith("/inbox/messages") && init?.method === "POST") {
-        posted.push(JSON.parse(String(init.body)));
-        const item = { ...msg(3, "Essay due Friday"), id: 30, source: "teams", author: "Marco Rossi", personal: true, deadline_id: 7, deadline_due: "2026-12-04T23:59:00",
-          ai_summary: "AI-detected deadline: Essay — Fri 4 Dec, 23:59." };
-        inbox = [item];
-        return json({ item, ai_status: "deadline_extracted", ai_error: null });
-      }
-      if (url.endsWith("/inbox/messages/30") && init?.method === "DELETE") { inbox = []; return json({ deleted: true }); }
-      if (url.endsWith("/inbox")) return json(inbox);
-      return json([]);
-    });
-    render(<ToastProvider><SessionProvider><StudentProvider><Inbox /></StudentProvider></SessionProvider></ToastProvider>);
-    fireEvent.click(await screen.findByRole("button", { name: /Add message/ }));
-    fireEvent.click(screen.getByRole("radio", { name: "Teams" }));
-    fireEvent.change(screen.getByLabelText("From"), { target: { value: "Marco Rossi" } });
-    fireEvent.change(screen.getByLabelText("Course"), { target: { value: "3SG712" } });
-    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Essay due Friday at 23:59" } });
-    fireEvent.click(screen.getByRole("button", { name: "Add to Inbox" }));
-    expect(await screen.findByText(/The AI found a date/)).toBeInTheDocument();
-    expect(posted[0]).toMatchObject({ source: "teams", author: "Marco Rossi", course_code: "3SG712", content: "Essay due Friday at 23:59" });
-    // the new message opens, says only the student sees it, and can be deleted
-    expect(screen.getByText(/only you see it/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
-    expect(await screen.findByText("Message deleted")).toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByText("Essay due Friday", { selector: ".msub" })).toBeNull());
-  });
 });

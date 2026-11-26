@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -p . && vite build --mode hub && vite build --mode unilearn && vite build --mode unisis",
+    "build": "tsc -p . && vite build --mode hub && vite build --mode unilearn && vite build --mode unisis && vite build --mode unicomms",
     "typecheck": "tsc -p .",
     "test": "vitest run"
   },

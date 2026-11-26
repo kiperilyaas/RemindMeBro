@@ -1,7 +1,7 @@
 import type {
   Billing, LessonChatAnswer, LessonChatMessage, LessonNote, NotesList, NotesSync, Plan,
   ChatResponse, Connection, Course, CourseWithStats, DemoAccounts, Deadline, Health, InboxItem, PublishResult,
-  ScheduleEvent, Source, Studies, SyncSummary, TokenResponse, User, AddMessageResult, NewMessage, ParsedEmail,
+  ScheduleEvent, Source, Studies, SyncSummary, TokenResponse, User,
 } from "./types";
 import { storage } from "../lib/storage";
 
@@ -71,9 +71,6 @@ export class ApiClient {
   deadlines = () => this.request<Deadline[]>("/deadlines");
   setDone = (id: number, done: boolean) => this.request<Deadline>(`/deadlines/${id}/complete?completed=${done}`, { method: "PATCH" });
   inbox = () => this.request<InboxItem[]>("/inbox");
-  addMessage = (m: NewMessage) => this.request<AddMessageResult>("/inbox/messages", { method: "POST", body: m, timeout: 180000 });   // the AI reads it
-  parseEml = (eml: string) => this.request<ParsedEmail>("/inbox/parse-eml", { method: "POST", body: { eml }, timeout: 30000 });
-  deleteMessage = (id: number) => this.request<{ deleted: boolean }>(`/inbox/messages/${id}`, { method: "DELETE" });
   schedule = (start: string, end: string) => this.request<ScheduleEvent[]>(`/schedule?start=${start}&end=${end}`);
   courses = () => this.request<Course[]>("/courses");
   chat = (question: string) => this.request<ChatResponse>("/chat", { method: "POST", body: { question }, timeout: 180000 });

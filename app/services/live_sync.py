@@ -1,6 +1,7 @@
 """
 Live messages: every UNILEARN_POLL_SECONDS (default 30) the hub reads the announcement forums of every student
-connected to UniLearn, so a lecturer's "Post an announcement" reaches the Inbox without pressing Sync.
+connected to UniLearn and the lecturers' emails and Teams posts in UniComms, so they reach the Inbox without
+pressing Sync.
 New posts also go through the AI (hidden deadlines). Set UNILEARN_POLL_SECONDS=0 to turn it off.
 """
 from __future__ import annotations
@@ -29,7 +30,7 @@ def poll_once() -> int:
 
 
 def _poll() -> int:
-    from app.services import unilearn_client
+    from app.services import unicomms_client, unilearn_client
     new = 0
     db = SessionLocal()
     try:
@@ -43,10 +44,15 @@ def _poll() -> int:
             except Exception as exc:   # UniLearn off, token revoked, AI busy...: try again next round
                 db.rollback()
                 logger.debug("Live sync skipped for user %s: %s", uid, exc)
+        try:
+            new += unicomms_client.sync_messages(db)["new"]
+        except Exception as exc:   # UniComms off: try again next round
+            db.rollback()
+            logger.debug("Live sync of UniComms skipped: %s", exc)
     finally:
         db.close()
     if new:
-        logger.info("Live sync: %d new UniLearn announcement(s)", new)
+        logger.info("Live sync: %d new message(s) from UniLearn and UniComms", new)
     return new
 
 

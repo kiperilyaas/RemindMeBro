@@ -120,42 +120,7 @@ class InboxItem(BaseModel):
     important: bool
     deadline_id: Optional[int] = None
     deadline_due: Optional[datetime] = None
-    personal: bool = False   # added by the student (Outlook/Teams): only they see it and can delete it
-
-
-class AddMessageRequest(BaseModel):
-    """An Outlook email or a Teams message that the student pastes (or loads from a .eml file)."""
-
-    source: SourceType = Field(SourceType.EMAIL, description="email (Outlook) or teams")
-    author: str = Field("", max_length=255, examples=["Prof. Laura Bianchi"])
-    subject: str = Field("", max_length=300)
-    content: str = Field(..., min_length=2, max_length=20000)
-    course_code: Optional[str] = Field(None, max_length=32)
-    sent_at: Optional[datetime] = None
-
-    @field_validator("source")
-    @classmethod
-    def _only_outlook_or_teams(cls, v: SourceType) -> SourceType:
-        if v not in (SourceType.EMAIL, SourceType.TEAMS):
-            raise ValueError("Only Outlook (email) or Teams messages can be added.")
-        return v
-
-
-class AddMessageResponse(BaseModel):
-    item: "InboxItem"
-    ai_status: str   # deadline_extracted | no_deadline | llm_unavailable | parsing_error
-    ai_error: Optional[str] = None
-
-
-class ParseEmlRequest(BaseModel):
-    eml: str = Field(..., min_length=10, max_length=5_000_000, description="The .eml file as text")
-
-
-class ParsedEmail(BaseModel):
-    author: str
-    subject: str
-    content: str
-    sent_at: Optional[datetime] = None
+    personal: bool = False   # UniComms email sent to this student only (not to the whole course)
 
 
 class ScheduleEvent(BaseModel):

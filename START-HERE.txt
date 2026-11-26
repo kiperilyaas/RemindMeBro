@@ -39,6 +39,10 @@ ITALIANO
        eventi di calendario, studenti iscritti.
      • UniSIS    http://127.0.0.1:8100/staff → Courses → New course:
        orario settimanale e iscritti; poi Exams → New exam date.
+     • UniComms  http://127.0.0.1:8300/staff (posta tipo Outlook e Teams,
+       solo su questo computer, senza password): scegli il docente e manda
+       un'email o un post Teams a tutti gli studenti di un corso o a uno
+       solo. Arriva nell'Inbox di Remind Me Bro entro mezzo minuto.
      • Remind Me Bro, area docente → New course (o "prendi" un corso che è
        già arrivato da UniLearn scrivendo lo stesso codice).
 8. Collega Giulia: in Remind Me Bro, come studente, Connections →
@@ -124,6 +128,10 @@ ENGLISH
        announcements, calendar events, enrolled students.
      • UniSIS    http://127.0.0.1:8100/staff → Courses → New course:
        weekly timetable and enrolments; then Exams → New exam date.
+     • UniComms  http://127.0.0.1:8300/staff (mail like Outlook and Teams,
+       only on this computer, no password): pick the lecturer and send an
+       email or a Teams post to every student of a course or to one
+       student. It reaches the Remind Me Bro Inbox within half a minute.
      • Remind Me Bro, lecturer area → New course (or take over a course
        that already came from UniLearn by typing the same code).
 8. Connect Giulia: in Remind Me Bro, as the student, Connections →

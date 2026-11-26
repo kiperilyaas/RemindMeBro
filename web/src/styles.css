@@ -522,10 +522,3 @@ pre{background:var(--surface-2);border-radius:12px;padding:12px;overflow:auto;fo
 .cchip.named{letter-spacing:0;min-width:0;max-width:100%}
 .cchip-n{overflow:hidden;text-overflow:ellipsis}
 
-/* Inbox: add an Outlook email or a Teams message */
-.modal.add-msg{width:min(560px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow-y:auto;gap:12px}
-.add-msg .seg{justify-self:start}
-.add-msg .hint{display:flex;gap:6px;align-items:flex-start;margin:0}
-.drop{display:flex;flex-wrap:wrap;align-items:center;gap:10px;border:1.5px dashed var(--line);border-radius:var(--r-sm);padding:12px 14px;font-size:14px;color:var(--muted)}
-.drop span{flex:1;min-width:160px}
-.drop.over{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 8%,transparent)}

@@ -27,7 +27,7 @@ from app.api.premium import require_premium
 from app.config import settings
 from app.database.db import get_db
 from app.database.models import Announcement, Course, Deadline, DeadlineDone, Event, SourceType, User
-from app.services import llm_extractor, personal_messages, sync_service, vector_store
+from app.services import llm_extractor, sync_service, vector_store
 from app.services.my_courses import course_filter
 
 router = APIRouter(prefix="/api", tags=["Academic Hub"])
@@ -77,14 +77,14 @@ def visible_events(user: User):
 
 
 def visible_announcements(db: Session, user: User):
-    """Shared messages of the student's courses + the Outlook/Teams messages the student added (whatever their course)."""
+    """Shared messages of the student's courses + the UniComms emails sent to this student only (whatever their course)."""
     return or_(Announcement.user_id == user.id,
                and_(Announcement.user_id.is_(None), course_filter(db, user, Announcement.course_id)))
 
 
 def _subject_from_content(text: str, limit: int = 80) -> str:
     """Prima frase del messaggio, accorciata: usata come oggetto nella Inbox."""
-    first = re.split(r"(?<=[.!?])\s+", text.strip(), maxsplit=1)[0]
+    first = re.split(r"(?<=[.!?])\s+", text.strip(), maxsplit=1)[0].rstrip(".")
     return first if len(first) <= limit else first[: limit - 1].rstrip() + "…"
 
 
@@ -216,38 +216,6 @@ def _inbox_item(a: Announcement, now: datetime) -> schemas.InboxItem:
         deadline_due=dl.due_date if dl else None,
         personal=a.user_id is not None,
     )
-
-
-@router.post("/inbox/messages", response_model=schemas.AddMessageResponse, status_code=201,
-             summary="Add an Outlook email or a Teams message (only the student sees it)")
-def add_inbox_message(payload: schemas.AddMessageRequest, db: Session = Depends(get_db), user: User = Authenticated) -> schemas.AddMessageResponse:
-    """The AI looks for a deadline in it, like in the lecturers' announcements. The deadline is personal too."""
-    if payload.course_code and db.scalar(select(Course.id).where(Course.code == payload.course_code)) is None:
-        raise HTTPException(status_code=404, detail="Course not found.")
-    detail = personal_messages.add_message(db, user, source=payload.source, author=payload.author, subject=payload.subject,
-                                           content=payload.content, course_code=payload.course_code, sent_at=payload.sent_at)
-    ann = db.get(Announcement, detail["announcement_id"])
-    db.refresh(ann)
-    return schemas.AddMessageResponse(item=_inbox_item(ann, settings.reference_now()), ai_status=detail.get("status", "no_deadline"),
-                                      ai_error=detail.get("error"))
-
-
-@router.post("/inbox/parse-eml", response_model=schemas.ParsedEmail, summary="Read an email saved from Outlook (.eml)")
-def parse_eml(payload: schemas.ParseEmlRequest, user: User = Authenticated) -> schemas.ParsedEmail:
-    try:
-        return schemas.ParsedEmail(**personal_messages.parse_eml(payload.eml.encode("utf-8", "surrogateescape")))
-    except personal_messages.EmlError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-
-@router.delete("/inbox/messages/{message_id}", summary="Delete a message the student added")
-def delete_inbox_message(message_id: int, db: Session = Depends(get_db), user: User = Authenticated) -> Dict[str, bool]:
-    ann = db.get(Announcement, message_id)
-    if ann is None or ann.user_id != user.id:   # course announcements are deleted by the lecturer in UniLearn
-        raise HTTPException(status_code=404, detail="Message not found.")
-    sync_service.delete_announcement(db, ann)
-    db.commit()
-    return {"deleted": True}
 
 
 @router.get("/schedule", response_model=List[schemas.ScheduleEvent], summary="Timetable/events in a date range")

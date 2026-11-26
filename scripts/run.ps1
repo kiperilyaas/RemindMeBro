@@ -26,6 +26,7 @@ $OllamaUrl = "http://127.0.0.1:11434"
 $script:BackendProc = $null
 $script:UnisisProc  = $null
 $script:UnilearnProc = $null
+$script:UnicommsProc = $null
 $script:OllamaProc  = $null
 $script:NgrokProc   = $null
 
@@ -43,6 +44,7 @@ function Stop-All {
   if ($script:WhisperProc -and -not $script:WhisperProc.HasExited) { Stop-Process -Id $script:WhisperProc.Id -Force -ErrorAction SilentlyContinue }
   if ($script:NgrokProc -and -not $script:NgrokProc.HasExited) { Write-Host "Closing the public link..."; Stop-Process -Id $script:NgrokProc.Id -Force -ErrorAction SilentlyContinue }
   if ($script:UnilearnProc -and -not $script:UnilearnProc.HasExited) { Write-Host "Stopping UniLearn..."; Stop-Process -Id $script:UnilearnProc.Id -Force -ErrorAction SilentlyContinue }
+  if ($script:UnicommsProc -and -not $script:UnicommsProc.HasExited) { Write-Host "Stopping UniComms..."; Stop-Process -Id $script:UnicommsProc.Id -Force -ErrorAction SilentlyContinue }
   if ($script:UnisisProc -and -not $script:UnisisProc.HasExited) { Write-Host "Stopping UniSIS..."; Stop-Process -Id $script:UnisisProc.Id -Force -ErrorAction SilentlyContinue }
   if ($script:BackendProc -and -not $script:BackendProc.HasExited) { Write-Host "Stopping the app..."; Stop-Process -Id $script:BackendProc.Id -Force -ErrorAction SilentlyContinue }
   if ($script:OllamaProc -and -not $script:OllamaProc.HasExited)   { Write-Host "Stopping Ollama...";  Stop-Process -Id $script:OllamaProc.Id -Force -ErrorAction SilentlyContinue }
@@ -264,7 +266,7 @@ try {
   } else { Ok "Ready" }
 
   # ---------- 5. Start the app ----------
-  Step "5/5  Starting UniSIS, UniLearn and Remind Me Bro"
+  Step "5/5  Starting UniSIS, UniLearn, UniComms and Remind Me Bro"
   function Get-FreePort($from, $to) {
     foreach ($p in $from..$to) {
       try { $l = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $p); $l.Start(); $l.Stop(); return $p } catch { }
@@ -316,6 +318,25 @@ try {
   }
   Ok "UniLearn running at $UnilearnUrl"
 
+  # UniComms: the university's mail (like Outlook) and chat (like Teams): lecturers write, the hub reads
+  $CPort = Get-FreePort 8300 8310
+  if (-not $CPort) { Fail "No free port between 8300 and 8310 for UniComms" }
+  $UnicommsUrl = "http://127.0.0.1:$CPort"
+  $env:UNICOMMS_URL = $UnicommsUrl
+  $script:UnicommsProc = Start-Process -FilePath $VenvPy -ArgumentList "-m", "uvicorn", "unicomms.main:app", "--host", "127.0.0.1", "--port", "$CPort" `
+    -WorkingDirectory $AppDir -NoNewWindow -PassThru `
+    -RedirectStandardOutput (Join-Path $Logs "unicomms.log") -RedirectStandardError (Join-Path $Logs "unicomms.err.log")
+  for ($i = 0; $i -lt 60; $i++) {
+    if (Test-Http "$UnicommsUrl/api/v1/health") { break }
+    if ($script:UnicommsProc.HasExited) { break }
+    Start-Sleep -Milliseconds 500
+  }
+  if (-not (Test-Http "$UnicommsUrl/api/v1/health")) {
+    Get-Content (Join-Path $Logs "unicomms.err.log") -Tail 25 -ErrorAction SilentlyContinue
+    Fail "UniComms did not start"
+  }
+  Ok "UniComms running at $UnicommsUrl"
+
 
   $script:BackendProc = Start-Process -FilePath $VenvPy -ArgumentList "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "$Port" `
     -WorkingDirectory $AppDir -NoNewWindow -PassThru `
@@ -359,6 +380,9 @@ try {
   Write-Host "  UniLearn (Moodle-compatible LMS)     ->  $UnilearnUrl"
   Write-Host "    Teaching        marco.rossi, laura.bianchi, ...  ->  $UnilearnUrl/staff  (create courses)"
   Write-Host "    Admin           admin                        (also Web services: live API call log and tokens)"
+  Write-Host ""
+  Write-Host "  UniComms (mail like Outlook + Teams) ->  $UnicommsUrl/staff  (only on this computer, no password)"
+  Write-Host "    Lecturers send emails and Teams posts to a course or to one student: they reach the Inbox by themselves"
   Write-Host ""
   Write-Host "  Everything starts empty and today's date is used. Create courses in UniLearn /staff and UniSIS /staff"
   Write-Host "  (same code in both), then as Giulia: Connect -> UniLearn and UniSIS, and Sync. Your data is kept."

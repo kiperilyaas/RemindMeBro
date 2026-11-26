@@ -63,6 +63,9 @@ class Settings:
     # UniLearn: the Moodle-compatible LMS (any real Moodle URL works too)
     UNILEARN_URL: str = os.getenv("UNILEARN_URL", "http://127.0.0.1:8200").rstrip("/")
     UNISIS_URL: str = os.getenv("UNISIS_URL", "http://127.0.0.1:8100").rstrip("/")
+    # UniComms: the lecturers' emails (like Outlook) and Teams posts; the key is written by UniComms in data/unicomms
+    UNICOMMS_URL: str = os.getenv("UNICOMMS_URL", "http://127.0.0.1:8300").rstrip("/")
+    UNICOMMS_KEY_FILE: str = os.getenv("UNICOMMS_KEY_FILE", str(DATA_DIR / "unicomms" / "hub.key"))
     UNISIS_CLIENT_ID: str = os.getenv("UNISIS_CLIENT_ID", "remind-me-bro")
     # Secret/API key: env vars, otherwise the credentials file exported by UniSIS
     UNISIS_CLIENT_SECRET: str = os.getenv("UNISIS_CLIENT_SECRET", "")
