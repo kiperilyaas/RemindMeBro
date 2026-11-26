@@ -49,11 +49,9 @@ async def lifespan(app: FastAPI):
     with session_scope() as db:
         from app.services.staff_accounts import rotate_lecturer_passwords
         rotate_lecturer_passwords(db)   # lecturers never keep the shared demo password
-    with session_scope() as db:   # Smart Notes left half-done when the app was closed: finish them
-        from app.services.notes import worker
-        from app.services.notes.sync import busy_note_ids
-        for nid in busy_note_ids(db):
-            worker.enqueue(nid)
+    with session_scope() as db:   # Smart Notes left half-done when the app was closed: they do NOT start again by themselves
+        from app.services.notes.sync import reset_interrupted
+        reset_interrupted(db)
     from app.services import live_sync
     live_sync.start()   # lecturers' announcements reach the Inbox within half a minute
     logger.info("Database pronto: %s", settings.DATABASE_URL)

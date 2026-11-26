@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 from app.config import settings
 from app.services.llm_extractor import LLMUnavailableError, chat_long, parse_llm_json
@@ -48,9 +48,9 @@ PART_FORMAT = (
 )
 
 
-def _ask(prompt: str) -> Dict[str, Any]:
+def _ask(prompt: str, should_stop: Optional[Callable[[], bool]] = None) -> Dict[str, Any]:
     raw = chat_long([{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}],
-                    {"temperature": 0.2, "num_ctx": settings.NOTES_NUM_CTX}, json_mode=True)
+                    {"temperature": 0.2, "num_ctx": settings.NOTES_NUM_CTX}, json_mode=True, should_stop=should_stop)
     try:
         data = parse_llm_json(raw)
     except Exception as exc:
@@ -105,8 +105,9 @@ def _defs(v: Any, limit: int) -> List[Dict[str, str]]:
     return out[:limit]
 
 
-def generate(course_name: str, lesson_name: str, sources: Sequence[Tuple[str, str, str]]) -> Dict[str, Any]:
-    """sources: (filename, kind, text). Returns title, summary, key_points, definitions."""
+def generate(course_name: str, lesson_name: str, sources: Sequence[Tuple[str, str, str]],
+             should_stop: Optional[Callable[[], bool]] = None) -> Dict[str, Any]:
+    """sources: (filename, kind, text). Returns title, summary, key_points, definitions. should_stop: see chat_long."""
     blocks = [f"### SOURCE: {name} ({KIND_LABEL.get(kind, kind)})\n{text.strip()}" for name, kind, text in sources if text and text.strip()]
     if not blocks:
         raise NotesError("No readable text in the files of this lesson (a scanned PDF or a silent recording?).")
@@ -115,17 +116,17 @@ def generate(course_name: str, lesson_name: str, sources: Sequence[Tuple[str, st
     chunks = _chunks(material)
     logger.info("Smart Notes: %s / %s, %d characters, %d part(s)", course_name, lesson_name, len(material), len(chunks))
     if len(chunks) == 1:
-        data = _ask(f"{header}MATERIALS:\n{material}\n\n{FULL_FORMAT}")
+        data = _ask(f"{header}MATERIALS:\n{material}\n\n{FULL_FORMAT}", should_stop)
     else:
         parts = []
         for i, c in enumerate(chunks, 1):
-            p = _ask(f"{header}PART {i} OF {len(chunks)}:\n{c}\n\n{PART_FORMAT}")
+            p = _ask(f"{header}PART {i} OF {len(chunks)}:\n{c}\n\n{PART_FORMAT}", should_stop)
             parts.append({"summary": str(p.get("summary") or ""), "key_points": _str_list(p.get("key_points"), 8),
                           "definitions": _defs(p.get("definitions"), 8)})
         merged_input = json.dumps(parts, ensure_ascii=False)
         try:
             data = _ask(f"{header}These are notes on the parts of the lesson, in order:\n{merged_input}\n\n"
-                        f"Merge them into one page of notes for the whole lesson. {FULL_FORMAT}")
+                        f"Merge them into one page of notes for the whole lesson. {FULL_FORMAT}", should_stop)
         except NotesError:
             data = {}
         # keep the definitions of every part even if the merge drops some

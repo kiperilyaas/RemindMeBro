@@ -83,6 +83,8 @@ export class ApiClient {
   note = (id: number) => this.request<LessonNote>(`/notes/${id}`);
   saveNote = (id: number, body_md: string) => this.request<LessonNote>(`/notes/${id}`, { method: "PUT", body: { body_md } });
   regenerateNote = (id: number) => this.request<LessonNote>(`/notes/${id}/regenerate`, { method: "POST" });
+  stopNote = (id: number) => this.request<LessonNote>(`/notes/${id}/stop`, { method: "POST" });
+  deleteNote = (id: number) => this.request<{ deleted: boolean }>(`/notes/${id}`, { method: "DELETE" });
   lessonChat = (id: number, question: string, sourceId: number | null) =>
     this.request<LessonChatAnswer>(`/notes/${id}/chat`, { method: "POST", body: { question, source_id: sourceId }, timeout: 1800000 });   // a slow computer can need minutes
   lessonChatHistory = (id: number, sourceId: number | null) =>

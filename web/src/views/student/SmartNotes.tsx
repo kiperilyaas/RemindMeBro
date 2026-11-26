@@ -24,11 +24,11 @@ export function StatusPill({ status }: { status: NoteStatus }) {
   return <span className={`pill ${s.tone}`} aria-live="polite">{s.busy && status !== "waiting" && <span className="dot-pulse" aria-hidden />}{s.label}</span>;
 }
 
-function LessonCard({ l, onOpen, onMake }: { l: LessonRow; onOpen: () => void; onMake: () => void }) {
+function LessonCard({ l, onOpen, onMake, onStop }: { l: LessonRow; onOpen: () => void; onMake: () => void; onStop: () => void }) {
   const media = l.sources.some((x) => x.kind === "audio" || x.kind === "video");
   return (
     <div className="lesson">
-      <button className="lesson-open" onClick={onOpen} disabled={STATUS[l.status].busy} aria-label={`${l.lesson}, ${STATUS[l.status].label}`}>
+      <button className="lesson-open" onClick={onOpen} aria-label={`${l.lesson}, ${STATUS[l.status].label}`}>
         <span className="lesson-h"><b>{l.lesson}</b><StatusPill status={l.status} /></span>
         {l.status === "ready" && l.summary && <span className="lesson-s">{l.summary}</span>}
         {l.status === "error" && l.error && <span className="lesson-err">{l.error}</span>}
@@ -37,6 +37,8 @@ function LessonCard({ l, onOpen, onMake }: { l: LessonRow; onOpen: () => void; o
         {l.sources.map((s) => <span key={s.filename} className="kind" title={s.filename}>{KIND[s.kind]}</span>)}
         {l.edited && <span className="kind ed">Edited</span>}
         {l.new_material && <span className="kind new">New material</span>}
+        {STATUS[l.status].busy && <button className="btn sm lesson-make" onClick={onStop} title="Stop making these notes">
+          <Icon name="x" size={15} /> Stop</button>}
         {l.status === "new" && <button className="btn primary sm lesson-make" onClick={onMake} title={media ? "Reads the files and transcribes the recording on this computer" : "Reads the files on this computer"}>
           <Icon name="sparkle" size={15} /> Make notes</button>}
       </span>
@@ -44,7 +46,7 @@ function LessonCard({ l, onOpen, onMake }: { l: LessonRow; onOpen: () => void; o
   );
 }
 
-function NoteView({ id, onBack }: { id: number; onBack: () => void }) {
+function NoteView({ id, onBack, onDeleted }: { id: number; onBack: () => void; onDeleted: () => void }) {
   const toast = useToast();
   const [note, setNote] = useState<LessonNote | null>(null);
   const [draft, setDraft] = useState<string | null>(null);
@@ -54,7 +56,7 @@ function NoteView({ id, onBack }: { id: number; onBack: () => void }) {
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {   // follow a regeneration until it is done
     if (!note || !STATUS[note.status].busy) return;
-    const t = window.setTimeout(() => void load(), 3000);
+    const t = window.setTimeout(() => void load(), 5000);
     return () => clearTimeout(t);
   }, [note, load]);
 
@@ -86,6 +88,19 @@ function NoteView({ id, onBack }: { id: number; onBack: () => void }) {
     catch (e) { toast("Couldn't start it", (e as Error).message, "error"); }
     setBusy(false);
   };
+  const stop = async () => {
+    setBusy(true);
+    try { setNote(await api.stopNote(note.id)); toast("Stopping", "The local AI stops working on this lesson."); }
+    catch (e) { toast("Couldn't stop it", (e as Error).message, "error"); }
+    setBusy(false);
+  };
+  const remove = async () => {
+    const what = note.status === "ready" ? "these notes and the saved questions" : "this lesson's work";
+    if (!window.confirm(`Delete ${what}? If the files are still in UniLearn, the lesson comes back as "Not made yet" at the next sync.`)) return;
+    setBusy(true);
+    try { await api.deleteNote(note.id); toast("Notes deleted", undefined, "ok"); onDeleted(); }
+    catch (e) { toast("Couldn't delete", (e as Error).message, "error"); setBusy(false); }
+  };
   const working = STATUS[note.status].busy;
   return (
     <article className="snote">
@@ -97,6 +112,7 @@ function NoteView({ id, onBack }: { id: number; onBack: () => void }) {
             <button className="btn sm" onClick={() => setDraft(note.body_md)} disabled={note.status !== "ready"}><Icon name="edit" size={16} /> Edit</button>
             <button className="btn sm" onClick={() => void copy()} disabled={note.status !== "ready"}>Copy text</button>
             <button className="btn sm" onClick={pdf} disabled={note.status !== "ready"}>Save as PDF</button>
+            <button className="btn ghost sm" onClick={() => void remove()} disabled={busy} aria-label="Delete these notes" title="Delete these notes"><Icon name="trash" size={16} /></button>
           </>
         ) : (
           <>
@@ -124,7 +140,8 @@ function NoteView({ id, onBack }: { id: number; onBack: () => void }) {
         <div className="note-alert warn"><Icon name="alert" size={18} /><span>{note.error ?? "The notes could not be made."}</span>
           <button className="btn sm" onClick={() => void regenerate()} disabled={busy}>Try again</button></div>
       ) : working ? (
-        <div className="note-working"><Spinner label={STATUS[note.status].label} /><span><b>{STATUS[note.status].label}</b> The notes appear here when they are ready.</span></div>
+        <div className="note-working"><Spinner label={STATUS[note.status].label} /><span><b>{STATUS[note.status].label}</b> The notes appear here when they are ready.</span>
+          <button className="btn sm" onClick={() => void stop()} disabled={busy}><Icon name="x" size={15} /> Stop</button></div>
       ) : draft !== null ? (
         <label className="note-edit"><span className="sr">Notes (Markdown)</span>
           <textarea value={draft} onChange={(e) => setDraft(e.target.value)} spellCheck autoFocus />
@@ -156,6 +173,10 @@ export function SmartNotes({ noteId, openNote }: { noteId: number | null; openNo
     } catch (e) { if (!quiet) toast("Couldn't sync the materials", (e as Error).message, "error"); else void load(); }
     setSyncing(false);
   }, [toast, load]);
+  const stopLesson = useCallback(async (l: LessonRow) => {
+    try { await api.stopNote(l.id); toast("Stopping", `${l.lesson}: the local AI stops working on it.`); void load(); }
+    catch (e) { toast("Couldn't stop it", (e as Error).message, "error"); }
+  }, [toast, load]);
   const make = useCallback(async (l: LessonRow) => {
     try {
       await api.regenerateNote(l.id);
@@ -168,11 +189,11 @@ export function SmartNotes({ noteId, openNote }: { noteId: number | null; openNo
   const busy = !!data?.courses.some((c) => c.lessons.some((l) => STATUS[l.status].busy));
   useEffect(() => {   // refresh while something is being made
     if (!busy || noteId !== null) return;
-    const t = window.setInterval(() => void load(), 3000);
+    const t = window.setInterval(() => void load(), 5000);
     return () => clearInterval(t);
   }, [busy, load, noteId]);
 
-  if (noteId !== null) return <NoteView id={noteId} onBack={() => { openNote(null); void load(); }} />;
+  if (noteId !== null) return <NoteView id={noteId} onBack={() => { openNote(null); void load(); }} onDeleted={() => { openNote(null); void load(); }} />;
   return (
     <section aria-label="Smart Notes">
       <div className="notes-h">
@@ -191,7 +212,7 @@ export function SmartNotes({ noteId, openNote }: { noteId: number | null; openNo
       ) : data.courses.map((c) => (
         <div key={c.code} className="notes-course">
           <h3><CourseChip code={c.code} name={c.name} /> {c.name}</h3>
-          <div className="lessons">{c.lessons.map((l) => <LessonCard key={l.id} l={l} onOpen={() => openNote(l.id)} onMake={() => void make(l)} />)}</div>
+          <div className="lessons">{c.lessons.map((l) => <LessonCard key={l.id} l={l} onOpen={() => openNote(l.id)} onMake={() => void make(l)} onStop={() => void stopLesson(l)} />)}</div>
         </div>
       ))}
     </section>

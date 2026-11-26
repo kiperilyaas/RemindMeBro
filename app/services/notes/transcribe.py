@@ -51,14 +51,20 @@ def _clock(seconds: float) -> str:
     return f"{s // 3600}:{s % 3600 // 60:02d}:{s % 60:02d}" if s >= 3600 else f"{s // 60}:{s % 60:02d}"
 
 
-def transcribe(path: Path) -> Tuple[str, Optional[str]]:
-    """Returns (text, language code)."""
+class TranscribeStopped(RuntimeError):
+    """The student pressed Stop during a transcription."""
+
+
+def transcribe(path: Path, should_stop=None) -> Tuple[str, Optional[str]]:
+    """Returns (text, language code). should_stop() True between two segments -> TranscribeStopped."""
     model = get_model()
     try:
         segments, info = model.transcribe(str(path), beam_size=1, vad_filter=True)
         # one paragraph per minute or so, each with its time: "[12:30]", so answers can say where it was said
         parts, cur, start = [], [], None
         for s in segments:
+            if should_stop and should_stop():
+                raise TranscribeStopped("Stopped.")
             if not s.text.strip():
                 continue
             if start is None:
@@ -70,6 +76,8 @@ def transcribe(path: Path) -> Tuple[str, Optional[str]]:
         if cur:
             parts.append(f"[{_clock(start or 0)}]\n" + " ".join(cur))
         text = "\n\n".join(parts)
+    except TranscribeStopped:
+        raise
     except Exception as exc:
         raise TranscribeError(f"Could not transcribe {path.name}: {exc}") from exc
     return text, getattr(info, "language", None)
