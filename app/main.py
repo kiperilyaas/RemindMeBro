@@ -54,6 +54,8 @@ async def lifespan(app: FastAPI):
         from app.services.notes.sync import busy_note_ids
         for nid in busy_note_ids(db):
             worker.enqueue(nid)
+    from app.services import live_sync
+    live_sync.start()   # lecturers' announcements reach the Inbox within half a minute
     logger.info("Database pronto: %s", settings.DATABASE_URL)
     logger.info("LLM: %s @ %s | data di riferimento: %s", settings.OLLAMA_MODEL, settings.OLLAMA_HOST, settings.reference_now().date())
     yield

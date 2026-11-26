@@ -248,8 +248,8 @@ class LessonNote(Base):
     section_ext_id: Mapped[int] = mapped_column(Integer)
     lesson_name: Mapped[str] = mapped_column(String(255))
     position: Mapped[int] = mapped_column(Integer, default=0)
-    # waiting | syncing | transcribing | processing | ready | error
-    status: Mapped[str] = mapped_column(String(20), default="waiting")
+    # new (found, not made yet: the student presses "Make notes") | waiting | syncing | transcribing | processing | ready | error
+    status: Mapped[str] = mapped_column(String(20), default="new")
     error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     title: Mapped[str] = mapped_column(String(255), default="")
     summary: Mapped[str] = mapped_column(Text, default="")
@@ -263,6 +263,7 @@ class LessonNote(Base):
     generated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     sources: Mapped[List["NoteSource"]] = relationship(back_populates="note", cascade="all, delete-orphan", order_by="NoteSource.id")
+    chat: Mapped[List["LessonChatMessage"]] = relationship(cascade="all, delete-orphan", order_by="LessonChatMessage.id")
 
 
 class NoteSource(Base):
@@ -291,4 +292,18 @@ class ExtractedText(Base):
     kind: Mapped[str] = mapped_column(String(20))
     text: Mapped[str] = mapped_column(Text, default="")
     language: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class LessonChatMessage(Base):
+    """Saved chat "Ask the material": one conversation per lesson (source_id empty) and one per file."""
+
+    __tablename__ = "lesson_chat_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    note_id: Mapped[int] = mapped_column(ForeignKey("lesson_notes.id"), index=True)
+    source_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    role: Mapped[str] = mapped_column(String(10))          # user | assistant
+    content: Mapped[str] = mapped_column(Text)
+    sources: Mapped[str] = mapped_column(Text, default="[]")   # JSON: excerpts the answer used
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

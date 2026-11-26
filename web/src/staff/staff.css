@@ -173,3 +173,4 @@
 .st-tick{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
 .st-tick input{width:16px;height:16px;margin:0}
 .st-mark.img{background:none;object-fit:contain;padding:0}
+.st-warn{margin:0;padding:10px 12px;border-radius:10px;background:var(--warn-soft);color:var(--warn);font-size:13px;font-weight:550}

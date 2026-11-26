@@ -52,11 +52,18 @@ describe("AI section", () => {
   });
 
   it("Premium: Smart Notes lists lessons with their status and opens a ready one", async () => {
-    const list = { connected: true, transcription: true, courses: [{ code: "2PR515", name: "Corporate Governance", lessons: [row(1, "Lesson 1", "ready"), row(2, "Lesson 2", "processing")] }] };
-    const { navigate } = mount("premium", "tab=notes", (url) => (url.endsWith("/notes/sync") ? json({ ...list, lessons: 2, files: 2, queued: 0 }) : url.endsWith("/notes") ? json(list) : null));
+    const list = { connected: true, transcription: true, courses: [{ code: "2PR515", name: "Corporate Governance", lessons: [row(1, "Lesson 1", "ready"), row(2, "Lesson 2", "processing"), row(3, "Lesson 3", "new")] }] };
+    const { navigate, calls } = mount("premium", "tab=notes", (url) => (url.endsWith("/notes/sync") ? json({ ...list, lessons: 3, files: 2, queued: 0, not_made: 1 })
+      : url.endsWith("/notes/3/regenerate") ? json({ ...row(3, "Lesson 3", "waiting"), body_md: "", key_points: [], definitions: [] }) : url.endsWith("/notes") ? json(list) : null));
     expect(await screen.findByRole("button", { name: "Lesson 2, AI processing…" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Lesson 1, Ready" }));
     expect(navigate).toHaveBeenCalledWith("ai?tab=notes&note=1");
+    // nothing starts by itself: only one lesson has a Make notes button, and only a click starts it
+    expect(calls.some((c) => c.url.includes("/regenerate"))).toBe(false);
+    const make = screen.getAllByRole("button", { name: /Make notes/ });
+    expect(make).toHaveLength(1);
+    fireEvent.click(make[0]);
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/notes/3/regenerate") && c.method === "POST")).toBe(true));
   });
 
   it("Premium: a note is shown as formatted text and can be edited", async () => {
@@ -80,22 +87,31 @@ describe("AI section", () => {
 describe("Ask the material", () => {
   it("asks only about the chosen file and shows the cited excerpts", async () => {
     const note = { ...row(1, "Lesson 1", "ready"), body_md: "# Governance\n", key_points: [], definitions: [] };
-    const { calls } = mount("premium", "tab=notes&note=1", (url) => {
-      if (url.endsWith("/notes/1/chat")) return json({ answer: "The board **monitors** managers [1].", scope: "rec.mp3", skipped: [],
-        sources: [{ n: 1, filename: "rec.mp3", kind: "audio", label: "1:02", excerpt: "The board monitors managers." }] });
+    const { calls } = mount("premium", "tab=notes&note=1", (url, init) => {
+      if (url.includes("/notes/1/chat") && init?.method === "POST") {
+        const src = [{ n: 1, filename: "rec.mp3", kind: "audio", label: "1:02", excerpt: "The board monitors managers." }];
+        return json({ answer: "The board **monitors** managers [1].", scope: "rec.mp3", skipped: [], sources: src, messages: [
+          { id: 11, role: "user", content: "Who monitors managers?", sources: [], created_at: null },
+          { id: 12, role: "assistant", content: "The board **monitors** managers [1].", sources: src, created_at: null }] });
+      }
+      if (url.endsWith("/notes/1/chat?source_id=8")) return json({ messages: [] });
+      if (url.endsWith("/notes/1/chat")) return json({ messages: [{ id: 5, role: "user", content: "Saved question about the lesson", sources: [], created_at: null }] });
       if (url.endsWith("/notes/1")) return json(note);
       if (url.endsWith("/notes/sync")) return json({ connected: true, transcription: true, courses: [], lessons: 0, files: 0, queued: 0 });
       return null;
     });
     fireEvent.click(await screen.findByRole("tab", { name: /Ask the material/ }));
+    expect(await screen.findByText("Saved question about the lesson")).toBeInTheDocument();   // saved conversation comes back
     fireEvent.change(screen.getByLabelText("Ask about"), { target: { value: "8" } });
+    await waitFor(() => expect(screen.queryByText("Saved question about the lesson")).not.toBeInTheDocument());
     expect(screen.getByText(/Answers use only rec\.mp3/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Question about the material"), { target: { value: "Who monitors managers?" } });
     fireEvent.click(screen.getByRole("button", { name: "Send question" }));
     expect(await screen.findByLabelText("source 1")).toBeInTheDocument();
     expect(screen.getByText(/1 source: rec\.mp3 · 1:02/)).toBeInTheDocument();
-    const sent = JSON.parse(calls.find((c) => c.url.endsWith("/notes/1/chat"))!.body!);
-    expect(sent).toEqual({ question: "Who monitors managers?", source_id: 8, history: [] });
+    const sent = JSON.parse(calls.find((c) => c.url.endsWith("/notes/1/chat") && c.method === "POST")!.body!);
+    expect(sent).toEqual({ question: "Who monitors managers?", source_id: 8 });
+    expect(screen.getByRole("button", { name: "Delete this conversation" })).toBeInTheDocument();
   });
 });
 

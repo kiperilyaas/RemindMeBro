@@ -113,10 +113,15 @@ La sezione **AI** dello studente contiene Ask Bro (la chat) e Smart Notes. Le du
 
 - Prezzo: `app/config.py`, righe `PREMIUM_PRICE` (79), `PREMIUM_CURRENCY` (CZK) e `PREMIUM_PERIOD` (month). Si possono anche impostare con le variabili d'ambiente con lo stesso nome. Dopo la modifica va riavviato il Run & Go.
 - Smart Notes legge con i web service di Moodle (`core_course_get_contents` + `webservice/pluginfile.php`) i file che il docente carica in UniLearn → `/staff` → corso → *Lessons and materials*: PDF, PPTX, DOCX, TXT, audio e video. Funziona anche con un Moodle vero.
+- Niente parte da solo: la sync trova lezioni e file (stato "Not made yet") e lo studente preme **Make notes** sulla lezione che vuole. Solo allora l'app legge i file, trascrive le registrazioni e scrive gli appunti.
 - Per ogni lezione: testo da slide e documenti (`pypdf`, `python-pptx`, `python-docx`), trascrizione delle registrazioni con `faster-whisper` sul computer, poi llama3.2 scrive titolo, riassunto, punti chiave e definizioni. Stati: Queued, Syncing, Transcribing, AI processing, Ready, Error.
-- Nella pagina di una lezione, la scheda **Ask the material** apre una chat che risponde solo con i file caricati: tutta la lezione oppure un file scelto dall'elenco. Il testo è diviso in pezzi che ricordano la slide, la pagina o il minuto della registrazione; i pezzi più vicini alla domanda (per significato con ChromaDB e per parole in comune) vanno a llama3.2, che cita le fonti come [1], [2]. Se la risposta non è nel materiale, lo dice. Endpoint: `POST /api/notes/{id}/chat`.
-- Lo studente legge, modifica (Markdown), copia o salva in PDF. Se il docente aggiunge file, le note non modificate si rifanno da sole; quelle modificate mostrano "New material".
+- Nella pagina di una lezione, la scheda **Ask the material** apre una chat che risponde solo con i file caricati: tutta la lezione oppure un file scelto dall'elenco. Il testo è diviso in pezzi che ricordano la slide, la pagina o il minuto della registrazione; i pezzi più vicini alla domanda (per significato con ChromaDB e per parole in comune) vanno a llama3.2, che cita le fonti come [1], [2]. Se la risposta non è nel materiale, lo dice. La conversazione è salvata (una per lezione e una per ogni file) e si cancella con "Delete this conversation". Endpoint: `GET/POST/DELETE /api/notes/{id}/chat` (`?source_id=` per un file).
+- Lo studente legge, modifica (Markdown), copia o salva in PDF. Se il docente aggiunge file, gli appunti restano com'erano e mostrano "New material"; si rifanno con "Make notes again".
 - Run & Go installa `faster-whisper` in un passo a parte (`requirements-whisper.txt`) e scarica il modello `base` (~150 MB) in `data/whisper` in sottofondo. Se l'installazione non riesce l'app parte lo stesso e salta audio e video. FFmpeg non serve: è già dentro PyAV.
+
+## Avvisi dei docenti in tempo reale
+
+Un avviso pubblicato in UniLearn (**Post an announcement**) arriva nell'Inbox degli studenti iscritti a quel corso entro circa mezzo minuto, senza premere Sync: l'hub legge i forum Announcements ogni 30 secondi (`app/services/live_sync.py`, variabile `UNILEARN_POLL_SECONDS`, 0 = spento) e l'app chiede i nuovi messaggi ogni 30 secondi, con un avviso a schermo. Lo studente vede solo i messaggi dei corsi che segue: se il corso non ha iscritti, UniLearn lo segnala sopra il modulo.
 
 ## Tre programmi, un solo avvio (v0.5)
 

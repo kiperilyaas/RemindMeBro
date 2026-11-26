@@ -2,7 +2,8 @@
 Finds the lessons and files of the student's courses in UniLearn (or any Moodle) and keeps one LessonNote per lesson.
 
 Uses the standard web services core_enrol_get_users_courses and core_course_get_contents.
-New lessons, and lessons whose files changed, are queued for processing (worker.py).
+Nothing is processed here: the student starts each lesson with "Make notes" (worker.py).
+A lesson whose files changed keeps its notes and shows "New material".
 """
 from __future__ import annotations
 
@@ -17,7 +18,6 @@ from sqlalchemy.orm import Session
 from app.database.models import LessonNote, NoteSource, User, UserRole
 from app.services import unilearn_client
 from app.services.my_courses import student_course_codes
-from app.services.notes import worker
 from app.services.notes.extract import kind_of
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ def sync_materials(db: Session, user: User) -> Dict[str, Any]:
             note = mine.get(key)
             if note is None:
                 note = LessonNote(user_id=user.id, course_code=code, section_ext_id=int(sec["id"]), course_name=c.get("fullname") or code,
-                                  lesson_name=sec.get("name") or "Lesson", status="waiting", updated_at=datetime.now())
+                                  lesson_name=sec.get("name") or "Lesson", status="new", updated_at=datetime.now())
                 db.add(note)
                 db.flush()
                 mine[key] = note
@@ -76,19 +76,15 @@ def sync_materials(db: Session, user: User) -> Dict[str, Any]:
                 if rid not in wanted:
                     note.sources.remove(src)
             note.sources_hash = hashlib.sha1("".join(sorted(s.contenthash for s in note.sources)).encode()).hexdigest()
-            if note.status in ("ready", "error") and note.sources_hash != note.generated_hash and not note.edited:
-                note.status, note.error = "waiting", None
-            if note.status == "waiting":
-                queued.append(note.id)
+            # nothing starts on its own: the student presses "Make notes" (or "Make notes again" when files changed)
             seen.add(note.id)
     for note in mine.values():   # lessons or files removed by the lecturer; notes the student edited stay
         if note.id not in seen and not note.edited and note.status not in BUSY - {"waiting"}:
             db.delete(note)
     db.commit()
-    for nid in queued:
-        worker.enqueue(nid)
-    logger.info("Smart Notes sync for %s: %d lesson(s), %d file(s), %d queued", user.email, len(seen), files_total, len(queued))
-    return {"lessons": len(seen), "files": files_total, "queued": len(queued)}
+    new = sum(1 for n in mine.values() if n.id in seen and n.status == "new")
+    logger.info("Smart Notes sync for %s: %d lesson(s), %d file(s), %d not made yet", user.email, len(seen), files_total, new)
+    return {"lessons": len(seen), "files": files_total, "queued": 0, "not_made": new}
 
 
 def busy_note_ids(db: Session) -> List[int]:

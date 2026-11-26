@@ -1,5 +1,5 @@
 import type {
-  Billing, LessonChatAnswer, LessonChatTurn, LessonNote, NotesList, NotesSync, Plan,
+  Billing, LessonChatAnswer, LessonChatMessage, LessonNote, NotesList, NotesSync, Plan,
   ChatResponse, Connection, Course, CourseWithStats, DemoAccounts, Deadline, Health, InboxItem, PublishResult,
   ScheduleEvent, Source, Studies, SyncSummary, TokenResponse, User,
 } from "./types";
@@ -83,8 +83,12 @@ export class ApiClient {
   note = (id: number) => this.request<LessonNote>(`/notes/${id}`);
   saveNote = (id: number, body_md: string) => this.request<LessonNote>(`/notes/${id}`, { method: "PUT", body: { body_md } });
   regenerateNote = (id: number) => this.request<LessonNote>(`/notes/${id}/regenerate`, { method: "POST" });
-  lessonChat = (id: number, question: string, sourceId: number | null, history: LessonChatTurn[]) =>
-    this.request<LessonChatAnswer>(`/notes/${id}/chat`, { method: "POST", body: { question, source_id: sourceId, history }, timeout: 180000 });
+  lessonChat = (id: number, question: string, sourceId: number | null) =>
+    this.request<LessonChatAnswer>(`/notes/${id}/chat`, { method: "POST", body: { question, source_id: sourceId }, timeout: 180000 });
+  lessonChatHistory = (id: number, sourceId: number | null) =>
+    this.request<{ messages: LessonChatMessage[] }>(`/notes/${id}/chat${sourceId === null ? "" : `?source_id=${sourceId}`}`);
+  clearLessonChat = (id: number, sourceId: number | null) =>
+    this.request<null>(`/notes/${id}/chat${sourceId === null ? "" : `?source_id=${sourceId}`}`, { method: "DELETE" });
   // connections
   connections = () => this.request<Connection[]>("/connections");
   connectUnisis = () => this.request<{ authorize_url: string }>("/connections/unisis/start", { method: "POST" });
