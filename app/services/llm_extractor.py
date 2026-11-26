@@ -1,5 +1,6 @@
 """
-Servizi basati su LLM locale (Ollama + llama3.2).
+Servizi basati su LLM: un'AI esterna compatibile con OpenAI (Gemini, OpenRouter, OmniRoute... vedi ai_remote.py e
+data/ai.env) oppure, se non è configurata o non risponde, l'LLM locale (Ollama + llama3.2).
 
 1. extract_deadline_from_text(): Structured Extraction di scadenze da testo libero.
 2. extract_and_save_deadline(): estrazione + persistenza in SQLite.
@@ -128,8 +129,36 @@ def get_ollama_client() -> ollama.Client:
     return _client
 
 
+def _use_local_after(exc: Exception) -> bool:
+    """The external AI failed: try Ollama instead? Only if allowed and Ollama is running with its model."""
+    from app.services import ai_remote
+    if not settings.AI_FALLBACK_OLLAMA or (isinstance(exc, ai_remote.RemoteAIError) and not exc.retry_local):
+        return False
+    if not check_ollama().get("model_available"):
+        return False
+    logger.warning("%s failed (%s): using the local AI (Ollama) instead", settings.AI_LABEL, exc)
+    return True
+
+
 def chat_long(messages: List[Dict[str, str]], options: Dict[str, Any], json_mode: bool = False,
               should_stop: Optional[Callable[[], bool]] = None) -> str:
+    """One chat for a long job (Smart Notes, Ask the material): the external AI if configured, else (or if it fails) Ollama."""
+    if settings.ai_remote:
+        from app.services import ai_remote
+        try:
+            return ai_remote.chat_stream(messages, json_mode=json_mode, temperature=options.get("temperature"), should_stop=should_stop)
+        except ai_remote.RemoteStopped as exc:
+            raise LLMStopped("Stopped.") from exc
+        except ai_remote.RemoteAIError as exc:
+            if should_stop and should_stop():
+                raise LLMStopped("Stopped.") from exc
+            if not _use_local_after(exc):
+                raise LLMUnavailableError(str(exc)) from exc
+    return _ollama_chat_long(messages, options, json_mode, should_stop)
+
+
+def _ollama_chat_long(messages: List[Dict[str, str]], options: Dict[str, Any], json_mode: bool = False,
+                      should_stop: Optional[Callable[[], bool]] = None) -> str:
     """
     One chat for a long job (Smart Notes, Ask the material), straight on Ollama's HTTP API.
     - Streamed: the wait limit (NOTES_TIMEOUT) counts from the last word received, so a slow computer that keeps
@@ -217,7 +246,19 @@ def _raise_long(exc: Exception) -> None:
     raise LLMUnavailableError(f"The local AI stopped with an error: {exc}") from exc
 
 
-def _chat(messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.0) -> str:
+def _chat(messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.0, fast: bool = False) -> str:
+    """One answer: the external AI if configured (fast=True: its quicker model), else (or if it fails) Ollama."""
+    if settings.ai_remote:
+        from app.services import ai_remote
+        try:
+            return ai_remote.chat(messages, json_mode=json_mode, temperature=temperature, fast=fast)
+        except ai_remote.RemoteAIError as exc:
+            if not _use_local_after(exc):
+                raise LLMUnavailableError(str(exc)) from exc
+    return _ollama_chat(messages, json_mode, temperature)
+
+
+def _ollama_chat(messages: List[Dict[str, str]], json_mode: bool = False, temperature: float = 0.0) -> str:
     """Wrapper unico attorno a ollama.chat() con gestione errori uniforme."""
     try:
         kwargs: Dict[str, Any] = {
@@ -239,6 +280,18 @@ def _chat(messages: List[Dict[str, str]], json_mode: bool = False, temperature: 
             f"Cannot reach Ollama at {settings.OLLAMA_HOST}: {exc}. "
             "Make sure `ollama serve` is running."
         ) from exc
+
+
+def check_ai() -> Dict[str, Any]:
+    """Health check of the AI in use: the external one (with Ollama as backup) or Ollama."""
+    if settings.ai_remote:
+        from app.services import ai_remote
+        out = dict(ai_remote.status())
+        if settings.AI_FALLBACK_OLLAMA:
+            local = check_ollama()
+            out["fallback"] = {"model": local.get("model"), "available": bool(local.get("model_available"))}
+        return out
+    return {**check_ollama(), "provider": "ollama", "label": "Local AI", "local": True}
 
 
 def check_ollama() -> Dict[str, Any]:
@@ -402,7 +455,7 @@ def extract_deadline_from_text(
         {"role": "assistant", "content": FEW_SHOT_ASSISTANT},
         {"role": "user", "content": user_prompt},
     ]
-    raw = _chat(messages, json_mode=True, temperature=0.0)
+    raw = _chat(messages, json_mode=True, temperature=0.0, fast=True)
     data = parse_llm_json(raw)
     extraction = ExtractedDeadline.model_validate(data)
     if extraction.has_deadline and not _mentions_time(text):

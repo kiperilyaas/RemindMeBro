@@ -354,7 +354,7 @@ def simulate_teams_message(
 # ---------------------------------------------------------------------------
 @router.get("/health", response_model=schemas.HealthOut, summary="Ollama, database and vector store status (public)")
 def health() -> schemas.HealthOut:
-    ollama_status = llm_extractor.check_ollama()
+    ollama_status = llm_extractor.check_ai()
     return schemas.HealthOut(
         status="ok" if ollama_status.get("model_available") else "degraded",
         app=settings.APP_NAME,

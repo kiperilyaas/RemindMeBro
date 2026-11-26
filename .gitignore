@@ -20,3 +20,6 @@ STAFF-PASSWORDS*.txt
 # Scratch / backups
 _to_delete/
 _backup*/
+
+# The AI key (data/ai.env is already ignored with data/; this covers a copy in the project folder)
+ai.env

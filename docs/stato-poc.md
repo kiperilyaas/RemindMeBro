@@ -28,9 +28,19 @@ Regola: dopo ogni modifica (codice, rami, decisioni) questo documento va aggiorn
   - #11 `fix/inbox-course-names` (`54e13f2`)
   - #12 `feature/notes-stop` (`5b73702`)
   - #13 `chore/claude-code` (`1d6fb32`): `CLAUDE.md` e questo documento in `docs/`
+  - `feature/ai-esterna` (nato da `feature/orario-vse`): AI esterna (Gemini) compatibile con OpenAI, Ollama come riserva. Da spingere da Illia.
   - `feature/orario-vse` (nato da `feature/outlook-teams`): orario settimanale della foto di InSIS per gli otto corsi. Da spingere da Illia.
   - `feature/outlook-teams` (nato da `chore/claude-code`): Inbox svuotata, corsi divisi tra i cinque docenti, servizio UniComms per Outlook e Teams. Da spingere da Illia (`git push`: in Claude Code non ci sono le credenziali GitHub) e PR da aprire dal sito (`gh` non è installato).
 - Tutte verso `main`. Una PR della catena mostra anche i commit delle precedenti finché quelle non sono unite.
+
+## AI esterna: Gemini e qualsiasi API compatibile con OpenAI (26 novembre, ramo `feature/ai-esterna`)
+- Richiesta di Illia: usare l'API di Gemini e poter cambiare indirizzo in modo semplice. Prima tutta l'AI era Ollama + llama3.2 sul computer (lento).
+- Scelta in `data/ai.env` (fuori da git e dallo zip; esempio commentato `ai.env.example` nel progetto): `AI_PROVIDER` (`gemini` | `openrouter` | `omniroute` | `openai` | `custom` | `ollama`), `AI_API_KEY`, facoltativi `AI_MODEL`, `AI_MODEL_FAST`, `AI_BASE_URL`, `AI_FALLBACK_OLLAMA` (default true), `AI_REASONING_EFFORT` (default low). Le variabili d'ambiente vincono sul file. Preset in `app/config.py` (`AI_PRESETS`); Gemini: `https://generativelanguage.googleapis.com/v1beta/openai`, `gemini-3.8-flash` (Ask Bro, Smart Notes, Ask the material) e `gemini-3.5-flash-lite` (scadenze nei messaggi). Modelli presi dalla documentazione Google di novembre 2026: se Google li ritira basta cambiare `AI_MODEL` nel file.
+- Codice: `app/services/ai_remote.py` (`chat`, `chat_stream` in SSE con lo stesso Stop a socket di Ollama, `status` con `/models` in cache 60 s, comando di controllo `python -m app.services.ai_remote`). `llm_extractor._chat` e `chat_long` usano l'AI esterna se configurata, altrimenti Ollama (`_ollama_chat`, `_ollama_chat_long`); se l'AI esterna fallisce (rete, quota, chiave) e Ollama è acceso con il modello si passa a Ollama. Un campo facoltativo rifiutato (400: `response_format`, `reasoning_effort`) fa ripartire la richiesta senza. `/api/health` → `check_ai` (provider, label, local, fallback). Smart Notes con AI esterna divide il testo in pezzi da 100.000 caratteri (locale 9000).
+- Run & Go (`run.sh`, `run.ps1`): la prima volta chiede la chiave Gemini (testo nascosto) e scrive `data/ai.env` (Invio = solo AI locale, `AI_PROVIDER=ollama`). Con AI esterna non scarica llama3.2 né installa Ollama; se Ollama c'è già lo avvia come riserva.
+- Frontend: "Local AI" → nome dell'AI in uso (Account → System status con la riserva, intestazione di Ask Bro, toast di Smart Notes, area docente).
+- Prove: server finto compatibile con OpenAI (risposta, JSON con modello veloce, streaming, Stop in 1 s, 400 → di nuovo senza campi facoltativi, chiave sbagliata, riserva Ollama con chiave sbagliata e senza rete); 33 Vitest. Prova con Gemini vero da fare quando Illia mette la chiave (`python -m app.services.ai_remote`).
+- Da tenere presente: dal link pubblico chiunque può usare Ask Bro e Smart Notes con la chiave di Illia (con la chiave gratuita nessun costo, ma la quota si consuma); i testi escono dal computer (dati finti della demo: va bene).
 
 ## Inbox, docenti, Outlook e Teams (26 novembre, ramo `feature/outlook-teams`)
 - Inbox svuotata su richiesta di Illia (dati, non codice): cancellati gli 11 avvisi dell'hub e gli 8 post rimasti nei forum Announcements di UniLearn, con le 9 scadenze che l'AI ci aveva trovato. Restano le 3 scadenze ufficiali (compiti UniLearn). Copia di prima in `.runtime/backup-before-clear-inbox-2026-11-26/`. L'indice di Ask Bro (ChromaDB) si ripulisce al prossimo avvio (`prune_vector_store`), perché l'app era accesa.
@@ -164,6 +174,7 @@ Regola: dopo ogni modifica (codice, rami, decisioni) questo documento va aggiorn
 - Studenti: vedono i messaggi solo dei corsi che seguono; gli avvisi arrivano da soli entro ~30 s.
 - Smart Notes non elabora nulla senza il clic su Make notes, non riparte da sola dopo un riavvio, e si può fermare (Stop) o eliminare.
 - Un sync alla volta (`SYNC_LOCK`): il Sync premuto aspetta il controllo automatico, che salta il giro se un Sync è in corso.
+- AI esterna (Gemini) scelta in `data/ai.env`, Ollama come riserva; cambiare servizio = cambiare il file.
 - I lavori lunghi dell'AI (appunti, Ask the material) non hanno un limite di tempo totale: si fermano solo se Ollama tace per `NOTES_TIMEOUT` (30 min) o con Stop.
 - Allo studente si mostra il nome del corso, non il codice (calendario, Inbox).
 - Outlook e Teams: niente collegamento Microsoft Graph; si simulano con UniComms (servizio locale, porta 8300), da cui si scrive a nome dei docenti.

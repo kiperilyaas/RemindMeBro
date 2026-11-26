@@ -221,11 +221,42 @@ if [ "$(cat "$RT/.whisper_stamp" 2>/dev/null)" != "$WHISPER_STAMP" ] \
   fi
 fi
 
-# ---------- 3. Ollama ----------
-step "3/5  Local AI (Ollama + $MODEL)"
+# ---------- 3. AI: external (data/ai.env, e.g. Gemini) and/or local Ollama ----------
+DATA="${ACADEMIC_HUB_DATA_DIR:-$APP_DIR/data}"
+AI_ENV="$DATA/ai.env"
+mkdir -p "$DATA"
+if [ ! -f "$AI_ENV" ] && [ -t 0 ]; then
+  echo
+  echo "    The AI can run on Google Gemini (fast) or only on this computer (Ollama, slower, nothing leaves it)."
+  echo "    Gemini key (free): https://aistudio.google.com/apikey"
+  printf "    Paste your Gemini API key, or press Enter to use only the local AI: "
+  read -rs GEMINI_KEY || GEMINI_KEY=""; echo
+  { echo "# Which AI Remind Me Bro uses. Options: ai.env.example in the project folder. Restart the app after a change."
+    if [ -n "$GEMINI_KEY" ]; then echo "AI_PROVIDER=gemini"; echo "AI_API_KEY=$GEMINI_KEY"; else echo "AI_PROVIDER=ollama"; echo "AI_API_KEY="; fi
+  } > "$AI_ENV"
+  chmod 600 "$AI_ENV" 2>/dev/null
+  unset GEMINI_KEY
+fi
+ai_get() { [ -f "$AI_ENV" ] && sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" "$AI_ENV" | tail -n 1 | sed 's/[[:space:]]*#.*$//; s/^["'"'"']//; s/["'"'"']$//'; }
+AI_PROVIDER_SET="${AI_PROVIDER:-$(ai_get AI_PROVIDER)}"; AI_PROVIDER_SET="${AI_PROVIDER_SET:-ollama}"
+AI_KEY_SET="${AI_API_KEY:-$(ai_get AI_API_KEY)}"
+REMOTE_AI=0
+case "$AI_PROVIDER_SET" in
+  ollama) ;;
+  omniroute|custom) REMOTE_AI=1 ;;
+  *) [ -n "$AI_KEY_SET" ] && REMOTE_AI=1 ;;
+esac
+unset AI_KEY_SET
+if [ "$REMOTE_AI" = "1" ]; then
+  step "3/5  AI: $AI_PROVIDER_SET (data/ai.env) · local Ollama only as backup"
+else
+  step "3/5  Local AI (Ollama + $MODEL)"
+fi
 OLLAMA=""
 if [ "${RMB_NO_AI:-0}" = "1" ]; then
   warn "RMB_NO_AI=1: skipping Ollama (AI features will show as unavailable)"
+elif [ "$REMOTE_AI" = "1" ] && ! command -v ollama >/dev/null 2>&1 && [ ! -x "$RT/ollama/ollama" ] && [ ! -x "/Applications/Ollama.app/Contents/Resources/ollama" ]; then
+  ok "External AI in use: Ollama is not installed, so there is no local backup (that's fine)"
 else
   if command -v ollama >/dev/null 2>&1; then OLLAMA="$(command -v ollama)"
   elif [ -x "/Applications/Ollama.app/Contents/Resources/ollama" ]; then OLLAMA="/Applications/Ollama.app/Contents/Resources/ollama"
@@ -266,6 +297,8 @@ else
   case "$MODEL" in *:*) MODEL_TAG="$MODEL" ;; *) MODEL_TAG="$MODEL:latest" ;; esac
   if curl -fsS "$OLLAMA_URL/api/tags" 2>/dev/null | grep -q "\"name\":\"$MODEL_TAG\""; then
     ok "Model $MODEL_TAG already downloaded"
+  elif [ "$REMOTE_AI" = "1" ]; then
+    ok "External AI in use: the local model is not downloaded (no backup, that's fine)"
   else
     echo "    Downloading the AI model $MODEL (~2 GB, first time only)..."
     "$OLLAMA" pull "$MODEL" || die "Model download failed"

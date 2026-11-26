@@ -143,7 +143,7 @@ export function Connections({ route, clearParams }: { route: Route; clearParams:
         {demo.map((c) => (
           <Card key={c.provider} c={c} icon={c.provider === "teams" ? "chat" : "inbox"} color={c.provider === "teams" ? "#5B5FC7" : "#2F69A3"}
             title={c.name} what={c.provider === "teams" ? "Course channels and chats with your lecturers." : "Messages from lecturers and the Student Office."}
-            how="Demo data for now: messages are simulated, the local AI reads them for real to find hidden dates." />
+            how="Demo data for now: messages are simulated, the AI reads them for real to find hidden dates." />
         ))}
       </div>
     </>

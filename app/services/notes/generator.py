@@ -16,7 +16,8 @@ from app.services.llm_extractor import LLMUnavailableError, chat_long, parse_llm
 
 logger = logging.getLogger(__name__)
 
-CHUNK_CHARS = 9000
+CHUNK_CHARS = 9000            # local AI (llama3.2 with NOTES_NUM_CTX 8192)
+REMOTE_CHUNK_CHARS = 100000   # external AI (Gemini reads far longer texts): most lessons fit in one part
 MAX_CHUNKS = 12
 KIND_LABEL = {"pdf": "PDF", "slides": "slides", "document": "document", "text": "text", "audio": "audio recording", "video": "video recording"}
 
@@ -59,7 +60,8 @@ def _ask(prompt: str, should_stop: Optional[Callable[[], bool]] = None) -> Dict[
 
 
 def _chunks(text: str) -> List[str]:
-    size = max(CHUNK_CHARS, len(text) // MAX_CHUNKS + 1)
+    from app.config import settings
+    size = max(REMOTE_CHUNK_CHARS if settings.ai_remote else CHUNK_CHARS, len(text) // MAX_CHUNKS + 1)
     paras = re.split(r"\n\s*\n|\n(?=\[)", text)
     out, cur = [], ""
     for p in paras:

@@ -60,7 +60,8 @@ export function Account() {
           <h2>System status</h2>
           <dl className="kv">
             <dt>Server</dt><dd>{offline ? <span className="flag">Not reachable</span> : <span className="okc">Connected</span>} <span className="mono muted">{API_BASE}</span></dd>
-            <dt>Local AI</dt><dd>{o ? (o.model_available ? <span className="okc">{o.model} ready</span> : <span className="flag">{o.model ?? "llama3.2"} not available</span>) : "—"}</dd>
+            <dt>AI</dt><dd>{o ? (o.model_available ? <span className="okc">{o.label ?? "Local AI"} · {o.model} ready</span> : <span className="flag" title={o.error}>{o.label ?? "Local AI"} · {o.model ?? "llama3.2"} not available</span>) : "—"}
+              {o?.fallback && <span className="muted"> · backup: {o.fallback.available ? `local ${o.fallback.model}` : "none"}</span>}</dd>
             <dt>Search index</dt><dd>{health ? `${health.vector_documents} messages indexed` : "—"}</dd>
             <dt>Demo date</dt><dd>{fmtLong(now)}</dd>
             <dt>Version</dt><dd>{health ? `${health.app} ${health.version}` : "—"}</dd>
