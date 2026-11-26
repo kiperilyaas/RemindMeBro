@@ -18,7 +18,7 @@ from unisis import api, staff, web
 from unisis.config import settings
 from unisis.db import SessionLocal, init_db, session_scope
 from unisis.models import AuditLog
-from unisis.seed import ensure_current_terms, ensure_hub_client, move_demo_courses, rotate_staff_passwords, seed
+from unisis.seed import ensure_current_terms, ensure_hub_client, move_demo_courses, rotate_staff_passwords, seed, seed_timetable
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
 logger = logging.getLogger("unisis")
@@ -34,6 +34,7 @@ async def lifespan(app: FastAPI):
             seed(db)
         ensure_current_terms(db)
         move_demo_courses(db)
+        seed_timetable(db)   # demo courses without weekly classes get the ones of the demo
         ensure_hub_client(db)
         rotate_staff_passwords(db)
     logger.info("UniSIS ready · business clock: %s", settings.now().strftime("%a %d %b %Y %H:%M"))

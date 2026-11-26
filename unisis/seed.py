@@ -1,6 +1,6 @@
 """Starting data for UniSIS: the degree programme, the two terms of the current academic year and two accounts.
 
-The demo courses are created without timetable, exams or grades: the Student Office adds those in /staff.
+The demo courses are created with their weekly classes (TIMETABLE), without exams or grades: the Student Office adds those in /staff.
 The terms are computed from today's date, so the calendar always starts from now.
 """
 from __future__ import annotations
@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from unisis import security
 from unisis.config import settings
-from unisis.models import Course, OAuthClient, Programme, Term, User
+from unisis.models import Course, OAuthClient, Programme, Term, TimetableSlot, User
 
 logger = logging.getLogger("unisis")
 
@@ -37,14 +37,46 @@ def academic_terms(today: date) -> list[Term]:
 COURSES = [
     # code, name, lecturer, room
     ("2PR515", "Corporate Governance", "Chiara Neri", "SB 408"),
-    ("2IB468", "Ethics in Finance", "Chiara Neri", "SB 410"),
-    ("2MO522", "Financial Strategies in International Business", "Laura Bianchi", "SB 411"),
-    ("2IB421", "Global ESG and Implications for Sustainable Business", "Laura Bianchi", "SB 412"),
-    ("3SG712", "Growth strategies", "Marco Rossi", "SB 413"),
-    ("3PA662", "Human Resource Management Seminar", "Marco Rossi", "SB 414"),
-    ("3MA674", "International Management", "Giovanni Verdi", "SB 415"),
-    ("3PO643", "Social Entrepreneurship: Innovation and Impact", "Paolo Conti", "SB 416"),
+    ("2IB468", "Ethics in Finance", "Chiara Neri", "NB 470"),
+    ("2MO522", "Financial Strategies in International Business", "Laura Bianchi", "RB 211"),
+    ("2IB421", "Global ESG and Implications for Sustainable Business", "Laura Bianchi", "NB 469"),
+    ("3SG712", "Growth strategies", "Marco Rossi", "RB 211"),
+    ("3PA662", "Human Resource Management Seminar", "Marco Rossi", "SB 303"),
+    ("3MA674", "International Management", "Giovanni Verdi", "NB 472"),
+    ("3PO643", "Social Entrepreneurship: Innovation and Impact", "Paolo Conti", "SB 211"),
 ]
+
+# Weekly classes, copied from a real VŠE personal timetable (winter term): code -> (weekday 0 = Monday, start, end, room, kind).
+# Green blocks in InSIS are lectures, light blue ones seminars. (In InSIS International Management is 2OP405; the demo keeps 3MA674.)
+TIMETABLE = {
+    "2MO522": [(0, "14:30", "16:00", "RB 211", "Lecture"), (1, "16:15", "17:45", "SB 111", "Seminar")],
+    "3SG712": [(0, "16:15", "19:30", "RB 211", "Lecture")],
+    "3PO643": [(1, "09:15", "10:45", "SB 211", "Lecture"), (1, "11:00", "12:30", "RB 435", "Seminar")],
+    "2IB421": [(1, "18:00", "19:30", "NB 469", "Lecture")],
+    "3MA674": [(2, "09:15", "10:45", "NB 472", "Lecture"), (2, "11:00", "12:30", "NB 472", "Seminar")],
+    "2PR515": [(2, "16:15", "19:30", "SB 408", "Lecture")],
+    "3PA662": [(3, "11:00", "12:30", "SB 303", "Seminar")],
+    "2IB468": [(3, "14:30", "16:00", "NB 470", "Seminar")],
+}
+
+
+def seed_timetable(db: Session, replace: bool = False) -> int:
+    """Weekly classes of the demo courses. A course that already has classes keeps them, unless replace=True."""
+    changed = 0
+    for code, slots in TIMETABLE.items():
+        course = db.scalar(select(Course).where(Course.code == code))
+        if course is None or (course.slots and not replace):
+            continue
+        course.slots.clear()
+        for weekday, start, end, room, kind in slots:
+            course.slots.append(TimetableSlot(weekday=weekday, start_time=start, end_time=end, room=room, kind=kind))
+        if replace:
+            course.room = next(r for c, _, _, r in COURSES if c == code)
+        changed += 1
+    if changed:
+        db.flush()
+        logger.info("Weekly timetable set for %s demo course(s)", changed)
+    return changed
 
 # Until 26 November 2026 Chiara Neri and Marco Rossi taught all eight courses: (code, old lecturer, new lecturer).
 MOVED_COURSES = [
@@ -131,7 +163,8 @@ def seed(db: Session) -> None:
     ])
     db.flush()
     n = seed_courses(db)
-    logger.info("UniSIS starts with the programme, 2 terms, 2 accounts and %s courses (no timetable yet)", n)
+    seed_timetable(db)
+    logger.info("UniSIS starts with the programme, 2 terms, 2 accounts and %s courses with their weekly classes", n)
 
 
 def ensure_hub_client(db: Session) -> None:

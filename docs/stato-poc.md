@@ -28,6 +28,7 @@ Regola: dopo ogni modifica (codice, rami, decisioni) questo documento va aggiorn
   - #11 `fix/inbox-course-names` (`54e13f2`)
   - #12 `feature/notes-stop` (`5b73702`)
   - #13 `chore/claude-code` (`1d6fb32`): `CLAUDE.md` e questo documento in `docs/`
+  - `feature/orario-vse` (nato da `feature/outlook-teams`): orario settimanale della foto di InSIS per gli otto corsi. Da spingere da Illia.
   - `feature/outlook-teams` (nato da `chore/claude-code`): Inbox svuotata, corsi divisi tra i cinque docenti, servizio UniComms per Outlook e Teams. Da spingere da Illia (`git push`: in Claude Code non ci sono le credenziali GitHub) e PR da aprire dal sito (`gh` non è installato).
 - Tutte verso `main`. Una PR della catena mostra anche i commit delle precedenti finché quelle non sono unite.
 
@@ -119,12 +120,19 @@ Regola: dopo ogni modifica (codice, rami, decisioni) questo documento va aggiorn
 
 ## Dati di partenza
 - Account: studentessa demo `student@demo.it` / `demo1234` (UniLearn e UniSIS: `giulia.esposito`); staff con password in `data/STAFF-PASSWORDS.txt`; UniSIS ha il corso di laurea BSc Economics and Finance e i due semestri dell'anno accademico in corso (calcolati dalla data di oggi).
-- Otto corsi della demo (codici VŠE), 6 ECTS, semestre in corso, a scelta, senza lezioni, compiti o esami:
-  - Chiara Neri: 2PR515 Corporate Governance (SB 408, creato da Illia), 2IB468 Ethics in Finance (SB 410).
-  - Laura Bianchi: 2MO522 Financial Strategies in International Business (SB 411), 2IB421 Global ESG and Implications for Sustainable Business (SB 412).
-  - Marco Rossi: 3SG712 Growth strategies (SB 413), 3PA662 Human Resource Management Seminar (SB 414).
-  - Giovanni Verdi: 3MA674 International Management (SB 415).
-  - Paolo Conti: 3PO643 Social Entrepreneurship: Innovation and Impact (SB 416).
+- Otto corsi della demo (codici VŠE), 6 ECTS, semestre in corso, a scelta, con orario settimanale, senza compiti o esami (aula principale = aula della lezione):
+  - Chiara Neri: 2PR515 Corporate Governance (SB 408, creato da Illia), 2IB468 Ethics in Finance (NB 470).
+  - Laura Bianchi: 2MO522 Financial Strategies in International Business (RB 211), 2IB421 Global ESG and Implications for Sustainable Business (NB 469).
+  - Marco Rossi: 3SG712 Growth strategies (RB 211), 3PA662 Human Resource Management Seminar (SB 303).
+  - Giovanni Verdi: 3MA674 International Management (NB 472).
+  - Paolo Conti: 3PO643 Social Entrepreneurship: Innovation and Impact (SB 211).
+- Orario settimanale (ramo `feature/orario-vse`, 26 novembre), copiato da un orario personale vero di InSIS VŠE mandato da Illia (foto); verde = Lecture, azzurro = Seminar:
+  - Lun: 14:30–16:00 2MO522 Lecture RB 211; 16:15–19:30 3SG712 Lecture RB 211.
+  - Mar: 09:15–10:45 3PO643 Lecture SB 211; 11:00–12:30 3PO643 Seminar RB 435; 16:15–17:45 2MO522 Seminar SB 111; 18:00–19:30 2IB421 Lecture NB 469.
+  - Mer: 09:15–10:45 3MA674 Lecture NB 472; 11:00–12:30 3MA674 Seminar NB 472; 16:15–19:30 2PR515 Lecture SB 408.
+  - Gio: 11:00–12:30 3PA662 Seminar SB 303; 14:30–16:00 2IB468 Seminar NB 470. Venerdì libero.
+  - Scelte di Illia: International Management resta 3MA674 (in InSIS è 2OP405); i docenti restano i 5 della demo (non i nomi veri della foto). Le note (1)–(7) della foto non sono state copiate (la legenda non era nella foto).
+  - Codice: `TIMETABLE` e `seed_timetable` in `unisis/seed.py` (all'avvio riempie solo i corsi demo senza lezioni; nei dati di Illia applicato una volta con `replace=True`, copia di prima in `.runtime/backup-before-timetable-2026-11-26/`). Aule nuove anche in `unilearn/seed.py` e nei corsi di UniLearn di Illia. Nell'hub arriva con il Sync di UniSIS (provato: 11 lezioni nella settimana).
   - Fino al 26 novembre tutti e otto erano di Neri e Rossi (ramo `feature/outlook-teams`).
   - Elenco in `unilearn/seed.py`, `unisis/seed.py`, `app/mocks/moodle_mock.py` (`seed_courses` aggiunge solo i corsi mancanti).
 - Orologio: `DEMO_REFERENCE_DATE=now` di default nei tre servizi e nel frontend. I dati di UniSIS usano l'ora locale del computer che fa girare l'app.
