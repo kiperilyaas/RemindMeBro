@@ -118,9 +118,12 @@ def moodle_connect(body: MoodleLogin, db: Session = Depends(get_db), user: User 
 @router.post("/connections/moodle/sync", summary="Import assignments, events and announcements from UniLearn")
 def moodle_sync(db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> Dict[str, Any]:
     try:
-        return unilearn_client.sync_user(db, user, run_ai=True)
+        result = unilearn_client.sync_user(db, user, run_ai=True)
     except UniLearnError as exc:
         _ul_fail(exc)
+    from app.api.endpoints import _sync_smart_notes
+    _sync_smart_notes(db, user)
+    return result
 
 
 @router.delete("/connections/moodle", summary="Disconnect UniLearn (forgets the token)")

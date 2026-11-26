@@ -5,7 +5,7 @@ import { useSession } from "../state/session";
 import { Icon } from "./Icon";
 
 interface Msg { id: number; who: "me" | "bot" | "err"; text: string }
-const SUGGESTIONS = ["What do I have to submit this week?", "When is the Microeconomics problem set due?", "When do I register for exams?", "Summarise the latest messages from my lecturers"];
+const SUGGESTIONS = ["What do I have to submit this week?", "When do I register for exams?", "Summarise the latest messages from my lecturers", "Explain the key points of my last lesson"];
 
 function Answer({ text }: { text: string }) {
   return <>{answerLines(text).map((l, i) => (
@@ -13,8 +13,12 @@ function Answer({ text }: { text: string }) {
   ))}</>;
 }
 
-/** Ask Bro: docked on desktop, bottom sheet on mobile. Answers come from the local llama3.2 RAG endpoint. */
-export function Assistant({ open, onClose }: { open: boolean; onClose: () => void }) {
+/**
+ * Ask Bro (Premium). Answers come from the local llama3.2 RAG endpoint.
+ * variant "page": inside the AI section; "sheet": overlay opened by a button (kept for reuse and tests).
+ */
+export function Assistant({ open = true, onClose = () => undefined, variant = "sheet" }: { open?: boolean; onClose?: () => void; variant?: "sheet" | "page" }) {
+  const page = variant === "page";
   const { user, health } = useSession();
   const [log, setLog] = useState<Msg[]>([]);
   const [q, setQ] = useState("");
@@ -26,12 +30,12 @@ export function Assistant({ open, onClose }: { open: boolean; onClose: () => voi
 
   useEffect(() => { end.current?.scrollIntoView({ block: "end" }); }, [log, busy]);
   useEffect(() => {
-    if (!open) return;
+    if (!open || page) return;
     input.current?.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, page]);
 
   const ask = async (text: string) => {
     const question = text.trim();
@@ -50,17 +54,17 @@ export function Assistant({ open, onClose }: { open: boolean; onClose: () => voi
 
   return (
     <>
-      {open && <div className="sheet-scrim" onClick={onClose} aria-hidden />}
-      <aside className={`assistant ${open ? "open" : ""}`} aria-label="Ask Bro assistant">
+      {open && !page && <div className="sheet-scrim" onClick={onClose} aria-hidden />}
+      <aside className={`assistant ${page ? "page" : open ? "open" : ""}`} aria-label="Ask Bro assistant">
         <div className="as-h">
           <span className="as-logo"><Icon name="sparkle" size={18} /></span>
           <div><b>Ask Bro</b><small>{llmOk ? `Local AI · ${health?.ollama?.model ?? "llama3.2"} · nothing leaves your computer` : "The local AI is not running"}</small></div>
-          <button className="icon-btn as-close" onClick={onClose} aria-label="Close assistant"><Icon name="x" /></button>
+          {!page && <button className="icon-btn as-close" onClick={onClose} aria-label="Close assistant"><Icon name="x" /></button>}
         </div>
         <div className="as-log" aria-live="polite">
           {log.length === 0 && (
             <>
-              <p className="as-hello">Hi {user?.full_name.split(" ")[0]}! I read your deadlines, timetable and messages. Try one of these:</p>
+              <p className="as-hello">Hi {user?.full_name.split(" ")[0]}! I read your deadlines, timetable, messages and lesson notes. Try one of these:</p>
               <div className="as-suggest">{SUGGESTIONS.map((s) => <button key={s} onClick={() => void ask(s)}>{s}</button>)}</div>
             </>
           )}

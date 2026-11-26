@@ -15,6 +15,68 @@ interface CourseDetail extends CourseRow {
   assignment_list: { id: number; name: string; intro: string; duedate: string; submitted: number; students: number }[];
   announcement_list: { id: number; subject: string; message: string; created: string; author: string }[];
   events: { id: number; name: string; timestart: string; minutes: number; location: string }[];
+  sections: Section[];
+}
+interface Section { id: number; name: string; summary: string; position: number; files: { id: number; name: string; filename: string; size: number; mimetype: string; uploaded: string }[] }
+
+const fmtSize = (n: number) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+
+function Materials({ courseId, sections, onChange }: { courseId: number; sections: Section[]; onChange: () => void }) {
+  const toast = useToast();
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState<number | null>(null);
+  const [confirm, setConfirm] = useState<string | null>(null);
+  const addSection = async (e: FormEvent) => {
+    e.preventDefault();
+    try { await staffFetch(`/staff/api/courses/${courseId}/sections`, { method: "POST", body: { name } }); setName(""); toast("Lesson added", "Now upload slides, documents or the recording."); onChange(); }
+    catch (e2) { toast("Couldn't add it", (e2 as Error).message, true); }
+  };
+  const upload = async (sectionId: number, files: FileList | null) => {
+    if (!files?.length) return;
+    setBusy(sectionId);
+    try {
+      for (const f of Array.from(files)) {
+        const body = new FormData();
+        body.append("file", f);
+        const res = await fetch(`/staff/api/sections/${sectionId}/files`, { method: "POST", credentials: "same-origin", headers: { "X-Requested-With": "staff" }, body });
+        if (!res.ok) { const d = await res.json().catch(() => null) as { detail?: string } | null; throw new Error(d?.detail ?? `Upload failed (${res.status})`); }
+      }
+      toast(files.length === 1 ? "File uploaded" : `${files.length} files uploaded`, "Students with Smart Notes get notes after their next sync.");
+    } catch (e) { toast("Couldn't upload", (e as Error).message, true); }
+    setBusy(null); onChange();
+  };
+  const del = async (path: string) => {
+    try { await staffFetch(path, { method: "DELETE" }); setConfirm(null); toast("Deleted"); onChange(); }
+    catch (e) { toast("Couldn't delete", (e as Error).message, true); }
+  };
+  return (
+    <section className="st-section"><h2>Lessons and materials <small>{sections.length}</small></h2>
+      <div className="st-card"><ul className="st-list">
+        {sections.length === 0 && <li className="st-empty">No lessons yet. Add one below, then upload slides (PDF, PPTX), documents (DOCX, TXT) or the recording (audio or video).</li>}
+        {sections.map((sec) => (
+          <li key={sec.id} style={{ display: "block" }}>
+            <div className="st-row" style={{ justifyContent: "space-between" }}>
+              <div className="t">{sec.position}. {sec.name}</div>
+              <span className="st-row">
+                <label className="st-btn sm" aria-disabled={busy === sec.id}>{busy === sec.id ? "Uploading…" : "Upload files"}
+                  <input type="file" multiple hidden disabled={busy !== null} accept=".pdf,.pptx,.docx,.txt,.md,.mp3,.m4a,.wav,.ogg,.flac,.aac,.mp4,.mov,.webm,.mkv"
+                    onChange={(e) => { void upload(sec.id, e.target.files); e.target.value = ""; }} /></label>
+                {confirm === `s${sec.id}` ? <><button className="st-btn danger solid sm" onClick={() => void del(`/staff/api/sections/${sec.id}`)}>Delete lesson</button><button className="st-btn ghost sm" onClick={() => setConfirm(null)}>Keep</button></>
+                  : <button className="st-btn ghost sm" onClick={() => setConfirm(`s${sec.id}`)}>Delete</button>}
+              </span>
+            </div>
+            {sec.files.length === 0 ? <div className="s">No files yet.</div> : (
+              <ul className="st-list" style={{ marginTop: 6 }}>{sec.files.map((f) => (
+                <li key={f.id}><div className="grow"><div className="t">{f.filename}</div><div className="s">{fmtSize(f.size)} · {fmtDateTime(f.uploaded)}</div></div>
+                  {confirm === `f${f.id}` ? <span className="st-row"><button className="st-btn danger solid sm" onClick={() => void del(`/staff/api/files/${f.id}`)}>Delete</button><button className="st-btn ghost sm" onClick={() => setConfirm(null)}>Keep</button></span>
+                    : <button className="st-btn ghost sm" onClick={() => setConfirm(`f${f.id}`)} aria-label={`Delete ${f.filename}`}>Delete</button>}</li>))}</ul>)}
+          </li>))}
+        <li><form className="st-row" style={{ width: "100%" }} onSubmit={addSection}>
+          <input className="st-input sm" style={{ flex: 1 }} value={name} onChange={(e) => setName(e.target.value)} required minLength={1} placeholder="Lesson 3 · Agency theory" aria-label="Lesson name" />
+          <button className="st-btn sm primary">Add lesson</button></form></li>
+      </ul></div>
+    </section>
+  );
 }
 interface WS { endpoints: { token: string; rest: string }; functions: string[]; tokens: { id: number; user: string; hint: string; client: string; created: string; lastaccess: string | null }[];
   log: { id: number; at: string; username: string | null; function: string; status: string }[] }
@@ -144,6 +206,7 @@ function CoursePage({ id, go }: { id: number; go: (p: string) => void }) {
           : <button className="st-btn ghost sm" onClick={() => setConfirm("course")}>Delete course</button>)} />
       <div className="st-split">
         <div>
+          <Materials courseId={c.id} sections={c.sections ?? []} onChange={() => void load()} />
           <section className="st-section">
             <h2>Assignments <small>click a date to change it</small></h2>
             <div className="st-card st-scroll"><table className="st-table">

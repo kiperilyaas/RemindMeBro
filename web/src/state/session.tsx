@@ -10,6 +10,8 @@ interface Session {
   logout: (reason?: string) => void; expiredNotice: string | null; refreshHealth: () => Promise<void>;
   /** true right after a sign-in or sign-up in this tab (not when a saved session is restored): App plays the intro once */
   justSignedIn: boolean; introDone: () => void;
+  /** after a plan change (checkout or the switch in Account) */
+  setPlan: (plan: NonNullable<User["plan"]>) => void;
 }
 const Ctx = createContext<Session | null>(null);
 const DEFAULT_NOW = new Date();
@@ -59,9 +61,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => start(await api.login(email, password)), [start]);
   const register = useCallback(async (p: Parameters<Session["register"]>[0]) => start(await api.register(p)), [start]);
 
+  const setPlan = useCallback((plan: NonNullable<User["plan"]>) => {
+    setUser((u) => { if (!u) return u; const next = { ...u, plan }; storage.setJSON("rmb.user", next); return next; });
+  }, []);
+
   const now = useMemo(() => (health ? new Date(health.reference_date) : DEFAULT_NOW), [health]);
-  const value = useMemo<Session>(() => ({ user, booting, offline, health, now, demo, login, register, logout, expiredNotice, refreshHealth, justSignedIn, introDone }),
-    [user, booting, offline, health, now, demo, login, register, logout, expiredNotice, refreshHealth, justSignedIn, introDone]);
+  const value = useMemo<Session>(() => ({ user, booting, offline, health, now, demo, login, register, logout, expiredNotice, refreshHealth, justSignedIn, introDone, setPlan }),
+    [user, booting, offline, health, now, demo, login, register, logout, expiredNotice, refreshHealth, justSignedIn, introDone, setPlan]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

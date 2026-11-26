@@ -70,6 +70,21 @@ class Settings:
     UNISIS_CREDENTIALS_FILE: str = os.getenv("UNISIS_CREDENTIALS_FILE", str(DATA_DIR / "unisis" / "clients" / "remind-me-bro.json"))
     UNISIS_SCOPES: str = "profile timetable enrollments enrollments:write exams exams:write grades"
 
+    # --- Premium plan (Ask Bro + Smart Notes) ---
+    # Price shown in the app. Change it here (or with the environment variables) and restart the app.
+    PREMIUM_PRICE: str = os.getenv("PREMIUM_PRICE", "79")
+    PREMIUM_CURRENCY: str = os.getenv("PREMIUM_CURRENCY", "CZK")
+    PREMIUM_PERIOD: str = os.getenv("PREMIUM_PERIOD", "month")
+
+    # --- Smart Notes ---
+    # Speech-to-text runs on this computer with faster-whisper (tiny | base | small | medium). "base" is quick on a laptop.
+    WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "base")
+    # Downloaded course files and the Whisper model stay in data/
+    MATERIALS_DIR: str = os.getenv("MATERIALS_DIR", str(DATA_DIR / "materials"))
+    WHISPER_DIR: str = os.getenv("WHISPER_DIR", str(DATA_DIR / "whisper"))
+    # Context window asked of Ollama when it writes the notes (llama3.2 supports much more than the default 2048)
+    NOTES_NUM_CTX: int = int(os.getenv("NOTES_NUM_CTX", "8192"))
+
     # --- Frontend ---
     # Se il file esiste, viene servito su http://127.0.0.1:8000/ (stessa origine, niente CORS)
     CLASSIC_FRONTEND_PATH: str = os.getenv("CLASSIC_FRONTEND_PATH", str(BASE_DIR / "frontend" / "index.html"))

@@ -36,7 +36,7 @@ export function Login() {
         <ul className="login-points">
           <li><Icon name="calendar" /> UniLearn assignments, UniSIS exams and your timetable, day by day</li>
           <li><Icon name="sparkle" /> A local AI reads Teams and email and finds the dates lecturers hide in messages</li>
-          <li><Icon name="chat" /> Ask Bro anything about your week — it runs on your computer</li>
+          <li><Icon name="chat" /> Premium: Ask Bro answers questions about your week, Smart Notes turns slides and lesson recordings into study notes. All on your computer.</li>
         </ul>
       </section>
       <section className="login-card">

@@ -101,11 +101,21 @@ La build è un unico file HTML già compilato in `frontend/app/index.html`: il R
 
 | Ruolo | Sezioni |
 |---|---|
-| Studente | **Timeline** (giorno per giorno: lezioni, scadenze, esami, *Plan my week* con blocchi di studio), **Inbox** (riassunto AI per messaggio), **Studies** (UniSIS live: appelli, prove parziali, elective, libretto), **Semester** (carico di lavoro per settimana + una corsia per corso), **Connect** (UniLearn e UniSIS), **Ask Bro** sempre a portata (pannello laterale su desktop, bottom sheet su mobile) |
+| Studente | **Timeline** (giorno per giorno: lezioni, scadenze, esami, *Plan my week* con blocchi di studio), **Inbox** (riassunto AI per messaggio), **Studies** (UniSIS live: appelli, prove parziali, elective, libretto), **Semester** (carico di lavoro per settimana + una corsia per corso), **AI** (Premium: Ask Bro e Smart Notes), **Connect** (UniLearn e UniSIS) |
 | Docente | **My courses** (statistiche, nuovo compito, nuovo corso), **Announce** (pubblica e vedi subito cosa ha capito l'AI), **AI dates** (correggi o scarta) |
 
 La vecchia interfaccia resta su **http://127.0.0.1:8000/classic**. Sviluppo e test della UI: vedi [`web/README.md`](web/README.md)
 (`npm run dev`, `npm test`, `npm run build`).
+
+## Premium: Ask Bro e Smart Notes
+
+La sezione **AI** dello studente contiene Ask Bro (la chat) e Smart Notes. Le due funzioni sono a pagamento: chi è sul piano Free vede i prezzi e un checkout simulato (nessuna carta, nessun addebito). Il piano si cambia anche da **Account → Plan** con un interruttore. Giulia (`student@demo.it`) parte su Premium; ogni altro studente parte su Free.
+
+- Prezzo: `app/config.py`, righe `PREMIUM_PRICE` (79), `PREMIUM_CURRENCY` (CZK) e `PREMIUM_PERIOD` (month). Si possono anche impostare con le variabili d'ambiente con lo stesso nome. Dopo la modifica va riavviato il Run & Go.
+- Smart Notes legge con i web service di Moodle (`core_course_get_contents` + `webservice/pluginfile.php`) i file che il docente carica in UniLearn → `/staff` → corso → *Lessons and materials*: PDF, PPTX, DOCX, TXT, audio e video. Funziona anche con un Moodle vero.
+- Per ogni lezione: testo da slide e documenti (`pypdf`, `python-pptx`, `python-docx`), trascrizione delle registrazioni con `faster-whisper` sul computer, poi llama3.2 scrive titolo, riassunto, punti chiave e definizioni. Stati: Queued, Syncing, Transcribing, AI processing, Ready, Error.
+- Lo studente legge, modifica (Markdown), copia o salva in PDF. Se il docente aggiunge file, le note non modificate si rifanno da sole; quelle modificate mostrano "New material".
+- Run & Go installa `faster-whisper` in un passo a parte (`requirements-whisper.txt`) e scarica il modello `base` (~150 MB) in `data/whisper` in sottofondo. Se l'installazione non riesce l'app parte lo stesso e salta audio e video. FFmpeg non serve: è già dentro PyAV.
 
 ## Tre programmi, un solo avvio (v0.5)
 

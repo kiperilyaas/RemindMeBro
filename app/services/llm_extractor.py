@@ -639,6 +639,19 @@ def build_rag_context(db: Session, user_query: str, n_results: int = 4, user: An
             except ValueError:
                 pass
 
+    # 2c) Smart Notes (Premium): the student's lesson notes that match the question best
+    if user_id is not None:
+        from app.database.models import LessonNote   # local import: keeps this module importable on its own
+        words = {w for w in re.findall(r"\w{4,}", user_query.lower())}
+        notes = db.scalars(select(LessonNote).where(LessonNote.user_id == user_id, LessonNote.status == "ready")).all()
+        scored = sorted(((len(words & set(re.findall(r"\w{4,}", f"{n.course_name} {n.lesson_name} {n.body_md}".lower()))), n) for n in notes),
+                        key=lambda x: -x[0])
+        picked = [n for score, n in scored[:2] if score > 0]
+        if picked:
+            sections.append("LESSON NOTES (made from the lecturers' slides, documents and recordings):\n" + "\n\n".join(
+                f"[{n.course_name} · {n.lesson_name}]\n{n.body_md[:1800]}" for n in picked))
+            sources += [{"type": "lesson_note", "id": n.id, "title": n.lesson_name} for n in picked]
+
     # 3) Avvisi semanticamente rilevanti (ChromaDB)
     try:
         hits = vector_store.query_relevant_context(user_query, n_results=n_results)

@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.api import schemas
 from app.api.access import is_local_request
 from app.api.auth import get_current_user, list_demo_accounts
+from app.api.premium import require_premium
 from app.config import settings
 from app.database.db import get_db
 from app.database.models import Announcement, Course, Deadline, DeadlineDone, Event, SourceType, User
@@ -95,7 +96,25 @@ def sync(db: Session = Depends(get_db), user: User = Authenticated) -> schemas.S
     indexes announcements in ChromaDB and uses llama3.2 to extract hidden deadlines.
     """
     summary = sync_service.run_sync_pipeline(db, user)
+    _sync_smart_notes(db, user)
     return schemas.SyncSummary(**summary)
+
+
+def _sync_smart_notes(db: Session, user: User) -> None:
+    """Premium students: every Sync also looks for new lesson files (the notes are made in the background)."""
+    if not user.is_premium or user.is_professor:
+        return
+    from app.services.notes.sync import sync_materials
+    from app.services.unilearn_client import UniLearnError, get_connection
+    conn = get_connection(db, user)
+    if conn is None or conn.status != "connected":
+        return
+    try:
+        sync_materials(db, user)
+    except (UniLearnError, Exception) as exc:  # never break the main sync
+        db.rollback()
+        import logging
+        logging.getLogger(__name__).warning("Smart Notes sync skipped: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -246,7 +265,7 @@ def list_events(db: Session = Depends(get_db), user: User = Authenticated) -> Li
 # Chatbot RAG
 # ---------------------------------------------------------------------------
 @router.post("/chat", response_model=schemas.ChatResponse, summary="RAG academic assistant")
-def chat(payload: schemas.ChatRequest, db: Session = Depends(get_db), user: User = Authenticated) -> schemas.ChatResponse:
+def chat(payload: schemas.ChatRequest, db: Session = Depends(get_db), user: User = Depends(require_premium)) -> schemas.ChatResponse:
     try:
         result = llm_extractor.answer_student_query(payload.question, db, user)
     except llm_extractor.LLMUnavailableError as exc:

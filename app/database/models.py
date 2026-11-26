@@ -68,10 +68,23 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
     courses: Mapped[List["Course"]] = relationship(back_populates="professor_user")
+    # Subscription: "free" or "premium". Empty = never chosen: the demo student starts on Premium, everybody else on Free.
+    plan_choice: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    plan_changed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     @property
     def is_professor(self) -> bool:
         return self.role == UserRole.PROFESSOR
+
+    @property
+    def plan(self) -> str:
+        if self.plan_choice in ("free", "premium"):
+            return self.plan_choice
+        return "premium" if self.email == "student@demo.it" else "free"
+
+    @property
+    def is_premium(self) -> bool:
+        return self.plan == "premium" or self.is_professor
 
     def __repr__(self) -> str:
         return f"<User {self.email} ({self.role.value})>"
@@ -216,4 +229,66 @@ class OAuthState(Base):
     provider: Mapped[str] = mapped_column(String(30))
     code_verifier: Mapped[str] = mapped_column(String(200))
     redirect_uri: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+# ---------------------------------------------------------------------------
+# Smart Notes (Premium): study notes made from the files lecturers upload to UniLearn/Moodle
+# ---------------------------------------------------------------------------
+class LessonNote(Base):
+    """One page of notes per student and lesson (Moodle course section)."""
+
+    __tablename__ = "lesson_notes"
+    __table_args__ = (UniqueConstraint("user_id", "course_code", "section_ext_id", name="uq_note_user_section"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    course_code: Mapped[str] = mapped_column(String(50), index=True)
+    course_name: Mapped[str] = mapped_column(String(255))
+    section_ext_id: Mapped[int] = mapped_column(Integer)
+    lesson_name: Mapped[str] = mapped_column(String(255))
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    # waiting | syncing | transcribing | processing | ready | error
+    status: Mapped[str] = mapped_column(String(20), default="waiting")
+    error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    title: Mapped[str] = mapped_column(String(255), default="")
+    summary: Mapped[str] = mapped_column(Text, default="")
+    key_points: Mapped[str] = mapped_column(Text, default="[]")      # JSON list of strings
+    definitions: Mapped[str] = mapped_column(Text, default="[]")     # JSON list of {term, definition}
+    body_md: Mapped[str] = mapped_column(Text, default="")
+    edited: Mapped[bool] = mapped_column(Boolean, default=False)
+    sources_hash: Mapped[str] = mapped_column(String(64), default="")     # files the lesson has now
+    generated_hash: Mapped[str] = mapped_column(String(64), default="")   # files the notes were made from
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    generated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    sources: Mapped[List["NoteSource"]] = relationship(back_populates="note", cascade="all, delete-orphan", order_by="NoteSource.id")
+
+
+class NoteSource(Base):
+    """A file of the lesson (slides, document, recording)."""
+
+    __tablename__ = "note_sources"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    note_id: Mapped[int] = mapped_column(ForeignKey("lesson_notes.id"), index=True)
+    resource_ext_id: Mapped[int] = mapped_column(Integer)
+    filename: Mapped[str] = mapped_column(String(255))
+    kind: Mapped[str] = mapped_column(String(20))           # slides | document | text | audio | video
+    contenthash: Mapped[str] = mapped_column(String(64))
+    fileurl: Mapped[str] = mapped_column(Text)
+    filesize: Mapped[int] = mapped_column(Integer, default=0)
+
+    note: Mapped[LessonNote] = relationship(back_populates="sources")
+
+
+class ExtractedText(Base):
+    """Text read or transcribed from a file, kept by content hash: the same file is processed once for every student."""
+
+    __tablename__ = "extracted_texts"
+
+    contenthash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20))
+    text: Mapped[str] = mapped_column(Text, default="")
+    language: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

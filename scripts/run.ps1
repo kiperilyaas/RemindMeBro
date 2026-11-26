@@ -40,6 +40,7 @@ function Fail($t) {
   exit 1
 }
 function Stop-All {
+  if ($script:WhisperProc -and -not $script:WhisperProc.HasExited) { Stop-Process -Id $script:WhisperProc.Id -Force -ErrorAction SilentlyContinue }
   if ($script:NgrokProc -and -not $script:NgrokProc.HasExited) { Write-Host "Closing the public link..."; Stop-Process -Id $script:NgrokProc.Id -Force -ErrorAction SilentlyContinue }
   if ($script:UnilearnProc -and -not $script:UnilearnProc.HasExited) { Write-Host "Stopping UniLearn..."; Stop-Process -Id $script:UnilearnProc.Id -Force -ErrorAction SilentlyContinue }
   if ($script:UnisisProc -and -not $script:UnisisProc.HasExited) { Write-Host "Stopping UniSIS..."; Stop-Process -Id $script:UnisisProc.Id -Force -ErrorAction SilentlyContinue }
@@ -186,7 +187,7 @@ try {
   }
   $reqHash = (Get-FileHash (Join-Path $AppDir "requirements.txt") -Algorithm SHA256).Hash
   $stamp = if (Test-Path $stampFile) { (Get-Content $stampFile -Raw).Trim() } else { "" }
-  & $VenvPy -c "import uvicorn, fastapi, sqlalchemy, chromadb, ollama, jose, passlib, jinja2, httpx" *> $null
+  & $VenvPy -c "import uvicorn, fastapi, sqlalchemy, chromadb, ollama, jose, passlib, jinja2, httpx, pypdf, pptx, docx" *> $null
   $pkgsOk = ($LASTEXITCODE -eq 0)
   if ($stamp -ne $reqHash -or -not $pkgsOk) {
     Write-Host "    Installing packages (first time only, ~1-3 min)..."
@@ -195,6 +196,17 @@ try {
     Set-Content -Path $stampFile -Value $reqHash
   }
   Ok (& $VenvPy --version)
+  # Smart Notes: speech-to-text for lesson recordings (optional: the app starts even if this fails)
+  $whisperStampFile = Join-Path $Rt ".whisper_stamp"
+  $whisperHash = (Get-FileHash (Join-Path $AppDir "requirements-whisper.txt") -Algorithm SHA256).Hash
+  $whisperStamp = if (Test-Path $whisperStampFile) { (Get-Content $whisperStampFile -Raw).Trim() } else { "" }
+  & $VenvPy -c "import faster_whisper" *> $null
+  if ($whisperStamp -ne $whisperHash -or $LASTEXITCODE -ne 0) {
+    Write-Host "    Installing speech-to-text for Smart Notes (first time only)..."
+    $code = Invoke-Logged $UvExe @("pip", "install", "--python", $VenvPy, "-r", "requirements-whisper.txt") (Join-Path $Logs "pip-whisper.log")
+    if ($code -eq 0) { Set-Content -Path $whisperStampFile -Value $whisperHash; Ok "Speech-to-text ready (faster-whisper)" }
+    else { Warn "Speech-to-text could not be installed (see $Logs\pip-whisper.log): Smart Notes will skip audio and video" }
+  }
 
   # ---------- 3. Ollama ----------
   Step "3/5  Local AI (Ollama + $Model)"
@@ -320,6 +332,13 @@ try {
 
   $Url = "http://127.0.0.1:$Port/"
   Ok "Running at $Url"
+  # Smart Notes: download the Whisper model in the background (once, ~150 MB), so the first recording is quick
+  & $VenvPy -c "import faster_whisper" *> $null
+  if ($LASTEXITCODE -eq 0) {
+    $script:WhisperProc = Start-Process -FilePath $VenvPy -ArgumentList "-m", "app.services.notes.transcribe", "--download" `
+      -WorkingDirectory $AppDir -NoNewWindow -PassThru `
+      -RedirectStandardOutput (Join-Path $Logs "whisper.log") -RedirectStandardError (Join-Path $Logs "whisper.err.log")
+  }
   # every staff password in one file (the services write their own part at start-up)
   $staffFile = Join-Path $AppDir "data\STAFF-PASSWORDS.txt"
   $parts = @("data\STAFF-PASSWORDS-hub.txt", "data\unisis\STAFF-PASSWORDS.txt", "data\unilearn\STAFF-PASSWORDS.txt") | ForEach-Object { Join-Path $AppDir $_ } | Where-Object { Test-Path $_ }

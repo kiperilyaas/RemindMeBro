@@ -37,6 +37,7 @@ class Course(Base):
     assignments: Mapped[List["Assignment"]] = relationship(back_populates="course", cascade="all, delete-orphan", order_by="Assignment.duedate")
     forums: Mapped[List["Forum"]] = relationship(back_populates="course", cascade="all, delete-orphan")
     events: Mapped[List["CalendarEvent"]] = relationship(back_populates="course", cascade="all, delete-orphan", order_by="CalendarEvent.timestart")
+    sections: Mapped[List["CourseSection"]] = relationship(back_populates="course", cascade="all, delete-orphan", order_by="CourseSection.position")
 
     def teachers(self) -> List[User]:
         return [e.user for e in self.enrolments if e.role == "editingteacher"]
@@ -117,6 +118,35 @@ class CalendarEvent(Base):
     location: Mapped[str] = mapped_column(String(200), default="")
 
     course: Mapped[Course] = relationship(back_populates="events")
+
+
+class CourseSection(Base):
+    """A lesson or module of the course page (Moodle: course_sections)."""
+    __tablename__ = "course_sections"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    course_id: Mapped[int] = mapped_column(ForeignKey("courses.id"), index=True)
+    name: Mapped[str] = mapped_column(String(255))
+    summary: Mapped[str] = mapped_column(Text, default="")
+    position: Mapped[int] = mapped_column(Integer, default=1)
+    timemodified: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    course: Mapped[Course] = relationship(back_populates="sections")
+    resources: Mapped[List["Resource"]] = relationship(back_populates="section", cascade="all, delete-orphan", order_by="Resource.id")
+
+
+class Resource(Base):
+    """A file uploaded by the teacher (Moodle: mod_resource + its file in the file pool)."""
+    __tablename__ = "resources"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    section_id: Mapped[int] = mapped_column(ForeignKey("course_sections.id"), index=True)
+    name: Mapped[str] = mapped_column(String(255))
+    filename: Mapped[str] = mapped_column(String(255))
+    mimetype: Mapped[str] = mapped_column(String(120), default="application/octet-stream")
+    filesize: Mapped[int] = mapped_column(Integer, default=0)
+    contenthash: Mapped[str] = mapped_column(String(64), index=True)       # sha1 of the bytes, like Moodle
+    timemodified: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+    section: Mapped[CourseSection] = relationship(back_populates="resources")
 
 
 class ExternalToken(Base):

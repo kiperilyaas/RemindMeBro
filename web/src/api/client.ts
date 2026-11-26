@@ -1,4 +1,5 @@
 import type {
+  Billing, LessonNote, NotesList, NotesSync, Plan,
   ChatResponse, Connection, Course, CourseWithStats, DemoAccounts, Deadline, Health, InboxItem, PublishResult,
   ScheduleEvent, Source, Studies, SyncSummary, TokenResponse, User,
 } from "./types";
@@ -74,6 +75,14 @@ export class ApiClient {
   courses = () => this.request<Course[]>("/courses");
   chat = (question: string) => this.request<ChatResponse>("/chat", { method: "POST", body: { question }, timeout: 180000 });
   sync = () => this.request<SyncSummary>("/sync", { method: "POST", timeout: 600000 });
+  // Premium (Ask Bro + Smart Notes)
+  billing = () => this.request<Billing>("/billing");
+  setPlan = (plan: Plan) => this.request<Billing>("/billing/plan", { method: "POST", body: { plan } });
+  notes = () => this.request<NotesList>("/notes");
+  syncNotes = () => this.request<NotesSync>("/notes/sync", { method: "POST", timeout: 120000 });
+  note = (id: number) => this.request<LessonNote>(`/notes/${id}`);
+  saveNote = (id: number, body_md: string) => this.request<LessonNote>(`/notes/${id}`, { method: "PUT", body: { body_md } });
+  regenerateNote = (id: number) => this.request<LessonNote>(`/notes/${id}/regenerate`, { method: "POST" });
   // connections
   connections = () => this.request<Connection[]>("/connections");
   connectUnisis = () => this.request<{ authorize_url: string }>("/connections/unisis/start", { method: "POST" });

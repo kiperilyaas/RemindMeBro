@@ -19,6 +19,8 @@ from pathlib import Path  # noqa: E402
 from app.api.auth import router as auth_router  # noqa: E402
 from app.api.connections_endpoints import router as connections_router  # noqa: E402
 from app.api.endpoints import router  # noqa: E402
+from app.api.notes_endpoints import router as notes_router  # noqa: E402
+from app.api.premium import router as premium_router  # noqa: E402
 from app.api.professor_endpoints import router as professor_router  # noqa: E402
 from app.config import settings  # noqa: E402
 from app.database.db import init_db, session_scope  # noqa: E402
@@ -47,6 +49,11 @@ async def lifespan(app: FastAPI):
     with session_scope() as db:
         from app.services.staff_accounts import rotate_lecturer_passwords
         rotate_lecturer_passwords(db)   # lecturers never keep the shared demo password
+    with session_scope() as db:   # Smart Notes left half-done when the app was closed: finish them
+        from app.services.notes import worker
+        from app.services.notes.sync import busy_note_ids
+        for nid in busy_note_ids(db):
+            worker.enqueue(nid)
     logger.info("Database pronto: %s", settings.DATABASE_URL)
     logger.info("LLM: %s @ %s | data di riferimento: %s", settings.OLLAMA_MODEL, settings.OLLAMA_HOST, settings.reference_now().date())
     yield
@@ -94,6 +101,8 @@ app.include_router(auth_router)
 app.include_router(router)
 app.include_router(professor_router)
 app.include_router(connections_router)
+app.include_router(premium_router)
+app.include_router(notes_router)
 
 
 @app.get("/", include_in_schema=False)

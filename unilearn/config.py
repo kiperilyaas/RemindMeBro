@@ -10,6 +10,8 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(os.getenv("ACADEMIC_HUB_DATA_DIR", PROJECT_DIR / "data"))
 UNILEARN_DIR = DATA_DIR / "unilearn"
 UNILEARN_DIR.mkdir(parents=True, exist_ok=True)
+FILES_DIR = UNILEARN_DIR / "files"          # uploaded course materials, stored by content hash (Moodle filedir)
+FILES_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class Settings:

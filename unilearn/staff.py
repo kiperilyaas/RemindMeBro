@@ -12,15 +12,20 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+import hashlib
+import mimetypes
+import shutil
+import tempfile
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from unilearn.config import settings
+from unilearn.config import FILES_DIR, settings
 from unilearn.db import get_db
-from unilearn.models import Assignment, CalendarEvent, Course, Discussion, Enrolment, ExternalToken, Forum, Submission, User, WSLog
+from unilearn.models import Assignment, CalendarEvent, Course, CourseSection, Discussion, Resource, Enrolment, ExternalToken, Forum, Submission, User, WSLog
 from unilearn.ws import FUNCTIONS, pwd_context
 
 router = APIRouter(include_in_schema=False)
@@ -154,6 +159,9 @@ def course_detail(course_id: int, user: User = Depends(staff_user), db: Session 
         "announcement_list": [{"id": d.id, "subject": d.subject, "message": d.message, "created": _iso(d.created), "author": d.user.fullname}
                               for d in (forum.discussions if forum else [])],
         "events": [{"id": e.id, "name": e.name, "timestart": _iso(e.timestart), "minutes": e.duration_minutes, "location": e.location} for e in c.events],
+        "sections": [{"id": sec.id, "name": sec.name, "summary": sec.summary, "position": sec.position,
+                      "files": [{"id": r.id, "name": r.name, "filename": r.filename, "size": r.filesize, "mimetype": r.mimetype,
+                                 "uploaded": _iso(r.timemodified)} for r in sec.resources]} for sec in c.sections],
         "student_list": sorted(({"id": e.user.id, "fullname": e.user.fullname, "username": e.user.username}
                                 for e in c.enrolments if e.role == "student"), key=lambda x: x["fullname"]),
         "can_delete": user.role == "admin" or user in c.teachers(),
@@ -349,6 +357,89 @@ def delete_assignment(assign_id: int, user: User = Depends(staff_user), db: Sess
         raise HTTPException(404, "Assignment not found.")
     _course_for(db, user, a.course_id)
     db.delete(a)
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Course materials: lessons (sections) and files
+# ---------------------------------------------------------------------------
+ALLOWED_EXT = {".pdf", ".pptx", ".docx", ".txt", ".md", ".mp3", ".m4a", ".wav", ".ogg", ".flac", ".aac", ".mp4", ".mov", ".webm", ".mkv"}
+
+
+class SectionBody(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    summary: str = ""
+
+
+def _section_for(db: Session, user: User, section_id: int) -> CourseSection:
+    sec = db.get(CourseSection, section_id)
+    if sec is None:
+        raise HTTPException(404, "Lesson not found.")
+    _course_for(db, user, sec.course_id)
+    return sec
+
+
+@router.post("/staff/api/courses/{course_id}/sections", status_code=201)
+def add_section(course_id: int, body: SectionBody, user: User = Depends(staff_user), db: Session = Depends(get_db)):
+    c = _course_for(db, user, course_id)
+    sec = CourseSection(course_id=c.id, name=body.name.strip(), summary=body.summary.strip(),
+                        position=max((x.position for x in c.sections), default=0) + 1, timemodified=settings.now())
+    db.add(sec)
+    db.commit()
+    return {"id": sec.id}
+
+
+@router.patch("/staff/api/sections/{section_id}")
+def edit_section(section_id: int, body: SectionBody, user: User = Depends(staff_user), db: Session = Depends(get_db)):
+    sec = _section_for(db, user, section_id)
+    sec.name, sec.summary, sec.timemodified = body.name.strip(), body.summary.strip(), settings.now()
+    db.commit()
+    return {"id": sec.id}
+
+
+@router.delete("/staff/api/sections/{section_id}", status_code=204)
+def delete_section(section_id: int, user: User = Depends(staff_user), db: Session = Depends(get_db)):
+    db.delete(_section_for(db, user, section_id))
+    db.commit()
+
+
+@router.post("/staff/api/sections/{section_id}/files", status_code=201)
+def upload_file(section_id: int, request: Request, file: UploadFile = File(...), name: str = Form(""),
+                user: User = Depends(staff_user), db: Session = Depends(get_db)):
+    sec = _section_for(db, user, section_id)
+    filename = Path(file.filename or "file").name
+    if Path(filename).suffix.lower() not in ALLOWED_EXT:
+        raise HTTPException(400, "Supported files: PDF, PPTX, DOCX, TXT, audio (MP3, M4A, WAV, OGG, FLAC, AAC) and video (MP4, MOV, WEBM, MKV).")
+    sha, size = hashlib.sha1(), 0
+    with tempfile.NamedTemporaryFile(dir=FILES_DIR, delete=False) as tmp:
+        while chunk := file.file.read(1024 * 1024):
+            sha.update(chunk)
+            size += len(chunk)
+            tmp.write(chunk)
+    digest = sha.hexdigest()
+    target = FILES_DIR / digest[:2] / digest
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        Path(tmp.name).unlink(missing_ok=True)
+    else:
+        shutil.move(tmp.name, target)
+    mime = file.content_type if file.content_type and file.content_type != "application/octet-stream" else (mimetypes.guess_type(filename)[0] or "application/octet-stream")
+    r = Resource(section_id=sec.id, name=(name.strip() or Path(filename).stem), filename=filename, mimetype=mime,
+                 filesize=size, contenthash=digest, timemodified=settings.now())
+    db.add(r)
+    sec.timemodified = settings.now()
+    db.commit()
+    return {"id": r.id, "filename": r.filename, "size": size}
+
+
+@router.delete("/staff/api/files/{resource_id}", status_code=204)
+def delete_file(resource_id: int, user: User = Depends(staff_user), db: Session = Depends(get_db)):
+    r = db.get(Resource, resource_id)
+    if r is None:
+        raise HTTPException(404, "File not found.")
+    _section_for(db, user, r.section_id)
+    r.section.timemodified = settings.now()
+    db.delete(r)
     db.commit()
 
 
