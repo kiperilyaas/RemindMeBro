@@ -28,9 +28,10 @@ Regola: dopo ogni modifica (codice, rami, decisioni) questo documento va aggiorn
   - #11 `fix/inbox-course-names` (`54e13f2`)
   - #12 `feature/notes-stop` (`5b73702`)
   - #13 `chore/claude-code` (`1d6fb32`): `CLAUDE.md` e questo documento in `docs/`
-  - `feature/ai-esterna` (nato da `feature/orario-vse`): AI esterna (Gemini) compatibile con OpenAI, Ollama come riserva. Da spingere da Illia.
-  - `feature/orario-vse` (nato da `feature/outlook-teams`): orario settimanale della foto di InSIS per gli otto corsi. Da spingere da Illia.
-  - `feature/outlook-teams` (nato da `chore/claude-code`): Inbox svuotata, corsi divisi tra i cinque docenti, servizio UniComms per Outlook e Teams. Da spingere da Illia (`git push`: in Claude Code non ci sono le credenziali GitHub) e PR da aprire dal sito (`gh` non è installato).
+  - `feature/ai-esterna` (nato da `feature/orario-vse`): AI esterna (Gemini) compatibile con OpenAI, Ollama come riserva.
+  - `feature/orario-vse` (nato da `feature/outlook-teams`): orario settimanale della foto di InSIS per gli otto corsi.
+  - `feature/outlook-teams` (nato da `chore/claude-code`): Inbox svuotata, corsi divisi tra i cinque docenti, servizio UniComms per Outlook e Teams.
+- 27 novembre: Illia ha spinto `feature/outlook-teams`, `feature/orario-vse` e `feature/ai-esterna` su GitHub (con un token al posto della password: GitHub non accetta la password dell'account per `git push`). Le loro PR sono da aprire dal sito, in quest'ordine, dopo #10–#13.
 - Tutte verso `main`. Una PR della catena mostra anche i commit delle precedenti finché quelle non sono unite.
 
 ## AI esterna: Gemini e qualsiasi API compatibile con OpenAI (26 novembre, ramo `feature/ai-esterna`)
