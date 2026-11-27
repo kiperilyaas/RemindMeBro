@@ -26,7 +26,14 @@ Regola: dopo ogni modifica (codice, rami, decisioni) questo documento va aggiorn
 - Su questo computer ora `gh` è installato e collegato all'account di Illia (`gh auth login`) e git ha le credenziali salvate: Claude Code può fare push e aprire le PR da solo.
 - Prossimo ramo: nasce da `main` aggiornato (`git pull`), non più a catena.
 - `feature/date-esami` (da `main`): date d'esame nei file dei corsi (piano Free), PR #18.
-- `fix/connect-semplice` (da `feature/date-esami`): pagina Connect con meno scritte; va unita dopo la #18.
+- `fix/connect-semplice` (da `feature/date-esami`): pagina Connect con meno scritte, PR #19; va unita dopo la #18.
+- `chore/struttura` (da `fix/connect-semplice`): launcher in `scripts/`, README nuovo, `docs/architettura.md` e `docs/sviluppo.md`; va unita dopo la #19.
+
+## Cartelle e README per GitHub (27 novembre, ramo `chore/struttura`, nato da `fix/connect-semplice`)
+- Richiesta di Illia: cartella principale più pulita e README aggiornato e leggibile su GitHub.
+- Nella cartella principale restano `README.md`, `CLAUDE.md`, `START-HERE.txt`, `ai.env.example`, `requirements*.txt` e i tre `run-share-*`. `run-linux.sh`, `run-mac.command`, `run-windows.bat` sono in `scripts/` (entrano nella cartella principale con `cd ..`, poi `scripts/run.sh` / `run.ps1` come prima).
+- `README.md` riscritto: cosa fa l'app, come provarla, i quattro servizi, l'AI, la struttura, i link ai documenti. I dettagli tecnici ancora validi sono in `docs/architettura.md` e `docs/sviluppo.md`; tolte le parti superate (data fissa 20/10/2026, vecchi corsi di Economics, account docenti con `demo1234`, storia delle versioni). Nessun nome reale nel README (il repository è pubblico).
+- `START-HERE.txt`, `CLAUDE.md` con i nuovi percorsi; lo zip include anche `docs/`.
 
 ## Pagina Connect più semplice (27 novembre, ramo `fix/connect-semplice`, nato da `feature/date-esami`)
 - Richiesta di Illia: meno scritte che a un utente normale non servono. `views/student/Connections.tsx`: per ogni sistema solo nome, a cosa serve (una riga), stato (Connected / Connect again / Not connected), "Signed in as … · updated …", Connect o Disconnect (con conferma). Tolti: righe tecniche (Moodle web-service API, OAuth 2.0, token cifrato), scope, ID dell'account, "Sync now" su ogni scheda e "Sync everything" (resta il tasto Sync in alto), testi tecnici nei messaggi. Restano (richiesta di Illia) i pulsanti "Open UniLearn" e "Open UniSIS" per andare al portale. Le due schede demo Teams ed Email diventano una sola, "Outlook and Teams · Automatic" (i messaggi arrivano da UniComms senza fare niente).
@@ -126,7 +133,7 @@ Regola: dopo ogni modifica (codice, rami, decisioni) questo documento va aggiorn
 | UniLearn (`unilearn/`) | 8200 | LMS che parla le API web service di Moodle, area staff React su `/staff` | token Moodle |
 | UniComms (`unicomms/`) | 8300 | posta tipo Outlook e Teams dei docenti, `/staff` solo in locale | chiave `X-API-Key` in `data/unicomms/hub.key` |
 
-- Avvio: `run-mac.command` / `run-windows.bat` / `run-linux.sh` (`scripts/run.sh`, `scripts/run.ps1`). Se la cartella è stata spostata o copiata, l'ambiente Python viene rifatto e i pacchetti reinstallati (correzione del 21 novembre).
+- Avvio: `scripts/run-mac.command` / `scripts/run-windows.bat` / `scripts/run-linux.sh` (`scripts/run.sh`, `scripts/run.ps1`); nella cartella principale restano solo i tre `run-share-*`. Se la cartella è stata spostata o copiata, l'ambiente Python viene rifatto e i pacchetti reinstallati (correzione del 21 novembre).
 - Link pubblico: `run-share-*` = stesso avvio + ngrok sulla porta dell'hub + QR code (`scripts/share.py`, pagina `.runtime/share/qr.html`). Token ngrok chiesto una volta. Dal link si raggiunge solo l'hub.
 
 ## Calendario: proposte sul canvas

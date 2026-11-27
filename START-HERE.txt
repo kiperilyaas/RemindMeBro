@@ -3,10 +3,12 @@ REMIND ME BRO · RUN & GO
 
 ITALIANO
 --------
-1. Fai doppio clic sul file per il tuo sistema:
-     Mac      →  run-mac.command
-     Windows  →  run-windows.bat
-     Linux    →  run-linux.sh   (da terminale: ./run-linux.sh)
+1. Fai doppio clic sul file per il tuo sistema, nella cartella "scripts":
+     Mac      →  scripts/run-mac.command
+     Windows  →  scripts/run-windows.bat
+     Linux    →  scripts/run-linux.sh   (da terminale: ./scripts/run-linux.sh)
+   (I file run-share-… nella cartella principale fanno lo stesso e in più
+   aprono un link pubblico per gli amici: vedi più sotto.)
 2. Si apre una finestra nera che installa tutto da sola. La prima volta ci
    vogliono 5–15 minuti (scarica circa 2,5 GB: Python e il modello AI;
    su Windows circa 4 GB perché include l'installer di Ollama).
@@ -63,10 +65,10 @@ ITALIANO
    cancella la cartella "data".
 
 Se il Mac blocca il file ("non può essere aperto" / "sviluppatore non identificato"):
-   • clic destro su run-mac.command → Apri → Apri
+   • clic destro su scripts/run-mac.command → Apri → Apri
    • oppure: Impostazioni di Sistema → Privacy e sicurezza → "Apri comunque"
    • oppure: apri l'app Terminale, scrivi  bash  (con uno spazio dopo),
-     trascina dentro il file run-mac.command e premi Invio.
+     trascina dentro il file scripts/run-mac.command e premi Invio.
 Se Windows mostra "Windows ha protetto il PC": Ulteriori informazioni → Esegui comunque.
 
 Serve: internet la prima volta, ~5 GB liberi, 8 GB di RAM.
@@ -77,7 +79,7 @@ nella cartella ".ollama" della tua home.
 
 FAR PROVARE L'APP AGLI AMICI (link pubblico + QR code)
 ------------------------------------------------------
-1. Al posto del file normale apri:
+1. Al posto del file normale apri, nella cartella principale:
      Mac      →  run-share-mac.command
      Windows  →  run-share-windows.bat
      Linux    →  run-share-linux.sh
@@ -100,10 +102,12 @@ FAR PROVARE L'APP AGLI AMICI (link pubblico + QR code)
 
 ENGLISH
 -------
-1. Double-click the file for your system:
-     Mac      →  run-mac.command
-     Windows  →  run-windows.bat
-     Linux    →  run-linux.sh   (from a terminal: ./run-linux.sh)
+1. Double-click the file for your system, in the "scripts" folder:
+     Mac      →  scripts/run-mac.command
+     Windows  →  scripts/run-windows.bat
+     Linux    →  scripts/run-linux.sh   (from a terminal: ./scripts/run-linux.sh)
+   (The run-share-… files in the main folder do the same and also open a
+   public link for friends: see below.)
 2. A terminal window opens and installs everything by itself. The first time
    takes 5–15 minutes (about 2.5 GB download: Python and the AI model;
    about 4 GB on Windows, which also downloads the Ollama installer).
@@ -157,10 +161,10 @@ ENGLISH
    To start from zero again: close the window and delete the "data" folder.
 
 If the Mac blocks the file ("cannot be opened" / "unidentified developer"):
-   • right-click run-mac.command → Open → Open
+   • right-click scripts/run-mac.command → Open → Open
    • or: System Settings → Privacy & Security → "Open Anyway"
    • or: open the Terminal app, type  bash  (followed by a space), drag the
-     run-mac.command file into the window and press Enter.
+     scripts/run-mac.command file into the window and press Enter.
 If Windows shows "Windows protected your PC": More info → Run anyway.
 
 Requirements: internet the first time, ~5 GB free disk space, 8 GB RAM.
@@ -170,7 +174,7 @@ Nothing needs to be installed beforehand.
 LET FRIENDS TRY THE APP (public link + QR code)
 -----------------------------------------------
 1. Open run-share-mac.command / run-share-windows.bat / run-share-linux.sh
-   instead of the normal file. Everything starts as usual, then a public
+   (main folder) instead of the normal file. Everything starts as usual, then a public
    ngrok link is opened.
 2. First time only, paste your free ngrok token (account at
    https://dashboard.ngrok.com, token at
