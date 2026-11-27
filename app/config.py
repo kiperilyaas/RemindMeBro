@@ -15,7 +15,7 @@ DATA_DIR = Path(os.getenv("ACADEMIC_HUB_DATA_DIR", BASE_DIR / "data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # Which AI the app uses: data/ai.env (outside git, written by the Run & Go the first time, easy to edit by hand).
-# Environment variables win over the file. Example with every option: ai.env.example in the project folder.
+# Environment variables win over the file. Example with every option: config/ai.env.example.
 AI_ENV_FILE = Path(os.getenv("AI_ENV_FILE", DATA_DIR / "ai.env"))
 
 

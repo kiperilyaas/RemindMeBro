@@ -16,7 +16,7 @@ PY="$(command -v python3 || true)"
 "$PY" - "$HERE" "$OUT_DIR/$NAME" <<'PYEOF'
 import os, stat, sys, zipfile, datetime
 root, out = sys.argv[1], sys.argv[2]
-INCLUDE = ["README.md", "START-HERE.txt", "ai.env.example", "requirements.txt", "requirements-whisper.txt", "app", "frontend", "scripts", "unilearn", "unisis", "unicomms", "web", "docs"]
+INCLUDE = ["README.md", "config", "app", "frontend", "scripts", "unilearn", "unisis", "unicomms", "web", "docs"]
 INCLUDE += sorted(f for f in os.listdir(root) if f.startswith("run-"))
 SKIP_DIRS = {"__pycache__", "node_modules", ".runtime", "data", "dist", ".git", "_to_delete"}
 n = 0
@@ -40,7 +40,7 @@ with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
                 with open(path, "rb") as fh:
                     z.writestr(info, fh.read())
                 n += 1
-    z.writestr("RemindMeBro/BUILD.txt", f"Remind Me Bro demo\nZip made on {datetime.datetime.now():%Y-%m-%d %H:%M}\nStart: open START-HERE.txt\n")
+    z.writestr("RemindMeBro/BUILD.txt", f"Remind Me Bro demo\nZip made on {datetime.datetime.now():%Y-%m-%d %H:%M}\nStart: open docs/START-HERE.txt\n")
 os.replace(tmp, out)
 print(f"{out}  ({n} files, {os.path.getsize(out) // 1024} KB)")
 PYEOF

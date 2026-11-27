@@ -40,7 +40,7 @@ Zip per i collaboratori: `scripts/make-zip.sh` → `../RemindMeBro-demo-<data>[-
 
 ## Configurazione
 
-L'AI si sceglie in `data/ai.env` (vedi [`ai.env.example`](../ai.env.example)); tutto il resto con variabili d'ambiente.
+L'AI si sceglie in `data/ai.env` (vedi [`config/ai.env.example`](../config/ai.env.example)); tutto il resto con variabili d'ambiente.
 
 | Variabile | Predefinito | Note |
 |---|---|---|

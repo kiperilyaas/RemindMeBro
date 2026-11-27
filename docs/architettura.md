@@ -80,7 +80,8 @@ API FastAPI + interfaccia React compilata in un solo file (`frontend/app/index.h
 ```
 RemindMeBro/
 ├── run-share-mac.command · run-share-windows.bat · run-share-linux.sh
-├── START-HERE.txt · ai.env.example · requirements.txt · requirements-whisper.txt
+├── README.md · CLAUDE.md · .gitignore            (devono restare qui)
+├── config/         requirements.txt · requirements-whisper.txt · ai.env.example
 ├── app/
 │   ├── main.py · config.py
 │   ├── api/            endpoint: auth, studente, docente, connessioni, note, date trovate, premium
@@ -95,5 +96,5 @@ RemindMeBro/
 ├── scripts/            run.sh · run.ps1 (Run & Go), run-linux.sh · run-mac.command · run-windows.bat,
 │                       share.py (link pubblico + QR), make-zip.sh
 ├── tests/              test Python senza AI né rete
-└── docs/
+└── docs/           START-HERE.txt (guida per chi prova la demo), architettura, sviluppo, stato del PoC
 ```

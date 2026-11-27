@@ -17,7 +17,7 @@ ITALIANO
    https://aistudio.google.com/apikey): con la chiave l'AI è veloce e il
    modello locale da 2 GB non si scarica. Premi Invio senza chiave per
    usare solo l'AI del computer. Per cambiare AI (Gemini, OpenRouter,
-   OmniRoute...) modifica data/ai.env (esempio: ai.env.example) e riavvia.
+   OmniRoute...) modifica data/ai.env (esempio: config/ai.env.example) e riavvia.
 3. Alla fine si apre il browser con l'app. Clicca un account demo
    (password: demo1234), ad esempio "Giulia Esposito · Student".
    La vecchia interfaccia è ancora su http://127.0.0.1:8000/classic
@@ -116,7 +116,7 @@ ENGLISH
    https://aistudio.google.com/apikey): with the key the AI is fast and the
    2 GB local model is not downloaded. Press Enter without a key to use only
    the AI on this computer. To change AI (Gemini, OpenRouter, OmniRoute...)
-   edit data/ai.env (example: ai.env.example) and restart.
+   edit data/ai.env (example: config/ai.env.example) and restart.
 3. Your browser opens the app. Click a demo account (password: demo1234),
    e.g. "Giulia Esposito · Student". The previous interface is still at
    http://127.0.0.1:8000/classic
