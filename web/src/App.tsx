@@ -5,6 +5,7 @@ import { Spinner } from "./components/ui";
 import { useHashRoute, type Route } from "./lib/router";
 import { LecturerProvider } from "./state/lecturer";
 import { useSession } from "./state/session";
+import { FoundDatesProvider } from "./state/foundDates";
 import { StudentProvider, useStudent } from "./state/student";
 import { Account } from "./views/Account";
 import { AI } from "./views/student/AI";
@@ -15,6 +16,7 @@ import { Connections } from "./views/student/Connections";
 import { Inbox } from "./views/student/Inbox";
 import { Semester } from "./views/student/Semester";
 import { Studies } from "./views/student/Studies";
+import { FindDatesButton } from "./views/student/FoundDates";
 import { Timeline } from "./views/student/Timeline";
 
 const STUDENT_PATHS = ["", "inbox", "studies", "semester", "ai", "connections", "account"];
@@ -33,7 +35,10 @@ function StudentApp({ route, navigate, clearParams }: { route: Route; navigate: 
   ];
   return (
     <Shell nav={nav} current={path} onNavigate={navigate}
-      actions={<button className={`icon-btn sync ${syncing ? "spin" : ""}`} onClick={() => void runSync()} disabled={syncing} aria-label={syncing ? "Syncing" : "Sync all sources"} title="Sync all sources"><Icon name="sync" /></button>}
+      actions={<>
+        <FindDatesButton onOpen={() => navigate("")} />
+        <button className={`icon-btn sync ${syncing ? "spin" : ""}`} onClick={() => void runSync()} disabled={syncing} aria-label={syncing ? "Syncing" : "Sync all sources"} title="Sync all sources"><Icon name="sync" /></button>
+      </>}
       fab={path !== "ai" && <button className="fab" onClick={() => navigate("ai")} aria-label="Open Ask Bro"><Icon name="sparkle" /></button>}>
       {path === "" && <Timeline onNavigate={navigate} />}
       {path === "inbox" && <Inbox />}
@@ -59,7 +64,7 @@ export function App() {
   // key={user.id}: switching account resets all per-user state
   const area = user.role === "professor"
     ? <LecturerProvider key={user.id}><LecturerApp route={route} navigate={navigate} /></LecturerProvider>
-    : <StudentProvider key={user.id}><StudentApp route={route} navigate={navigate} clearParams={clearParams} /></StudentProvider>;
+    : <StudentProvider key={user.id}><FoundDatesProvider><StudentApp route={route} navigate={navigate} clearParams={clearParams} /></FoundDatesProvider></StudentProvider>;
   // right after signing in, the intro plays over the app, which loads underneath and opens with the bell's wave
   return <>{area}{justSignedIn && wantsIntro() && <LoginIntro onDone={introDone} />}</>;
 }

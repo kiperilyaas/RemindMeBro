@@ -1,14 +1,12 @@
 // "Find exam dates" (Free plan): searches the course files (syllabus, first-lesson slides) for exam dates.
+// The button sits in the top bar (FindDatesButton); the Timeline shows the progress and the dates to review (FoundDates).
 // Found dates are only proposals: each one shows the sentence of the file, and reaches the calendar only with "Add to calendar".
-import { useCallback, useEffect, useRef, useState } from "react";
-import { api } from "../../api/client";
-import type { FoundDate, FoundDatesStatus } from "../../api/types";
+import type { FoundDate } from "../../api/types";
 import { Icon } from "../../components/Icon";
 import { Spinner } from "../../components/ui";
 import { courseColor } from "../../lib/domain";
 import { fmtLong, parse } from "../../lib/time";
-import { useStudent } from "../../state/student";
-import { useToast } from "../../state/toast";
+import { useFoundDates } from "../../state/foundDates";
 
 function FoundCard({ f, busy, onAccept, onReject }: { f: FoundDate; busy: boolean; onAccept: () => void; onReject: () => void }) {
   const day = parse(`${f.date}T00:00:00`);
@@ -33,64 +31,34 @@ function FoundCard({ f, busy, onAccept, onReject }: { f: FoundDate; busy: boolea
   );
 }
 
-/** Button + progress + list of dates to review, shown on the Timeline. */
+/** Top-bar button: starts the search (and opens the Timeline); shows how many dates wait for review. */
+export function FindDatesButton({ onOpen }: { onOpen: () => void }) {
+  const { running, pending, start } = useFoundDates();
+  const label = running ? "Searching your course files for exam dates" : pending.length ? `${pending.length} exam dates to review` : "Find exam dates in your course files";
+  return (
+    <button className={`icon-btn find-btn ${running ? "busy" : ""}`} aria-label={label} title={label}
+      onClick={() => { onOpen(); if (!running && !pending.length) void start(); }}>
+      <Icon name="search" />
+      {pending.length > 0 && !running && <span className="find-n" aria-hidden>{pending.length}</span>}
+    </button>
+  );
+}
+
+/** On the Timeline, only while searching or when dates wait for review: progress and the list. */
 export function FoundDates() {
-  const { reload } = useStudent();
-  const toast = useToast();
-  const [status, setStatus] = useState<FoundDatesStatus>({ state: "idle" });
-  const [pending, setPending] = useState<FoundDate[]>([]);
-  const [busyId, setBusyId] = useState<number | null>(null);
-  const timer = useRef<number | null>(null);
-  const wasRunning = useRef(false);
-
-  const load = useCallback(async () => {
-    try {
-      const r = await api.foundDates();
-      if (!r || !r.status) return;
-      setStatus(r.status);
-      setPending(r.pending ?? []);
-      if (r.status.state === "running") {
-        wasRunning.current = true;
-        timer.current = window.setTimeout(() => void load(), 2000);
-      } else if (wasRunning.current) {
-        wasRunning.current = false;
-        if (r.status.state === "error") toast("Could not search the course files", r.status.error ?? "", "error");
-        else if (r.pending.length) toast(r.pending.length === 1 ? "1 date found" : `${r.pending.length} dates found`, "Check each one before adding it to your calendar.", "ok");
-        else toast("No new exam dates", "No exam, test, presentation or submission date is written in your course files.", "info");
-      }
-    } catch { /* offline: the session shows it */ }
-  }, [toast]);
-  useEffect(() => { void load(); return () => { if (timer.current) clearTimeout(timer.current); }; }, [load]);
-
-  const start = async () => {
-    try { setStatus(await api.scanFoundDates()); wasRunning.current = true; if (timer.current) clearTimeout(timer.current); timer.current = window.setTimeout(() => void load(), 1500); }
-    catch (e) { toast("Could not start the search", (e as Error).message, "error"); }
-  };
-  const decide = async (f: FoundDate, accept: boolean) => {
-    setBusyId(f.id);
-    try {
-      if (accept) { await api.acceptFoundDate(f.id); await reload(); toast("Added to your calendar", `${f.title} · ${f.course_name}`, "ok"); }
-      else { await api.rejectFoundDate(f.id); toast("Left out", "This date will not be proposed again.", "info"); }
-      setPending((p) => p.filter((x) => x.id !== f.id));
-    } catch (e) { toast("Could not save it", (e as Error).message, "error"); }
-    setBusyId(null);
-  };
-
-  const running = status.state === "running";
+  const { status, pending, running, busyId, start, decide } = useFoundDates();
+  if (!running && pending.length === 0) return null;
   return (
     <section className="found" aria-label="Exam dates in your course files">
       <div className="found-head">
-        <Icon name="search" />
+        {running ? <Spinner label="Searching" /> : <Icon name="search" />}
         <div>
-          <b>{pending.length ? `${pending.length} date${pending.length > 1 ? "s" : ""} found in your course files` : "Exam dates in your course files"}</b>
+          <b>{running ? "Looking for exam dates" : `${pending.length} date${pending.length > 1 ? "s" : ""} found in your course files`}</b>
           <p>{running
             ? `Reading ${Math.min((status.files_done ?? 0) + 1, status.files_total || 1)} of ${status.files_total || "…"} files${status.current ? `: ${status.current}` : ""}`
-            : pending.length ? "Only dates written in the files. Check the sentence, then add the ones that are right."
-              : "Reads the syllabus and slides of your courses and finds exams, tests, presentations and submissions."}</p>
+            : "Only dates written in the files. Check the sentence, then add the ones that are right."}</p>
         </div>
-        <button className="btn" onClick={() => void start()} disabled={running}>
-          {running ? <><Spinner label="Searching" /> Searching…</> : <><Icon name="search" size={16} /> Find exam dates</>}
-        </button>
+        {!running && <button className="btn ghost sm" onClick={() => void start()} title="Search the course files again"><Icon name="sync" size={14} /> Again</button>}
       </div>
       {pending.length > 0 && (
         <ul className="found-list">
