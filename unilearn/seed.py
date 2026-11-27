@@ -28,13 +28,13 @@ TEACHERS = [
 COURSES = [
     # code, name, teacher username, room
     ("2PR515", "Corporate Governance", "chiara.neri", "SB 408"),
-    ("2IB468", "Ethics in Finance", "chiara.neri", "SB 410"),
-    ("2MO522", "Financial Strategies in International Business", "laura.bianchi", "SB 411"),
-    ("2IB421", "Global ESG and Implications for Sustainable Business", "laura.bianchi", "SB 412"),
-    ("3SG712", "Growth strategies", "marco.rossi", "SB 413"),
-    ("3PA662", "Human Resource Management Seminar", "marco.rossi", "SB 414"),
-    ("3MA674", "International Management", "giovanni.verdi", "SB 415"),
-    ("3PO643", "Social Entrepreneurship: Innovation and Impact", "paolo.conti", "SB 416"),
+    ("2IB468", "Ethics in Finance", "chiara.neri", "NB 470"),
+    ("2MO522", "Financial Strategies in International Business", "laura.bianchi", "RB 211"),
+    ("2IB421", "Global ESG and Implications for Sustainable Business", "laura.bianchi", "NB 469"),
+    ("3SG712", "Growth strategies", "marco.rossi", "RB 211"),
+    ("3PA662", "Human Resource Management Seminar", "marco.rossi", "SB 303"),
+    ("3MA674", "International Management", "giovanni.verdi", "NB 472"),
+    ("3PO643", "Social Entrepreneurship: Innovation and Impact", "paolo.conti", "SB 211"),
 ]
 
 # Until 26 November 2026 Chiara Neri and Marco Rossi taught all eight courses: (code, old teacher, new teacher).
