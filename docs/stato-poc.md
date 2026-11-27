@@ -30,6 +30,10 @@ Regola: dopo ogni modifica (codice, rami, decisioni) questo documento va aggiorn
 - `fix/connect-semplice` (da `feature/date-esami`): pagina Connect con meno scritte, PR #19; va unita dopo la #18.
 - `chore/struttura` (da `fix/connect-semplice`): launcher in `scripts/`, README nuovo, `docs/architettura.md` e `docs/sviluppo.md`; va unita dopo la #19.
 
+## Cartella principale solo con i launcher (27 novembre, ramo `chore/cartella-pulita`)
+- Richiesta di Illia (con screenshot di GitHub): nella cartella principale devono restare solo i `run-share-*`. Restano anche `README.md` (pagina del progetto su GitHub), `CLAUDE.md` (Claude Code lo legge solo da lì) e `.gitignore` (git lo cerca lì).
+- `requirements.txt`, `requirements-whisper.txt`, `ai.env.example` → `config/`; `START-HERE.txt` → `docs/START-HERE.txt`. Corretti `scripts/run.sh` e `run.ps1` (installazione da `config/`, la cartella di lavoro è già quella del progetto), `make-zip.sh` (include `config/`; `BUILD.txt` rimanda a `docs/START-HERE.txt`), README, documenti, `CLAUDE.md`, commenti in `app/config.py` e `ai_remote.py`. Provato: `uv pip install -r config/requirements*.txt` sull'ambiente esistente, zip con i file al posto giusto.
+
 ## Cartelle e README per GitHub (27 novembre, ramo `chore/struttura`, nato da `fix/connect-semplice`)
 - Richiesta di Illia: cartella principale più pulita e README aggiornato e leggibile su GitHub.
 - Nella cartella principale restano `README.md`, `CLAUDE.md`, `START-HERE.txt`, `ai.env.example`, `requirements*.txt` e i tre `run-share-*`. `run-linux.sh`, `run-mac.command`, `run-windows.bat` sono in `scripts/` (entrano nella cartella principale con `cd ..`, poi `scripts/run.sh` / `run.ps1` come prima).

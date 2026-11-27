@@ -1,7 +1,7 @@
 """
 External AI through any OpenAI-compatible API (/chat/completions): Google Gemini, OpenRouter, OmniRoute, OpenAI...
 
-Chosen in data/ai.env (see ai.env.example): AI_PROVIDER, AI_API_KEY, optionally AI_MODEL, AI_MODEL_FAST, AI_BASE_URL.
+Chosen in data/ai.env (see config/ai.env.example): AI_PROVIDER, AI_API_KEY, optionally AI_MODEL, AI_MODEL_FAST, AI_BASE_URL.
 llm_extractor.py calls chat() and chat_stream(). A busy service (503, 429...) is asked again after a few seconds,
 then its backup model is used; only when all of that fails does llm_extractor fall back to Ollama.
 """

@@ -192,28 +192,28 @@ ok "uv $("$UV" --version 2>/dev/null | awk '{print $2}')"
 
 # ---------- 2. Python + dependencies ----------
 step "2/5  Python $PY_VERSION and app dependencies"
-REQ_STAMP="$(cksum < requirements.txt | awk '{print $1}')"
+REQ_STAMP="$(cksum < config/requirements.txt | awk '{print $1}')"
 # The environment stores absolute paths: if the folder was moved, renamed or copied
 # (e.g. "RemindMeBro 4"), its python no longer works and it must be rebuilt.
 if ! "$VENV/bin/python" -c "import sys" >/dev/null 2>&1; then
   rm -rf "$VENV" "$RT/.req_stamp"
   "$UV" venv "$VENV" --python "$PY_VERSION" --quiet || die "Cannot create the Python environment"
 fi
-# Reinstall when requirements.txt changed or a package is missing (the stamp alone can lie)
+# Reinstall when config/requirements.txt changed or a package is missing (the stamp alone can lie)
 if [ "$(cat "$RT/.req_stamp" 2>/dev/null)" != "$REQ_STAMP" ] \
    || ! "$VENV/bin/python" -c "import uvicorn, fastapi, sqlalchemy, chromadb, ollama, jose, passlib, jinja2, httpx, pypdf, pptx, docx" >/dev/null 2>&1; then
   echo "    Installing packages (first time only, ~1-3 min)..."
-  "$UV" pip install --python "$VENV/bin/python" -r requirements.txt > "$LOGS/pip.log" 2>&1 \
+  "$UV" pip install --python "$VENV/bin/python" -r config/requirements.txt > "$LOGS/pip.log" 2>&1 \
     || { tail -n 20 "$LOGS/pip.log"; die "Package installation failed"; }
   echo "$REQ_STAMP" > "$RT/.req_stamp"
 fi
 ok "$("$VENV/bin/python" --version)"
 # Smart Notes: speech-to-text for lesson recordings (optional: the app starts even if this fails)
-WHISPER_STAMP="$(cksum < requirements-whisper.txt | awk '{print $1}')"
+WHISPER_STAMP="$(cksum < config/requirements-whisper.txt | awk '{print $1}')"
 if [ "$(cat "$RT/.whisper_stamp" 2>/dev/null)" != "$WHISPER_STAMP" ] \
    || ! "$VENV/bin/python" -c "import faster_whisper" >/dev/null 2>&1; then
   echo "    Installing speech-to-text for Smart Notes (first time only)..."
-  if "$UV" pip install --python "$VENV/bin/python" -r requirements-whisper.txt > "$LOGS/pip-whisper.log" 2>&1; then
+  if "$UV" pip install --python "$VENV/bin/python" -r config/requirements-whisper.txt > "$LOGS/pip-whisper.log" 2>&1; then
     echo "$WHISPER_STAMP" > "$RT/.whisper_stamp"
     ok "Speech-to-text ready (faster-whisper)"
   else
@@ -231,7 +231,7 @@ if [ ! -f "$AI_ENV" ] && [ -t 0 ]; then
   echo "    Gemini key (free): https://aistudio.google.com/apikey"
   printf "    Paste your Gemini API key, or press Enter to use only the local AI: "
   read -rs GEMINI_KEY || GEMINI_KEY=""; echo
-  { echo "# Which AI Remind Me Bro uses. Options: ai.env.example in the project folder. Restart the app after a change."
+  { echo "# Which AI Remind Me Bro uses. Options: config/ai.env.example in the project folder. Restart the app after a change."
     if [ -n "$GEMINI_KEY" ]; then echo "AI_PROVIDER=gemini"; echo "AI_API_KEY=$GEMINI_KEY"; else echo "AI_PROVIDER=ollama"; echo "AI_API_KEY="; fi
   } > "$AI_ENV"
   chmod 600 "$AI_ENV" 2>/dev/null

@@ -187,25 +187,25 @@ try {
     & $UvExe venv $Venv --python $PyVersion --quiet
     if ($LASTEXITCODE -ne 0) { Fail "Cannot create the Python environment" }
   }
-  $reqHash = (Get-FileHash (Join-Path $AppDir "requirements.txt") -Algorithm SHA256).Hash
+  $reqHash = (Get-FileHash (Join-Path $AppDir "config\requirements.txt") -Algorithm SHA256).Hash
   $stamp = if (Test-Path $stampFile) { (Get-Content $stampFile -Raw).Trim() } else { "" }
   & $VenvPy -c "import uvicorn, fastapi, sqlalchemy, chromadb, ollama, jose, passlib, jinja2, httpx, pypdf, pptx, docx" *> $null
   $pkgsOk = ($LASTEXITCODE -eq 0)
   if ($stamp -ne $reqHash -or -not $pkgsOk) {
     Write-Host "    Installing packages (first time only, ~1-3 min)..."
-    $code = Invoke-Logged $UvExe @("pip", "install", "--python", $VenvPy, "-r", "requirements.txt") (Join-Path $Logs "pip.log")
+    $code = Invoke-Logged $UvExe @("pip", "install", "--python", $VenvPy, "-r", "config\requirements.txt") (Join-Path $Logs "pip.log")
     if ($code -ne 0) { Get-Content (Join-Path $Logs "pip.log") -Tail 20; Fail "Package installation failed" }
     Set-Content -Path $stampFile -Value $reqHash
   }
   Ok (& $VenvPy --version)
   # Smart Notes: speech-to-text for lesson recordings (optional: the app starts even if this fails)
   $whisperStampFile = Join-Path $Rt ".whisper_stamp"
-  $whisperHash = (Get-FileHash (Join-Path $AppDir "requirements-whisper.txt") -Algorithm SHA256).Hash
+  $whisperHash = (Get-FileHash (Join-Path $AppDir "config\requirements-whisper.txt") -Algorithm SHA256).Hash
   $whisperStamp = if (Test-Path $whisperStampFile) { (Get-Content $whisperStampFile -Raw).Trim() } else { "" }
   & $VenvPy -c "import faster_whisper" *> $null
   if ($whisperStamp -ne $whisperHash -or $LASTEXITCODE -ne 0) {
     Write-Host "    Installing speech-to-text for Smart Notes (first time only)..."
-    $code = Invoke-Logged $UvExe @("pip", "install", "--python", $VenvPy, "-r", "requirements-whisper.txt") (Join-Path $Logs "pip-whisper.log")
+    $code = Invoke-Logged $UvExe @("pip", "install", "--python", $VenvPy, "-r", "config\requirements-whisper.txt") (Join-Path $Logs "pip-whisper.log")
     if ($code -eq 0) { Set-Content -Path $whisperStampFile -Value $whisperHash; Ok "Speech-to-text ready (faster-whisper)" }
     else { Warn "Speech-to-text could not be installed (see $Logs\pip-whisper.log): Smart Notes will skip audio and video" }
   }
@@ -220,7 +220,7 @@ try {
     Write-Host "    Gemini key (free): https://aistudio.google.com/apikey"
     $sec = Read-Host "    Paste your Gemini API key, or press Enter to use only the local AI" -AsSecureString
     $geminiKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
-    $lines = @("# Which AI Remind Me Bro uses. Options: ai.env.example in the project folder. Restart the app after a change.")
+    $lines = @("# Which AI Remind Me Bro uses. Options: config\ai.env.example in the project folder. Restart the app after a change.")
     if ($geminiKey) { $lines += "AI_PROVIDER=gemini"; $lines += "AI_API_KEY=$geminiKey" } else { $lines += "AI_PROVIDER=ollama"; $lines += "AI_API_KEY=" }
     Set-Content -Path $AiEnv -Value $lines -Encoding ASCII
     $geminiKey = $null

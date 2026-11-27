@@ -34,7 +34,7 @@ Serve solo un doppio clic: il launcher installa tutto da solo dentro la cartella
 - La prima volta chiede la **chiave di Google Gemini** (gratuita: [aistudio.google.com/apikey](https://aistudio.google.com/apikey)). Premendo Invio senza chiave l'AI gira sul computer con Ollama: più lenta, ma nulla esce dal computer.
 - Il link pubblico usa ngrok: la prima volta chiede il token gratuito di ngrok.
 - Studentessa demo: **Giulia Esposito** · `student@demo.it` / `demo1234` (anche dal link pubblico). Le password dello staff sono in `data/STAFF-PASSWORDS.txt`, solo sul computer che avvia la demo.
-- Guida passo passo per chi prova la demo (italiano e inglese): [`START-HERE.txt`](START-HERE.txt).
+- Guida passo passo per chi prova la demo (italiano e inglese): [`docs/START-HERE.txt`](docs/START-HERE.txt).
 
 ## Quattro servizi, un solo avvio
 
@@ -51,7 +51,7 @@ Per mostrare la demo: si carica il syllabus in **UniLearn** → `/staff` → cor
 
 ## AI
 
-L'AI si sceglie in `data/ai.env` (fuori da git; esempio commentato in [`ai.env.example`](ai.env.example)):
+L'AI si sceglie in `data/ai.env` (fuori da git; esempio commentato in [`config/ai.env.example`](config/ai.env.example)):
 
 - **Gemini** (predefinito con la chiave): `gemini-3.8-flash`, con modelli di riserva se Google è sovraccarico;
 - qualsiasi servizio **compatibile con OpenAI** (OpenRouter, OmniRoute, OpenAI, un indirizzo personalizzato);
@@ -71,8 +71,9 @@ RemindMeBro/
 ├── unilearn/              UniLearn, LMS compatibile con Moodle (porta 8200)
 ├── unicomms/              UniComms, posta e Teams dei docenti (porta 8300)
 ├── scripts/               launcher solo locali, Run & Go, zip per i collaboratori
+├── config/                librerie Python da installare, esempio di configurazione dell'AI
 ├── tests/                 test Python (date d'esame)
-├── docs/                  architettura, sviluppo, stato del progetto
+├── docs/                  guida per chi prova la demo, architettura, sviluppo, stato del progetto
 └── data/                  creata all'avvio: database, file, chiavi (mai in git)
 ```
 

@@ -16,7 +16,7 @@ Progetto di Illia (con Sara): PoC "Academic Unified Hub & AI Assistant", fronten
 7. Prima di riavviare l'app di Illia avvisalo: interrompe quello che sta facendo (per esempio appunti di Smart Notes in corso).
 
 ## Comandi
-- Avvio completo (quattro servizi + AI): `./scripts/run-linux.sh` (Mac `scripts/run-mac.command`, Windows `scripts/run-windows.bat`); con link pubblico ngrok + QR: `run-share-*` nella cartella principale (lì restano solo questi tre launcher).
+- Avvio completo (quattro servizi + AI): `./scripts/run-linux.sh` (Mac `scripts/run-mac.command`, Windows `scripts/run-windows.bat`); con link pubblico ngrok + QR: `run-share-*`. Nella cartella principale restano solo i tre `run-share-*`, `README.md`, `CLAUDE.md` e `.gitignore`: librerie Python ed esempio dell'AI in `config/`, guida per chi prova la demo in `docs/START-HERE.txt`.
 - Documentazione: `README.md` (vetrina per GitHub, corta), `docs/architettura.md`, `docs/sviluppo.md` (avvio, test, configurazione, API), `docs/stato-poc.md`.
 - AI: `data/ai.env` (fuori da git, contiene la chiave: non mostrarla mai) sceglie l'AI esterna (Gemini di default, o qualsiasi API compatibile con OpenAI); senza chiave si usa Ollama. Controllo: `.runtime/venv/bin/python -m app.services.ai_remote`.
 - Log: `.runtime/logs/backend.log`, `unilearn.log`, `unisis.log`, `unicomms.log`, `whisper.log`.
