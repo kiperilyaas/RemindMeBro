@@ -9,7 +9,7 @@ import { useSession } from "../../state/session";
 import { useStudent } from "../../state/student";
 import { useToast } from "../../state/toast";
 
-// What a student needs here: what each system brings, whether it is connected, Connect / Disconnect. Nothing technical.
+// What a student needs here: what each system brings, whether it is connected, Connect / Disconnect, a link to open it. Nothing technical.
 
 function Status({ c }: { c?: Connection }) {
   if (!c) return <span className="pill ok">Automatic</span>;
@@ -34,7 +34,12 @@ function Card({ c, icon, color, title, what, children, actions }: {
         {c?.available === false && <p className="form-err">{title} is not available right now. Try again later.</p>}
         {children}
       </div>
-      {actions && <div className="conn-act">{actions}</div>}
+      {(actions || c?.portal_url) && (
+        <div className="conn-act">
+          {actions}
+          {c?.portal_url && <a className="btn ghost sm" href={c.portal_url} target="_blank" rel="noopener noreferrer">Open {title} <Icon name="external" size={14} /></a>}
+        </div>
+      )}
     </article>
   );
 }
