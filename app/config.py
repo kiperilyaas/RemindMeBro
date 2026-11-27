@@ -83,7 +83,8 @@ class Settings:
     AI_FALLBACK_OLLAMA: bool = os.getenv("AI_FALLBACK_OLLAMA", "true").lower() in {"1", "true", "yes"}
     # "low" = quicker answers on thinking models; empty = do not send it
     AI_REASONING_EFFORT: str = os.getenv("AI_REASONING_EFFORT", "low").strip()
-    AI_TIMEOUT: float = float(os.getenv("AI_TIMEOUT", "120"))
+    # Short answers (deadlines, Ask Bro, exam dates): a model that does not answer in time counts as busy (next model)
+    AI_TIMEOUT: float = float(os.getenv("AI_TIMEOUT", "60"))
     # Busy service (503 "high demand"), rate limit (429), network error: seconds to wait before each new try
     # (when every model of the chain is busy: the chain is tried again after these waits)
     AI_RETRY_WAITS: list = [float(x) for x in os.getenv("AI_RETRY_WAITS", "10,30").split(",") if x.strip()]
@@ -148,6 +149,8 @@ class Settings:
     # Notes and "Ask the material" read long texts: on a slow computer the model can think for minutes before the
     # first word. The answer is streamed, and this is the longest wait (seconds) without any new word from Ollama.
     NOTES_TIMEOUT: float = float(os.getenv("NOTES_TIMEOUT", "1800"))
+    # Exam dates in course files: a second, independent yes/no question to the AI for every date found (fewer wrong dates)
+    EXAM_DATES_DOUBLE_CHECK: bool = os.getenv("EXAM_DATES_DOUBLE_CHECK", "true").lower() in {"1", "true", "yes"}
 
     # --- Frontend ---
     # Se il file esiste, viene servito su http://127.0.0.1:8000/ (stessa origine, niente CORS)

@@ -20,6 +20,7 @@ Progetto di Illia (con Sara): PoC "Academic Unified Hub & AI Assistant", fronten
 - AI: `data/ai.env` (fuori da git, contiene la chiave: non mostrarla mai) sceglie l'AI esterna (Gemini di default, o qualsiasi API compatibile con OpenAI); senza chiave si usa Ollama. Controllo: `.runtime/venv/bin/python -m app.services.ai_remote`.
 - Log: `.runtime/logs/backend.log`, `unilearn.log`, `unisis.log`, `unicomms.log`, `whisper.log`.
 - Frontend (`web/`): `npm test` (Vitest), `npm run typecheck`, `npm run build` (compila hub → `frontend/app/index.html`, UniLearn → `unilearn/static/staff/index.html`, UniSIS → `unisis/static/staff/index.html`, UniComms → `unicomms/static/staff/index.html`). I quattro file compilati sono nel repo: **ricompilali dopo ogni modifica a `web/` e committali**.
+- Test Python (senza AI né rete): `.runtime/venv/bin/python -m unittest discover -s tests`. Con Node 26: `NODE_OPTIONS=--no-experimental-webstorage npm test`.
 - Python: ambiente in `.runtime/venv` (creato dal launcher). Esempio: `.runtime/venv/bin/python -m uvicorn app.main:app --port 18000` per una copia di prova accanto all'app vera.
 - Dati locali in `data/` (fuori da git): database SQLite in modalità WAL, password staff in `data/STAFF-PASSWORDS.txt` (non mostrarle mai), file dei corsi, modello Whisper.
 

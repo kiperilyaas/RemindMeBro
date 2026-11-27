@@ -5,6 +5,7 @@ import { Spinner } from "./components/ui";
 import { useHashRoute, type Route } from "./lib/router";
 import { LecturerProvider } from "./state/lecturer";
 import { useSession } from "./state/session";
+import { FoundDatesProvider } from "./state/foundDates";
 import { StudentProvider, useStudent } from "./state/student";
 import { Account } from "./views/Account";
 import { AI } from "./views/student/AI";
@@ -59,7 +60,7 @@ export function App() {
   // key={user.id}: switching account resets all per-user state
   const area = user.role === "professor"
     ? <LecturerProvider key={user.id}><LecturerApp route={route} navigate={navigate} /></LecturerProvider>
-    : <StudentProvider key={user.id}><StudentApp route={route} navigate={navigate} clearParams={clearParams} /></StudentProvider>;
+    : <StudentProvider key={user.id}><FoundDatesProvider><StudentApp route={route} navigate={navigate} clearParams={clearParams} /></FoundDatesProvider></StudentProvider>;
   // right after signing in, the intro plays over the app, which loads underneath and opens with the bell's wave
   return <>{area}{justSignedIn && wantsIntro() && <LoginIntro onDone={introDone} />}</>;
 }

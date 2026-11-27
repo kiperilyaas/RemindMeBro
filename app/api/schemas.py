@@ -81,6 +81,8 @@ class DeadlineOut(BaseModel):
     superseded_by_id: Optional[int] = None
     source_message: Optional[str] = Field(None, description="Text of the announcement the AI extracted the deadline from")
     replaces: Optional[Dict[str, Any]] = Field(None, description="Moodle deadline replaced by this one")
+    found_in: Optional[str] = Field(None, description="Found in a course file and accepted by the student: file · page")
+    time_known: bool = True
 
     @classmethod
     def from_orm_deadline(cls, d: Any, replaces: Any = None) -> "DeadlineOut":

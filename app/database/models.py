@@ -160,6 +160,10 @@ class Deadline(Base):
     user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
     # When the source system (e.g. UniLearn) last changed this deadline: a message older than this can't move it
     source_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    # Found in a course file and accepted by the student: "Syllabus.pdf · page 4" (the quote is in description)
+    found_in: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+    # False = the file gives the day but no time (due_date is then 23:59 of that day, shown as "time not stated")
+    time_known: Mapped[bool] = mapped_column(Boolean, default=True)
 
     course: Mapped[Optional[Course]] = relationship(back_populates="deadlines")
     announcement: Mapped[Optional[Announcement]] = relationship(back_populates="deadlines")
@@ -309,3 +313,57 @@ class LessonChatMessage(Base):
     content: Mapped[str] = mapped_column(Text)
     sources: Mapped[str] = mapped_column(Text, default="[]")   # JSON: excerpts the answer used
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+# ---------------------------------------------------------------------------
+# Exam dates found in course files (Free plan, app/services/exam_dates)
+# ---------------------------------------------------------------------------
+class FileScan(Base):
+    """A course file already searched for exam dates (by content hash and finder version): read once for everybody."""
+
+    __tablename__ = "file_scans"
+
+    contenthash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    version: Mapped[str] = mapped_column(String(20))
+    filename: Mapped[str] = mapped_column(String(300))
+    course_code: Mapped[str] = mapped_column(String(32))
+    found: Mapped[int] = mapped_column(Integer, default=0)
+    rejected: Mapped[int] = mapped_column(Integer, default=0)       # AI proposals thrown away by the checks
+    error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    scanned_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class FoundExamDate(Base):
+    """A date found in a course file that passed every check. Shared by the students of the course."""
+
+    __tablename__ = "found_exam_dates"
+    __table_args__ = (UniqueConstraint("contenthash", "kind", "on_date", "title", name="uq_found_exam_date"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    contenthash: Mapped[str] = mapped_column(String(64), index=True)
+    course_code: Mapped[str] = mapped_column(String(32), index=True)
+    filename: Mapped[str] = mapped_column(String(300))
+    page: Mapped[str] = mapped_column(String(40), default="")         # "Page 4", "Slide 3", "" for plain text
+    kind: Mapped[str] = mapped_column(String(20))                     # exam | midterm | test | presentation | submission
+    title: Mapped[str] = mapped_column(String(200))
+    on_date: Mapped[datetime] = mapped_column(DateTime)               # the day (00:00)
+    at_time: Mapped[Optional[str]] = mapped_column(String(5), nullable=True)   # "14:00" only if written in the quote
+    room: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    quote: Mapped[str] = mapped_column(Text)                          # verbatim from the file
+    year_written: Mapped[bool] = mapped_column(Boolean, default=True)  # False = the year was completed from the term
+    model: Mapped[str] = mapped_column(String(100), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class FoundDateChoice(Base):
+    """What a student did with a found date: accepted (deadline_id = the calendar entry) or rejected."""
+
+    __tablename__ = "found_date_choices"
+    __table_args__ = (UniqueConstraint("user_id", "found_id", name="uq_found_date_choice"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    found_id: Mapped[int] = mapped_column(ForeignKey("found_exam_dates.id", ondelete="CASCADE"), index=True)
+    choice: Mapped[str] = mapped_column(String(10))                   # accepted | rejected
+    deadline_id: Mapped[Optional[int]] = mapped_column(ForeignKey("deadlines.id", ondelete="SET NULL"), nullable=True)
+    decided_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

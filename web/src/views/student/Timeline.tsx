@@ -7,6 +7,7 @@ import { daysBetween, greeting, parse, relative, startOfDay } from "../../lib/ti
 import { useSession } from "../../state/session";
 import { useStudent } from "../../state/student";
 import { buildItems, Calendar, type CalView } from "./Calendar";
+import { FindExamsButton, FoundDates } from "./FoundDates";
 
 const VIEWS: { id: CalView; label: string }[] = [{ id: "agenda", label: "Agenda" }, { id: "week", label: "Week" }, { id: "month", label: "Month" }];
 const VIEW_KEY = "rmb.calendar.view";
@@ -87,6 +88,8 @@ export function Timeline({ onNavigate }: { onNavigate: (p: string) => void }) {
         </section>
       )}
 
+      {!loading && user?.role === "student" && <FoundDates />}
+
       <div className="cal-bar">
         <div className="seg cal-views" role="tablist" aria-label="Calendar view">
           {VIEWS.map((v) => (
@@ -97,6 +100,7 @@ export function Timeline({ onNavigate }: { onNavigate: (p: string) => void }) {
         <button className={`btn plan-btn ${planned ? "on" : ""}`} aria-pressed={planned} onClick={() => setPlanned((p) => !p)}>
           <Icon name="wand" size={16} /> {planned ? `${blocks.length} study blocks planned` : "Plan my week"}
         </button>
+        {user?.role === "student" && <FindExamsButton />}
       </div>
 
       {courses.length > 0 && (

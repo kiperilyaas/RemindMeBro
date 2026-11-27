@@ -19,6 +19,7 @@ from pathlib import Path  # noqa: E402
 from app.api.auth import router as auth_router  # noqa: E402
 from app.api.connections_endpoints import router as connections_router  # noqa: E402
 from app.api.endpoints import router  # noqa: E402
+from app.api.found_dates_endpoints import router as found_dates_router  # noqa: E402
 from app.api.notes_endpoints import router as notes_router  # noqa: E402
 from app.api.premium import router as premium_router  # noqa: E402
 from app.api.professor_endpoints import router as professor_router  # noqa: E402
@@ -108,6 +109,7 @@ app.include_router(professor_router)
 app.include_router(connections_router)
 app.include_router(premium_router)
 app.include_router(notes_router)
+app.include_router(found_dates_router)
 
 
 @app.get("/", include_in_schema=False)
