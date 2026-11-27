@@ -71,6 +71,7 @@ Tutta la parte "staff" è rifatta in React con uno stile unico, minimale (grigi 
 | Hub | http://127.0.0.1:8000 (login docente) | `chiara.neri@demo.it`, … | Courses, Announce (risultato AI), Dates found by AI, **Try a case** |
 | UniLearn | http://127.0.0.1:8200/staff | `chiara.neri`, `marco.rossi`, … · `admin` | corsi, compiti (data modificabile al clic), avvisi, Web services (admin), **Try a case** |
 | UniSIS | http://127.0.0.1:8100/staff | `registrar` | appelli e finestre, posti, corsi e lista d'attesa, studenti, Apps & keys, **Try a case** |
+| UniComms | http://127.0.0.1:8300/staff | uno dei cinque docenti, senza password (solo in locale) | email tipo Outlook e post tipo Teams a un corso o a uno studente |
 
 **Try a case**: ogni scheda esegue con un clic un'azione reale nel sistema e dice cosa controllare nell'hub
 come Giulia. Quasi tutti hanno **Undo**, così si possono ripetere.
@@ -121,7 +122,7 @@ La sezione **AI** dello studente contiene Ask Bro (la chat) e Smart Notes. Le du
 
 ## Avvisi dei docenti in tempo reale
 
-Un avviso pubblicato in UniLearn (**Post an announcement**) arriva nell'Inbox degli studenti iscritti a quel corso entro circa mezzo minuto, senza premere Sync: l'hub legge i forum Announcements ogni 30 secondi (`app/services/live_sync.py`, variabile `UNILEARN_POLL_SECONDS`, 0 = spento) e l'app chiede i nuovi messaggi ogni 30 secondi, con un avviso a schermo. Lo studente vede solo i messaggi dei corsi che segue: se il corso non ha iscritti, UniLearn lo segnala sopra il modulo. Nell'Inbox i messaggi appena arrivati hanno l'etichetta **New** e una barra in alto ("1 new message just arrived"); la barra avvisa anche quando un messaggio non letto è nascosto dal filtro (es. un avviso senza scadenza non è "Important") e lo mostra con *Show all*. Il numero dei non letti compare sulla voce Inbox e nel titolo della scheda del browser, es. "(2) Remind Me Bro".
+Un avviso pubblicato in UniLearn (**Post an announcement**), un'email o un post Teams mandati da UniComms arrivano nell'Inbox degli studenti iscritti a quel corso entro circa mezzo minuto, senza premere Sync: l'hub legge i forum Announcements ogni 30 secondi (`app/services/live_sync.py`, variabile `UNILEARN_POLL_SECONDS`, 0 = spento) e l'app chiede i nuovi messaggi ogni 30 secondi, con un avviso a schermo. Lo studente vede solo i messaggi dei corsi che segue: se il corso non ha iscritti, UniLearn lo segnala sopra il modulo. Nell'Inbox i messaggi appena arrivati hanno l'etichetta **New** e una barra in alto ("1 new message just arrived"); la barra avvisa anche quando un messaggio non letto è nascosto dal filtro (es. un avviso senza scadenza non è "Important") e lo mostra con *Show all*. Il numero dei non letti compare sulla voce Inbox e nel titolo della scheda del browser, es. "(2) Remind Me Bro".
 
 ## Tre programmi, un solo avvio (v0.5)
 
@@ -130,8 +131,9 @@ Un avviso pubblicato in UniLearn (**Post an announcement**) arriva nell'Inbox de
 | **Remind Me Bro** (hub + SPA) | 8000 | dashboard, AI, chat RAG | — |
 | **UniSIS** (`unisis/`) | 8100 | segreteria: orario, appelli, iscrizioni, voti | OAuth 2.0 + PKCE (client ID, secret, API key) |
 | **UniLearn** (`unilearn/`) | 8200 | LMS **compatibile con Moodle**: corsi, compiti, consegne, calendario, forum avvisi | **API web service di Moodle** con token personale |
+| **UniComms** (`unicomms/`) | 8300 | posta (tipo Outlook) e Teams dei docenti: messaggi a un corso o a uno studente | `GET /api/v1/messages` con chiave `X-API-Key` (`data/unicomms/hub.key`) |
 
-Il Run & Go (sezione 0) li avvia **tutti e tre** con un solo doppio clic, sulle prime porte libere,
+Il Run & Go (sezione 0) li avvia **tutti e quattro** con un solo doppio clic, sulle prime porte libere,
 e li chiude insieme. Nessun Docker: ogni servizio è un'app FastAPI con il suo database SQLite in `data/`.
 
 ## UniLearn — il nostro Moodle (novità v0.5)
@@ -200,10 +202,10 @@ Lo script (`scripts/run.sh` per Mac/Linux, `scripts/run.ps1` per Windows):
 3. usa Ollama se c'è già, altrimenti: **Mac** → scarica la versione CLI dentro `.runtime/ollama`,
    **Windows** → installer per-utente senza admin, **Linux** → installer ufficiale (chiede la password);
 4. scarica `llama3.2` (~2 GB, una volta sola) e il modello di ricerca di ChromaDB;
-5. avvia **UniSIS** (8100–8110), **UniLearn** (8200–8210) e l'hub (8000–8010) sulle prime porte libere,
-   collega l'hub ai due servizi e **apre il browser**; nel terminale stampa tutti gli account demo.
+5. avvia **UniSIS** (8100–8110), **UniLearn** (8200–8210), **UniComms** (8300–8310) e l'hub (8000–8010) sulle prime porte libere,
+   collega l'hub ai tre servizi e **apre il browser**; nel terminale stampa tutti gli account demo.
 
-Chiudendo la finestra del terminale si fermano hub, UniSIS, UniLearn e Ollama (se l'ha avviato lo script).
+Chiudendo la finestra del terminale si fermano hub, UniSIS, UniLearn, UniComms e Ollama (se l'ha avviato lo script).
 Opzioni: `RMB_MODEL=llama3.2:1b` (modello più leggero), `RMB_NO_AI=1` (senza AI), `RMB_NO_BROWSER=1`.
 Istruzioni per l'utente finale (IT/EN) in `START-HERE.txt`.
 
@@ -244,6 +246,7 @@ pip install -r requirements.txt
 ```bash
 uvicorn unisis.main:app --port 8100 &      # segreteria
 uvicorn unilearn.main:app --port 8200 &    # LMS compatibile Moodle
+uvicorn unicomms.main:app --port 8300 &    # posta e Teams dei docenti
 uvicorn app.main:app --reload              # hub (porta 8000)
 ```
 
@@ -379,6 +382,7 @@ academic_hub_backend/
 ├── run-mac.command / run-windows.bat / run-linux.sh   # Run & Go
 ├── scripts/run.sh, scripts/run.ps1
 ├── START-HERE.txt              # istruzioni per l'utente finale
+├── unicomms/                   # UniComms: lecturers' mail (like Outlook) and Teams (separate service, port 8300)
 ├── unilearn/                   # UniLearn: Moodle-compatible LMS (separate service, port 8200)
 │   ├── main.py, ws.py, web.py  # login/token.php + webservice/rest/server.php, web portal
 │   ├── models.py, seed.py      # courses, assignments, submissions, forums, calendar, tokens
@@ -458,6 +462,7 @@ academic_hub_backend/
 | `ACADEMIC_HUB_DATA_DIR` | `./data` | cartella di SQLite e ChromaDB (anche di UniSIS e UniLearn) |
 | `UNISIS_URL` | `http://127.0.0.1:8100` | indirizzo di UniSIS visto dall'hub |
 | `UNILEARN_URL` | `http://127.0.0.1:8200` | indirizzo di UniLearn (o di un Moodle vero) |
+| `UNICOMMS_URL` | `http://127.0.0.1:8300` | indirizzo di UniComms visto dall'hub |
 
 ## Troubleshooting
 

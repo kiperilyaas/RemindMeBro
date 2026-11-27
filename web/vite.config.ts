@@ -4,12 +4,13 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { viteSingleFile } from "vite-plugin-singlefile";
 
-// Three single-file builds, committed prebuilt (the Run & Go launcher never needs Node.js).
-// Pick one with --mode:  hub (default) | unilearn | unisis
+// Four single-file builds, committed prebuilt (the Run & Go launcher never needs Node.js).
+// Pick one with --mode:  hub (default) | unilearn | unisis | unicomms
 const TARGETS = {
   hub: { input: "index.html", out: "frontend/app" },                     // student + lecturer hub, served at /
   unilearn: { input: "apps/unilearn/index.html", out: "unilearn/static/staff" },  // UniLearn /staff
   unisis: { input: "apps/unisis/index.html", out: "unisis/static/staff" },        // UniSIS /staff
+  unicomms: { input: "apps/unicomms/index.html", out: "unicomms/static/staff" },  // UniComms /staff
 } as const;
 
 export default defineConfig(({ mode }) => {

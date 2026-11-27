@@ -20,9 +20,9 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.database.models import Announcement, Course, Deadline, Event, SourceType
-from app.mocks import moodle_mock, teams_mock
-from app.services import llm_extractor, unilearn_client, unisis_client, vector_store
+from app.database.models import Announcement, Course, Deadline, DeadlineDone, Event, SourceType
+from app.mocks import moodle_mock
+from app.services import llm_extractor, unicomms_client, unilearn_client, unisis_client, vector_store
 
 # Import ritardato per evitare cicli: auth dipende solo da DB/schemi
 from app.api.auth import link_all_professors, seed_demo_users  # noqa: E402
@@ -85,6 +85,7 @@ def upsert_announcement(
     created_at: datetime,
     course: Optional[Course],
     author_id: Optional[int] = None,
+    owner_id: Optional[int] = None,
 ) -> tuple[Announcement, Optional[str]]:
     """
     Salva l'avviso in SQLite e lo indicizza in ChromaDB.
@@ -103,6 +104,7 @@ def upsert_announcement(
     ann.course_id = course.id if course else None
     if author_id is not None:
         ann.author_id = author_id
+    ann.user_id = owner_id
     db.flush()
 
     try:
@@ -116,12 +118,32 @@ def upsert_announcement(
                 "course_name": course.name if course else None,
                 "created_at": created_at.strftime(DT_FMT),
                 "announcement_id": ann.id,
+                "owner_id": owner_id,   # personal Outlook/Teams message: only its owner's assistant may read it
             },
         )
     except Exception as exc:
         logger.warning("Indicizzazione ChromaDB fallita per %s: %s", external_id, exc)
         return ann, str(exc)
     return ann, None
+
+
+def delete_announcement(db: Session, ann: Announcement) -> None:
+    """Cancella un messaggio con le scadenze che l'AI ci aveva trovato (e lo toglie da ChromaDB)."""
+    found = list(db.scalars(select(Deadline).where(Deadline.announcement_id == ann.id)))
+    ids = [d.id for d in found]
+    if ids:
+        for d in db.scalars(select(Deadline).where(Deadline.superseded_by_id.in_(ids))):
+            d.superseded_by_id = None   # an official date hidden by this message comes back
+        for row in db.scalars(select(DeadlineDone).where(DeadlineDone.deadline_id.in_(ids))):
+            db.delete(row)
+        for d in found:
+            db.delete(d)
+    try:
+        vector_store.delete_documents([f"{ann.source.value}:{ann.external_id}"])
+    except Exception as exc:  # the vector DB never blocks a delete
+        logger.warning("ChromaDB: avviso %s non tolto dall'indice: %s", ann.external_id, exc)
+    db.delete(ann)
+    db.flush()
 
 
 # ---------------------------------------------------------------------------
@@ -138,6 +160,7 @@ def process_informal_message(
     source: SourceType = SourceType.TEAMS,
     author_id: Optional[int] = None,
     course_is_certain: bool = False,
+    owner_id: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     Gestisce un singolo messaggio informale:
@@ -158,6 +181,7 @@ def process_informal_message(
         created_at=created_at,
         course=course,
         author_id=author_id,
+        owner_id=owner_id,
     )
 
     detail: Dict[str, Any] = {
@@ -179,6 +203,7 @@ def process_informal_message(
             fallback_course_code=course_code,
             force_course_code=course_code if course_is_certain else None,
             announcement_id=ann.id,
+            owner_id=owner_id,
         )
         detail.update(
             {
@@ -196,42 +221,6 @@ def process_informal_message(
         detail.update({"status": "parsing_error", "error": str(exc)})
     detail["llm_seconds"] = round(time.perf_counter() - started, 2)
     return detail
-
-
-def sync_teams(db: Session) -> List[Dict[str, Any]]:
-    details = []
-    for m in teams_mock.get_channel_messages():
-        details.append(
-            process_informal_message(
-                db,
-                external_id=m["id"],
-                content=m["content"],
-                author=m["author"],
-                created_at=_parse_dt(m["created"]),
-                course_code=m.get("channel_course_code"),
-            )
-        )
-        db.commit()  # commit per messaggio: un errore LLM non annulla il lavoro precedente
-    return details
-
-
-def sync_emails(db: Session) -> List[Dict[str, Any]]:
-    """Email istituzionali: stesso trattamento dei messaggi Teams (ChromaDB + estrazione AI)."""
-    details = []
-    for m in teams_mock.get_emails():
-        details.append(
-            process_informal_message(
-                db,
-                external_id=m["id"],
-                content=m["content"],
-                author=m["author"],
-                created_at=_parse_dt(m["created"]),
-                course_code=m.get("course_code"),
-                source=SourceType.EMAIL,
-            )
-        )
-        db.commit()
-    return details
 
 
 # ---------------------------------------------------------------------------
@@ -278,21 +267,16 @@ def run_sync_pipeline(db: Session, user: Optional[Any] = None) -> Dict[str, Any]
             summary["unilearn"] = {"status": "error", "error": str(exc)}
             summary["errors"].append(f"UniLearn: {exc}")
 
-    # --- Teams + Email: ChromaDB + estrazione AI ---
+    # --- UniComms: lecturers' Teams posts and Outlook emails -> ChromaDB + estrazione AI ---
+    teams_details: List[Dict[str, Any]] = []
+    email_details: List[Dict[str, Any]] = []
     try:
-        teams_details = sync_teams(db)
-    except Exception as exc:
+        uc = unicomms_client.sync_messages(db, run_ai=True)
+        for d in uc["ai_details"]:
+            (email_details if d.get("source") == SourceType.EMAIL.value else teams_details).append(d)
+    except unicomms_client.UniCommsError as exc:
         db.rollback()
-        logger.exception("Errore sincronizzazione Teams")
-        teams_details = []
-        summary["errors"].append(f"Teams: {exc}")
-    try:
-        email_details = sync_emails(db)
-    except Exception as exc:
-        db.rollback()
-        logger.exception("Errore sincronizzazione email")
-        email_details = []
-        summary["errors"].append(f"Email: {exc}")
+        summary["errors"].append(f"UniComms: {exc}")
 
     all_details = forum_details + teams_details + email_details
     summary["teams_messages_processed"] = len(teams_details)
@@ -311,6 +295,40 @@ def run_sync_pipeline(db: Session, user: Optional[Any] = None) -> Dict[str, Any]
     return summary
 
 
+def prune_vector_store(db: Session) -> int:
+    """At start-up: messages deleted from the database leave the assistant's index too."""
+    keep = {f"{s.value}:{e}" for s, e in db.execute(select(Announcement.source, Announcement.external_id))}
+    try:
+        gone = [i for i in vector_store.all_ids() if i not in keep]
+        vector_store.delete_documents(gone)
+    except Exception as exc:  # the vector DB never blocks the start
+        logger.warning("ChromaDB non ripulito: %s", exc)
+        return 0
+    if gone:
+        logger.info("ChromaDB: tolti %s avvisi che non esistono più", len(gone))
+    return len(gone)
+
+
+def move_demo_courses(db: Session) -> int:
+    """Existing data: a course still taught by its old demo lecturer goes to the new one (and to their hub account)."""
+    from app.database.models import User   # local import: only needed here
+    moved = 0
+    for code, old, new in moodle_mock.MOVED_COURSES:
+        course = _course_by_code(db, code)
+        if course is None or course.professor != old:
+            continue
+        old_user = course.professor_user
+        if old_user is not None and old_user.full_name != old:
+            continue   # the course belongs to a lecturer who took it in the hub: keep it
+        course.professor = new
+        course.professor_id = db.scalar(select(User.id).where(User.full_name == new))
+        moved += 1
+    if moved:
+        db.flush()
+        logger.info("%s corsi demo passati ai nuovi docenti", moved)
+    return moved
+
+
 def bootstrap_demo_data(db: Session, seed_users: bool = True) -> Dict[str, Any]:
     """
     Avvio dell'app: se il DB è vuoto importa subito i dati *strutturati* di Moodle
@@ -322,6 +340,9 @@ def bootstrap_demo_data(db: Session, seed_users: bool = True) -> Dict[str, Any]:
         sync_moodle_courses(db)   # assignments and events arrive when a student connects UniLearn
         db.commit()
         info["imported"] = True
+    move_demo_courses(db)
+    db.commit()
+    prune_vector_store(db)
     if seed_users:
         info["demo_users_created"] = seed_demo_users(db)
     else:

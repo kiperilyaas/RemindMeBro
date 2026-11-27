@@ -29,13 +29,44 @@ COURSES = [
     # code, name, teacher username, room
     ("2PR515", "Corporate Governance", "chiara.neri", "SB 408"),
     ("2IB468", "Ethics in Finance", "chiara.neri", "SB 410"),
-    ("2MO522", "Financial Strategies in International Business", "chiara.neri", "SB 411"),
-    ("2IB421", "Global ESG and Implications for Sustainable Business", "chiara.neri", "SB 412"),
+    ("2MO522", "Financial Strategies in International Business", "laura.bianchi", "SB 411"),
+    ("2IB421", "Global ESG and Implications for Sustainable Business", "laura.bianchi", "SB 412"),
     ("3SG712", "Growth strategies", "marco.rossi", "SB 413"),
     ("3PA662", "Human Resource Management Seminar", "marco.rossi", "SB 414"),
-    ("3MA674", "International Management", "marco.rossi", "SB 415"),
-    ("3PO643", "Social Entrepreneurship: Innovation and Impact", "marco.rossi", "SB 416"),
+    ("3MA674", "International Management", "giovanni.verdi", "SB 415"),
+    ("3PO643", "Social Entrepreneurship: Innovation and Impact", "paolo.conti", "SB 416"),
 ]
+
+# Until 26 November 2026 Chiara Neri and Marco Rossi taught all eight courses: (code, old teacher, new teacher).
+MOVED_COURSES = [
+    ("2MO522", "chiara.neri", "laura.bianchi"),
+    ("2IB421", "chiara.neri", "laura.bianchi"),
+    ("3MA674", "marco.rossi", "giovanni.verdi"),
+    ("3PO643", "marco.rossi", "paolo.conti"),
+]
+
+
+def move_demo_courses(db: Session) -> int:
+    """Existing data: a course still taught by its old demo teacher goes to the new one (a teacher chosen in /staff is kept)."""
+    moved = 0
+    for code, old, new in MOVED_COURSES:
+        course = db.scalar(select(Course).where(Course.shortname == code))
+        old_u = db.scalar(select(User).where(User.username == old))
+        new_u = db.scalar(select(User).where(User.username == new))
+        if not (course and old_u and new_u):
+            continue
+        teachers = list(db.scalars(select(Enrolment).where(Enrolment.course_id == course.id, Enrolment.role == "editingteacher")))
+        if [t.user_id for t in teachers] != [old_u.id]:
+            continue
+        if db.scalar(select(Enrolment).where(Enrolment.course_id == course.id, Enrolment.user_id == new_u.id)) is None:
+            teachers[0].user_id = new_u.id
+        else:
+            db.delete(teachers[0])
+        moved += 1
+    if moved:
+        db.flush()
+        logger.info("%s demo course(s) moved to their new teachers", moved)
+    return moved
 
 
 def seed_courses(db: Session) -> int:

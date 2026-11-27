@@ -36,6 +36,7 @@ export interface InboxItem {
   id: number; source: Source; course_id: number | null; course_code: string | null; course_name: string | null;
   author: string; created_at: string; subject: string; content: string; ai_summary: string; important: boolean;
   deadline_id: number | null; deadline_due: string | null;
+  personal?: boolean;   // UniComms email sent only to this student
 }
 export interface ScheduleEvent {
   id: number; course_id: number | null; course_code: string | null; course_name: string | null;

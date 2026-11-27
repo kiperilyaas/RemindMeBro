@@ -17,7 +17,7 @@ from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api import schemas
@@ -76,9 +76,15 @@ def visible_events(user: User):
     return or_(Event.user_id.is_(None), Event.user_id == user.id)
 
 
+def visible_announcements(db: Session, user: User):
+    """Shared messages of the student's courses + the UniComms emails sent to this student only (whatever their course)."""
+    return or_(Announcement.user_id == user.id,
+               and_(Announcement.user_id.is_(None), course_filter(db, user, Announcement.course_id)))
+
+
 def _subject_from_content(text: str, limit: int = 80) -> str:
     """Prima frase del messaggio, accorciata: usata come oggetto nella Inbox."""
-    first = re.split(r"(?<=[.!?])\s+", text.strip(), maxsplit=1)[0]
+    first = re.split(r"(?<=[.!?])\s+", text.strip(), maxsplit=1)[0].rstrip(".")
     return first if len(first) <= limit else first[: limit - 1].rstrip() + "…"
 
 
@@ -134,7 +140,7 @@ def list_deadlines(
         .options(selectinload(Deadline.course), selectinload(Deadline.announcement))
         .order_by(Deadline.due_date)
     )
-    stmt = stmt.where(visible_deadlines(user), course_filter(db, user, Deadline.course_id))
+    stmt = stmt.where(or_(Deadline.user_id == user.id, and_(Deadline.user_id.is_(None), course_filter(db, user, Deadline.course_id))))
     if not include_superseded:
         stmt = stmt.where(Deadline.superseded_by_id.is_(None))
     if source:
@@ -179,37 +185,37 @@ def inbox(limit: int = Query(50, ge=1, le=200), db: Session = Depends(get_db), u
     rows = db.scalars(
         select(Announcement)
         .options(selectinload(Announcement.course), selectinload(Announcement.deadlines))
-        .where(course_filter(db, user, Announcement.course_id))
+        .where(visible_announcements(db, user))
         .order_by(Announcement.created_at.desc())
         .limit(limit)
     )
     now = settings.reference_now()
-    items: List[schemas.InboxItem] = []
-    for a in rows:
-        dl = next(iter(sorted(a.deadlines, key=lambda d: d.due_date)), None)
-        if dl:
-            summary = f"AI-detected deadline: {dl.title} — {_fmt_short(dl.due_date)}."
-        else:
-            summary = "No deadline detected. Informational message."
-        recent = (now - a.created_at) <= timedelta(days=2)
-        items.append(
-            schemas.InboxItem(
-                id=a.id,
-                source=a.source,
-                course_id=a.course_id,
-                course_code=a.course.code if a.course else None,
-                course_name=a.course.name if a.course else None,
-                author=a.author,
-                created_at=a.created_at,
-                subject=_subject_from_content(a.content),
-                content=a.content,
-                ai_summary=summary,
-                important=bool(dl) or recent,
-                deadline_id=dl.id if dl else None,
-                deadline_due=dl.due_date if dl else None,
-            )
-        )
-    return items
+    return [_inbox_item(a, now) for a in rows]
+
+
+def _inbox_item(a: Announcement, now: datetime) -> schemas.InboxItem:
+    dl = next(iter(sorted(a.deadlines, key=lambda d: d.due_date)), None)
+    if dl:
+        summary = f"AI-detected deadline: {dl.title} — {_fmt_short(dl.due_date)}."
+    else:
+        summary = "No deadline detected. Informational message."
+    recent = (now - a.created_at) <= timedelta(days=2)
+    return schemas.InboxItem(
+        id=a.id,
+        source=a.source,
+        course_id=a.course_id,
+        course_code=a.course.code if a.course else None,
+        course_name=a.course.name if a.course else None,
+        author=a.author,
+        created_at=a.created_at,
+        subject=_subject_from_content(a.content),
+        content=a.content,
+        ai_summary=summary,
+        important=bool(dl) or recent,
+        deadline_id=dl.id if dl else None,
+        deadline_due=dl.due_date if dl else None,
+        personal=a.user_id is not None,
+    )
 
 
 @router.get("/schedule", response_model=List[schemas.ScheduleEvent], summary="Timetable/events in a date range")
@@ -253,7 +259,7 @@ def schedule(
 def list_announcements(
     limit: int = Query(20, ge=1, le=200), db: Session = Depends(get_db), user: User = Authenticated
 ) -> List[Announcement]:
-    return list(db.scalars(select(Announcement).where(course_filter(db, user, Announcement.course_id)).order_by(Announcement.created_at.desc()).limit(limit)))
+    return list(db.scalars(select(Announcement).where(visible_announcements(db, user)).order_by(Announcement.created_at.desc()).limit(limit)))
 
 
 @router.get("/events", response_model=List[schemas.EventOut], summary="All calendar events")

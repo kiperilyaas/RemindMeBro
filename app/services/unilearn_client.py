@@ -205,11 +205,17 @@ def sync_posts(db: Session, user: User, courses: Optional[List[Dict[str, Any]]] 
     if not by_id:
         return out
     forums = call(db, user, "mod_forum_get_forums_by_courses", courseids=list(by_id))
+    read_courses: set = set()   # courses whose announcement forum was read in full
+    seen: set = set()
     for f in forums:
         if f.get("type") != "news":
             continue
         shortname = by_id.get(f["course"], {}).get("shortname")
-        for d in call(db, user, "mod_forum_get_forum_discussions", forumid=f["id"]).get("discussions", []):
+        discussions = call(db, user, "mod_forum_get_forum_discussions", forumid=f["id"]).get("discussions", [])
+        if shortname:
+            read_courses.add(shortname)
+        for d in discussions:
+            seen.add(f"unilearn-post-{d['id']}")
             text = _strip_html(d.get("message", ""))
             subject = d.get("subject") or ""
             content = text if text.lower().startswith(subject.lower()) else f"{subject}. {text}"
@@ -226,6 +232,18 @@ def sync_posts(db: Session, user: User, courses: Optional[List[Dict[str, Any]]] 
                                                  content=content, created_at=kwargs["created_at"], course=_course(db, shortname) if shortname else None)
             db.commit()
             out["posts"] += 1
+    # a post deleted in UniLearn leaves the Inbox too (with the deadlines the AI had found in it)
+    if read_courses:
+        gone = db.scalars(select(Announcement).join(Course, Announcement.course_id == Course.id).where(
+            Announcement.source == SourceType.MOODLE, Announcement.external_id.like("unilearn-post-%"),
+            Course.code.in_(read_courses), Announcement.external_id.not_in(seen)))
+        removed = 0
+        for ann in list(gone):
+            sync_service.delete_announcement(db, ann)
+            removed += 1
+        if removed:
+            db.commit()
+        out["removed"] = removed
     return out
 
 

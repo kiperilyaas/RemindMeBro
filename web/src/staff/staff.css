@@ -174,3 +174,9 @@
 .st-tick input{width:16px;height:16px;margin:0}
 .st-mark.img{background:none;object-fit:contain;padding:0}
 .st-warn{margin:0;padding:10px 12px;border-radius:10px;background:var(--warn-soft);color:var(--warn);font-size:13px;font-weight:550}
+
+/* UniComms: sent messages */
+.uc-row{display:grid;gap:6px;width:100%;text-align:left;background:none;border:0;padding:0;cursor:pointer;color:inherit}
+.uc-row .t{font-weight:550}.uc-row .s{font-size:13px;color:var(--muted)}
+.uc-body{margin-top:10px;display:grid;gap:10px;justify-items:start}
+.uc-body p{margin:0;white-space:pre-wrap;line-height:1.55;max-width:70ch}

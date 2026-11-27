@@ -17,7 +17,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from unilearn import staff, web, ws
 from unilearn.config import settings
 from unilearn.db import init_db, session_scope
-from unilearn.seed import rotate_staff_passwords, seed
+from unilearn.seed import move_demo_courses, rotate_staff_passwords, seed
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
 logger = logging.getLogger("unilearn")
@@ -29,6 +29,7 @@ async def lifespan(app: FastAPI):
         with session_scope() as db:
             seed(db)
     with session_scope() as db:
+        move_demo_courses(db)
         rotate_staff_passwords(db)
     settings.provisioning_key()   # shared with the hub (same data folder) to create student accounts
     logger.info("UniLearn ready at %s", settings.public_url())

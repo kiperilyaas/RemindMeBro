@@ -29,6 +29,7 @@ ARCH="$(uname -m)"
 BACKEND_PID=""
 UNISIS_PID=""
 UNILEARN_PID=""
+UNICOMMS_PID=""
 OLLAMA_PID=""
 NGROK_PID=""
 
@@ -53,6 +54,9 @@ cleanup() {
   fi
   if [ -n "$UNILEARN_PID" ] && kill -0 "$UNILEARN_PID" 2>/dev/null; then
     echo "Stopping UniLearn..."; kill "$UNILEARN_PID" 2>/dev/null; wait "$UNILEARN_PID" 2>/dev/null
+  fi
+  if [ -n "$UNICOMMS_PID" ] && kill -0 "$UNICOMMS_PID" 2>/dev/null; then
+    echo "Stopping UniComms..."; kill "$UNICOMMS_PID" 2>/dev/null; wait "$UNICOMMS_PID" 2>/dev/null
   fi
   if [ -n "$UNISIS_PID" ] && kill -0 "$UNISIS_PID" 2>/dev/null; then
     echo "Stopping UniSIS..."; kill "$UNISIS_PID" 2>/dev/null; wait "$UNISIS_PID" 2>/dev/null
@@ -286,7 +290,7 @@ else
 fi
 
 # ---------- 5. Start the app ----------
-step "5/5  Starting UniSIS, UniLearn and Remind Me Bro"
+step "5/5  Starting UniSIS, UniLearn, UniComms and Remind Me Bro"
 free_port() { # first free port in [$1, $2]
   for p in $(seq "$1" "$2"); do
     if "$VENV/bin/python" -c "import socket; s=socket.socket(); s.bind(('127.0.0.1', $p)); s.close()" 2>/dev/null; then echo "$p"; return 0; fi
@@ -324,6 +328,20 @@ done
 http_ok "$UNILEARN_URL/login" || { tail -n 25 "$LOGS/unilearn.log"; die "UniLearn did not start"; }
 ok "UniLearn running at $UNILEARN_URL"
 export UNILEARN_URL
+
+# UniComms: the university's mail (like Outlook) and chat (like Teams): lecturers write, the hub reads
+CPORT="$(free_port 8300 8310)" || die "No free port between 8300 and 8310 for UniComms"
+UNICOMMS_URL="http://127.0.0.1:$CPORT"
+"$VENV/bin/python" -m uvicorn unicomms.main:app --host 127.0.0.1 --port "$CPORT" > "$LOGS/unicomms.log" 2>&1 &
+UNICOMMS_PID=$!
+for _ in $(seq 1 60); do
+  http_ok "$UNICOMMS_URL/api/v1/health" && break
+  kill -0 "$UNICOMMS_PID" 2>/dev/null || break
+  sleep 0.5
+done
+http_ok "$UNICOMMS_URL/api/v1/health" || { tail -n 25 "$LOGS/unicomms.log"; die "UniComms did not start"; }
+ok "UniComms running at $UNICOMMS_URL"
+export UNICOMMS_URL
 
 
 "$VENV/bin/python" -m uvicorn app.main:app --host 127.0.0.1 --port "$PORT" > "$LOGS/backend.log" 2>&1 &
@@ -363,6 +381,9 @@ ${G}${B}Remind Me Bro is running${N}  →  $URL   (previous interface: ${URL}cla
   UniLearn (Moodle-compatible LMS)     →  $UNILEARN_URL
     Teaching        marco.rossi, laura.bianchi, ...  →  $UNILEARN_URL/staff  (create courses)
     Admin           admin                        (also Web services: live API call log and tokens)
+
+  UniComms (mail like Outlook + Teams) →  $UNICOMMS_URL/staff  (only on this computer, no password)
+    Lecturers send emails and Teams posts to a course or to one student: they reach the Inbox by themselves
 
   Everything starts empty and today's date is used. Create courses in UniLearn /staff and UniSIS /staff
   (same code in both), then as Giulia: Connect → UniLearn and UniSIS, and Sync. Your data is kept.

@@ -8,7 +8,7 @@ import { useSession } from "../../state/session";
 import { useStudent } from "../../state/student";
 
 type Filter = "important" | "all" | Source;
-const FILTERS: [Filter, string][] = [["important", "Important"], ["all", "All"], ["teams", "Teams"], ["moodle", "UniLearn"], ["email", "Email"]];
+const FILTERS: [Filter, string][] = [["important", "Important"], ["all", "All"], ["teams", "Teams"], ["moodle", "UniLearn"], ["email", "Outlook"]];
 
 function Avatar({ m }: { m: InboxItem }) {
   const letter = m.author.replace(/^Prof\.?\s+/i, "").trim()[0] ?? "?";
@@ -34,7 +34,7 @@ export function Inbox() {
 
   return (
     <>
-      <PageHeader eyebrow="Teams · UniLearn · Email" title="Inbox"
+      <PageHeader eyebrow="Teams · UniLearn · Outlook" title="Inbox"
         actions={unreadHere.length > 0 && <button className="btn" onClick={() => markRead(unreadHere.map((m) => m.id))}><Icon name="check" size={16} /> Mark all as read</button>} />
       <div className="seg scroll" role="tablist" aria-label="Filter messages">
         {FILTERS.map(([f, label]) => (
@@ -53,7 +53,7 @@ export function Inbox() {
       )}
       {loading ? <Skeleton lines={5} /> : list.length === 0 ? (
         <Empty icon="inbox" title={inbox.length ? "No messages here" : "No messages yet"}>
-          {inbox.length ? "Try another filter." : "Press Sync: Remind Me Bro reads Teams, UniLearn announcements and email for you."}
+          {inbox.length ? "Try another filter." : "Your lecturers' UniLearn announcements, Outlook emails and Teams messages arrive here by themselves."}
         </Empty>
       ) : (
         <ul className="mlist">
@@ -77,7 +77,7 @@ export function Inbox() {
                   <div className="mbody" id={`msg-${m.id}`}>
                     <p>{m.content}</p>
                     <div className={`ai-sum ${m.deadline_id ? "hit" : ""}`}><Icon name="sparkle" size={16} /><span><b>AI summary</b> {m.ai_summary}</span></div>
-                    <p className="mfoot">{m.course_name ?? "University"} · {fmtDay(at)} {fmtTime(at)}</p>
+                    <p className="mfoot">{m.course_name ?? "University"} · {fmtDay(at)} {fmtTime(at)}{m.personal && " · sent only to you"}</p>
                   </div>
                 )}
               </li>

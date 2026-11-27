@@ -119,10 +119,12 @@ export function Stat({ label, value }: { label: string; value: ReactNode }) {
 export interface DemoAccount { id?: number; username: string; fullname: string; role: string }
 export interface DemoAccounts { password: string | null; passwords_file?: string; local?: boolean; accounts: DemoAccount[] }
 
-export function StaffLogin({ system, intro, demo, onLogin, onQuick }: {
+export function StaffLogin({ system, intro, demo, onLogin, onQuick, noPassword = false }: {
   system: SystemInfo; intro: string; demo: DemoAccounts | null; onLogin: (u: string, p: string) => Promise<void>;
   /** one-click sign-in, offered only on the computer that runs the demo (demo.local) */
   onQuick?: (uid: number) => Promise<void>;
+  /** no username/password form: only the account list (UniComms) */
+  noPassword?: boolean;
 }) {
   const [u, setU] = useState("");
   const [p, setP] = useState("");
@@ -145,16 +147,16 @@ export function StaffLogin({ system, intro, demo, onLogin, onQuick }: {
           <div className="st-brand">{system.logo ? <img className="st-mark img" src={system.logo} alt="" aria-hidden /> : <span className="st-mark" aria-hidden>{system.mark}</span>}{system.name}<small>{system.area}</small></div>
           <h1>Sign in</h1>
           <p>{intro}</p>
-          <form className="st-form" onSubmit={submit}>
+          {noPassword ? err && <p className="st-err" role="alert">{err}</p> : <form className="st-form" onSubmit={submit}>
             <label className="st-field">Username<input value={u} onChange={(e) => setU(e.target.value)} autoComplete="username" required /></label>
             <label className="st-field">Password<input type="password" value={p} onChange={(e) => setP(e.target.value)} autoComplete="current-password" required /></label>
             {err && <p className="st-err" role="alert">{err}</p>}
             <button className="st-btn primary lg block" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
-          </form>
+          </form>}
           {demo && demo.accounts.length > 0 && (
             <div className="st-demo">
               {quick
-                ? <p>Quick sign-in · only on this computer, no password (for debugging)</p>
+                ? <p>{noPassword ? "Who writes?" : "Quick sign-in · only on this computer, no password (for debugging)"}</p>
                 : <p>Staff accounts — passwords in <span className="st-code">{demo.passwords_file ?? "data/STAFF-PASSWORDS.txt"}</span> on this computer</p>}
               <div className="st-demo-grid">
                 {demo.accounts.map((a) => (

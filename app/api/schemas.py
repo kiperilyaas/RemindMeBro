@@ -120,6 +120,7 @@ class InboxItem(BaseModel):
     important: bool
     deadline_id: Optional[int] = None
     deadline_due: Optional[datetime] = None
+    personal: bool = False   # UniComms email sent to this student only (not to the whole course)
 
 
 class ScheduleEvent(BaseModel):

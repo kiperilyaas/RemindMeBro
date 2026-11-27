@@ -10,12 +10,20 @@ from typing import Any, Dict, List
 COURSES = [
     ("2PR515", "Corporate Governance", "Prof. Chiara Neri"),
     ("2IB468", "Ethics in Finance", "Prof. Chiara Neri"),
-    ("2MO522", "Financial Strategies in International Business", "Prof. Chiara Neri"),
-    ("2IB421", "Global ESG and Implications for Sustainable Business", "Prof. Chiara Neri"),
+    ("2MO522", "Financial Strategies in International Business", "Prof. Laura Bianchi"),
+    ("2IB421", "Global ESG and Implications for Sustainable Business", "Prof. Laura Bianchi"),
     ("3SG712", "Growth strategies", "Prof. Marco Rossi"),
     ("3PA662", "Human Resource Management Seminar", "Prof. Marco Rossi"),
-    ("3MA674", "International Management", "Prof. Marco Rossi"),
-    ("3PO643", "Social Entrepreneurship: Innovation and Impact", "Prof. Marco Rossi"),
+    ("3MA674", "International Management", "Prof. Giovanni Verdi"),
+    ("3PO643", "Social Entrepreneurship: Innovation and Impact", "Prof. Paolo Conti"),
+]
+
+# Until 26 November 2026 Chiara Neri and Marco Rossi taught all eight courses: (code, old lecturer, new lecturer).
+MOVED_COURSES = [
+    ("2MO522", "Prof. Chiara Neri", "Prof. Laura Bianchi"),
+    ("2IB421", "Prof. Chiara Neri", "Prof. Laura Bianchi"),
+    ("3MA674", "Prof. Marco Rossi", "Prof. Giovanni Verdi"),
+    ("3PO643", "Prof. Marco Rossi", "Prof. Paolo Conti"),
 ]
 
 
