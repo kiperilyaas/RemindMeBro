@@ -5,7 +5,7 @@ import { SessionProvider } from "../state/session";
 import { StudentProvider } from "../state/student";
 import { ToastProvider } from "../state/toast";
 import { FoundDatesProvider } from "../state/foundDates";
-import { FindDatesButton, FoundDates } from "../views/student/FoundDates";
+import { FindExamsButton, FoundDates } from "../views/student/FoundDates";
 
 const json = (body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } }));
 const found = (id: number, title: string, extra = {}) => ({
@@ -33,10 +33,10 @@ describe("Exam dates in course files", () => {
       if (url.endsWith("/found-dates")) return json({ status: { state }, pending: state === "idle" ? [] : pending, accepted: 0 });
       return json([]);
     });
-    render(<ToastProvider><SessionProvider><StudentProvider><FoundDatesProvider><FindDatesButton onOpen={() => undefined} /><FoundDates /></FoundDatesProvider></StudentProvider></SessionProvider></ToastProvider>);
-    // nothing to review yet: no panel on the Timeline, only the button in the top bar
+    render(<ToastProvider><SessionProvider><StudentProvider><FoundDatesProvider><FindExamsButton /><FoundDates /></FoundDatesProvider></StudentProvider></SessionProvider></ToastProvider>);
+    // nothing to review yet: no panel on the Timeline, only the small button above the calendar
     expect(screen.queryByText(/found in your course files/)).toBeNull();
-    fireEvent.click(await screen.findByRole("button", { name: "Find exam dates in your course files" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Find exams/ }));
     expect(await screen.findByText("2 dates found in your course files", {}, { timeout: 4000 })).toBeInTheDocument();
     // the sentence of the file, the course by name, the missing year and time said plainly
     expect(screen.getAllByText("“13 16.12 FINAL EXAM Doc. Pichanič”")[0]).toBeInTheDocument();
@@ -44,7 +44,7 @@ describe("Exam dates in course files", () => {
     expect(screen.getAllByText(/time not stated/)[0]).toBeInTheDocument();
     expect(screen.getByText(/already has “Exam: Written exam”/)).toBeInTheDocument();
     expect(calls).not.toContain("POST /found-dates/1/accept");      // nothing reaches the calendar by itself
-    expect(screen.getByRole("button", { name: "2 exam dates to review" })).toBeInTheDocument();   // the count in the top bar
+    expect(screen.getByRole("button", { name: /2 to review/ })).toBeInTheDocument();   // the button says how many
     fireEvent.click(screen.getAllByRole("button", { name: /Add to calendar/ })[0]);
     expect(await screen.findByText("Added to your calendar")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Not right" }));
@@ -52,6 +52,6 @@ describe("Exam dates in course files", () => {
     expect(calls).toContain("POST /found-dates/1/accept");
     // all reviewed: the panel leaves the Timeline, the button is back to "find"
     await waitFor(() => expect(screen.queryByText(/found in your course files/)).toBeNull());
-    expect(screen.getByRole("button", { name: "Find exam dates in your course files" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Find exams/ })).toBeInTheDocument();
   });
 });

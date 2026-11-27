@@ -537,8 +537,6 @@ pre{background:var(--surface-2);border-radius:12px;padding:12px;overflow:auto;fo
 .found-flag{margin:0;font-size:12.5px;color:var(--muted)}.found-flag.ok{color:var(--ok,#2F855A);display:flex;gap:6px;align-items:center}
 .link-btn{background:none;border:0;padding:0 0 0 6px;color:var(--acc);font:inherit;font-weight:600;cursor:pointer}
 .link-btn:hover{text-decoration:underline}
-/* "Find exam dates" in the top bar */
-.find-btn{position:relative}
-.find-btn.busy svg{animation:find-pulse 1.1s ease-in-out infinite}@keyframes find-pulse{50%{opacity:.35;transform:scale(.85)}}
-.find-n{position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--violet);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
-@media (prefers-reduced-motion:reduce){.find-btn.busy svg{animation:none}}
+/* "Find exams" above the calendar */
+.find-exams{flex:none}
+@media (max-width:520px){.cal-bar{gap:8px}.cal-bar .btn{padding-left:10px;padding-right:10px;font-size:14px;gap:6px}}

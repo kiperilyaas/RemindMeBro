@@ -1,5 +1,5 @@
 // "Find exam dates" (Free plan): searches the course files (syllabus, first-lesson slides) for exam dates.
-// The button sits in the top bar (FindDatesButton); the Timeline shows the progress and the dates to review (FoundDates).
+// The button sits above the calendar (FindExamsButton); the Timeline shows the progress and the dates to review (FoundDates).
 // Found dates are only proposals: each one shows the sentence of the file, and reaches the calendar only with "Add to calendar".
 import type { FoundDate } from "../../api/types";
 import { Icon } from "../../components/Icon";
@@ -31,15 +31,16 @@ function FoundCard({ f, busy, onAccept, onReject }: { f: FoundDate; busy: boolea
   );
 }
 
-/** Top-bar button: starts the search (and opens the Timeline); shows how many dates wait for review. */
-export function FindDatesButton({ onOpen }: { onOpen: () => void }) {
+/** Small button above the calendar: starts the search; while dates wait for review it says how many and scrolls to them. */
+export function FindExamsButton() {
   const { running, pending, start } = useFoundDates();
-  const label = running ? "Searching your course files for exam dates" : pending.length ? `${pending.length} exam dates to review` : "Find exam dates in your course files";
+  const open = () => document.getElementById("found-dates")?.scrollIntoView({ behavior: "smooth", block: "start" });
   return (
-    <button className={`icon-btn find-btn ${running ? "busy" : ""}`} aria-label={label} title={label}
-      onClick={() => { onOpen(); if (!running && !pending.length) void start(); }}>
-      <Icon name="search" />
-      {pending.length > 0 && !running && <span className="find-n" aria-hidden>{pending.length}</span>}
+    <button className="btn find-exams" disabled={running} title="Find exam, test, presentation and submission dates in your course files"
+      onClick={() => (pending.length ? open() : void start())}>
+      {running ? <><Spinner label="Searching" /> Searching…</>
+        : pending.length ? <><Icon name="search" size={16} /> {pending.length} to review</>
+          : <><Icon name="search" size={16} /> Find exams</>}
     </button>
   );
 }
@@ -49,7 +50,7 @@ export function FoundDates() {
   const { status, pending, running, busyId, start, decide } = useFoundDates();
   if (!running && pending.length === 0) return null;
   return (
-    <section className="found" aria-label="Exam dates in your course files">
+    <section className="found" id="found-dates" aria-label="Exam dates in your course files">
       <div className="found-head">
         {running ? <Spinner label="Searching" /> : <Icon name="search" />}
         <div>

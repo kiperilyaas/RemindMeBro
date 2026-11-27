@@ -16,7 +16,6 @@ import { Connections } from "./views/student/Connections";
 import { Inbox } from "./views/student/Inbox";
 import { Semester } from "./views/student/Semester";
 import { Studies } from "./views/student/Studies";
-import { FindDatesButton } from "./views/student/FoundDates";
 import { Timeline } from "./views/student/Timeline";
 
 const STUDENT_PATHS = ["", "inbox", "studies", "semester", "ai", "connections", "account"];
@@ -35,10 +34,7 @@ function StudentApp({ route, navigate, clearParams }: { route: Route; navigate: 
   ];
   return (
     <Shell nav={nav} current={path} onNavigate={navigate}
-      actions={<>
-        <FindDatesButton onOpen={() => navigate("")} />
-        <button className={`icon-btn sync ${syncing ? "spin" : ""}`} onClick={() => void runSync()} disabled={syncing} aria-label={syncing ? "Syncing" : "Sync all sources"} title="Sync all sources"><Icon name="sync" /></button>
-      </>}
+      actions={<button className={`icon-btn sync ${syncing ? "spin" : ""}`} onClick={() => void runSync()} disabled={syncing} aria-label={syncing ? "Syncing" : "Sync all sources"} title="Sync all sources"><Icon name="sync" /></button>}
       fab={path !== "ai" && <button className="fab" onClick={() => navigate("ai")} aria-label="Open Ask Bro"><Icon name="sparkle" /></button>}>
       {path === "" && <Timeline onNavigate={navigate} />}
       {path === "inbox" && <Inbox />}
