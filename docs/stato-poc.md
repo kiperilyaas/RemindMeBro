@@ -21,18 +21,10 @@ Regola: dopo ogni modifica (codice, rami, decisioni) questo documento va aggiorn
   - `make-zip.sh` con il nome del ramo nello zip.
 - `f1891e7` (25 novembre): PR #2 `feature/calendar` unita da Illia. Calendario della proposta A nella Timeline dello studente. `web/src/views/student/Calendar.tsx`: Agenda (oggi con linea dell'ora, poi 21 giorni, solo quelli con qualcosa), Week (frecce, settimana ISO, striscia di 7 giorni con pallini, tocco = scorre al giorno), Month (griglia 6 settimane, pallini lezione per corso / scadenza / esame, legenda, giorno scelto sotto). Tasto Today, filtro corsi, Plan my week, Mark as done in tutte le viste; vista scelta salvata nel browser; le scadenze in alto aprono il mese sul giorno. Eventi caricati dall'inizio del mese. Filtri e scadenze in alto mostrano il nome del corso.
 
-## Stato delle PR (26 novembre, sera)
-- Unite da Illia in `main`: #3 `feature/smart-notes`, #4 `feature/lesson-chat`, #5 `feature/notes-on-demand`, #6 `feature/inbox-new`, #7 `feature/better-answers`, #8 `feature/quick-login`, #9 `fix/db-locked` (`main` = `db81b84`).
-- Aperte, una catena (ognuna nasce dalla precedente), da unire in quest'ordine:
-  - #10 `fix/notes-timeout` (`c981d44`)
-  - #11 `fix/inbox-course-names` (`54e13f2`)
-  - #12 `feature/notes-stop` (`5b73702`)
-  - #13 `chore/claude-code` (`1d6fb32`): `CLAUDE.md` e questo documento in `docs/`
-  - `feature/ai-esterna` (nato da `feature/orario-vse`): AI esterna (Gemini) compatibile con OpenAI, Ollama come riserva.
-  - `feature/orario-vse` (nato da `feature/outlook-teams`): orario settimanale della foto di InSIS per gli otto corsi.
-  - `feature/outlook-teams` (nato da `chore/claude-code`): Inbox svuotata, corsi divisi tra i cinque docenti, servizio UniComms per Outlook e Teams.
-- 27 novembre: Illia ha spinto `feature/outlook-teams`, `feature/orario-vse` e `feature/ai-esterna` su GitHub (con un token al posto della password: GitHub non accetta la password dell'account per `git push`). Le loro PR sono da aprire dal sito, in quest'ordine, dopo #10–#13.
-- Tutte verso `main`. Una PR della catena mostra anche i commit delle precedenti finché quelle non sono unite.
+## Stato delle PR (27 novembre)
+- Tutte unite in `main` da Illia: dalla #1 alla #16 (#14 `feature/outlook-teams`, #15 `feature/orario-vse`, #16 `feature/ai-esterna`; `main` = `c749258`). Nessun ramo aperto.
+- Su questo computer ora `gh` è installato e collegato all'account di Illia (`gh auth login`) e git ha le credenziali salvate: Claude Code può fare push e aprire le PR da solo.
+- Prossimo ramo: nasce da `main` aggiornato (`git pull`), non più a catena.
 
 ## AI esterna: Gemini e qualsiasi API compatibile con OpenAI (26 novembre, ramo `feature/ai-esterna`)
 - Richiesta di Illia: usare l'API di Gemini e poter cambiare indirizzo in modo semplice. Prima tutta l'AI era Ollama + llama3.2 sul computer (lento).
