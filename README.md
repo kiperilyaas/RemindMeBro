@@ -15,13 +15,11 @@ Prototipo (PoC) per i corsi della VŠE di Praga · Python · FastAPI · React ·
 
 ## Cosa fa
 
-| | |
-|---|---|
-| 📅 **Timeline** | Calendario unico (Agenda, Week, Month) con lezioni, scadenze ed esami di tutti i sistemi dell'università. *Plan my week* propone i blocchi di studio. |
-| 🔎 **Find exams** *(gratis)* | Legge syllabus e slide dei corsi e trova esami, midterm, test, presentazioni e consegne. Ogni data mostra la frase del file e la pagina; va nel calendario solo se lo studente la conferma. Meglio nessuna data che una sbagliata. |
-| 📥 **Inbox** | Avvisi di UniLearn, email (Outlook) e post Teams dei docenti in un posto solo. L'AI segnala le scadenze scritte nel testo. I messaggi arrivano da soli entro mezzo minuto. |
-| 🎓 **Studies** | Iscrizione ai corsi e agli appelli, voti con la scala ceca (1–4, 5 = fail), crediti. |
-| ✨ **AI** *(Premium)* | **Ask Bro**: chat sulle proprie scadenze e lezioni. **Smart Notes**: appunti dalle slide e dalle registrazioni, e una chat che risponde solo con il materiale del corso, citando le pagine. |
+- 📅 **Timeline**: calendario unico (Agenda, Week, Month) con lezioni, scadenze ed esami di tutti i sistemi dell'università. *Plan my week* propone i blocchi di studio.
+- 🔎 **Find exams** *(gratis)*: legge syllabus e slide dei corsi e trova esami, midterm, test, presentazioni e consegne. Ogni data mostra la frase del file e la pagina, e va nel calendario solo se lo studente la conferma. Meglio nessuna data che una sbagliata.
+- 📥 **Inbox**: avvisi di UniLearn, email (Outlook) e post Teams dei docenti in un posto solo. L'AI segnala le scadenze scritte nel testo; i messaggi arrivano da soli entro mezzo minuto.
+- 🎓 **Studies**: iscrizione ai corsi e agli appelli, voti con la scala ceca (1–4, 5 = fail), crediti.
+- ✨ **AI** *(Premium)*: **Ask Bro**, una chat sulle proprie scadenze e lezioni; **Smart Notes**, appunti dalle slide e dalle registrazioni e una chat che risponde solo con il materiale del corso, citando le pagine.
 
 ## Prova la demo
 
@@ -80,12 +78,10 @@ RemindMeBro/
 
 ## Documentazione
 
-| | |
-|---|---|
-| [`docs/architettura.md`](docs/architettura.md) | come sono fatti e collegati i servizi, le scelte tecniche |
-| [`docs/sviluppo.md`](docs/sviluppo.md) | avvio a mano, test, build, configurazione, API, problemi comuni |
-| [`docs/stato-poc.md`](docs/stato-poc.md) | a che punto siamo: funzioni, decisioni, storia delle modifiche |
-| [`web/README.md`](web/README.md) · [`unisis/README.md`](unisis/README.md) · [`unilearn/README.md`](unilearn/README.md) | dettagli di interfaccia, UniSIS e UniLearn |
+- [`docs/architettura.md`](docs/architettura.md): come sono fatti e collegati i servizi, le scelte tecniche
+- [`docs/sviluppo.md`](docs/sviluppo.md): avvio a mano, test, build, configurazione, API, problemi comuni
+- [`docs/stato-poc.md`](docs/stato-poc.md): a che punto siamo, decisioni, storia delle modifiche
+- [`web/README.md`](web/README.md) · [`unisis/README.md`](unisis/README.md) · [`unilearn/README.md`](unilearn/README.md): dettagli di interfaccia, UniSIS e UniLearn
 
 ---
 
