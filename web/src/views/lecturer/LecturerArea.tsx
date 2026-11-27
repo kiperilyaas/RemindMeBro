@@ -14,7 +14,7 @@ const SYSTEM: SystemInfo = { name: "Remind Me Bro", area: "Lecturers", mark: "R"
 const CHANNELS: Source[] = ["teams", "moodle", "email"];
 const STATUS_TEXT: Record<PublishResult["status"], [string, "ok" | "info" | "warn"]> = {
   deadline_extracted: ["Deadline found", "ok"], no_deadline: ["No deadline in this message", "info"],
-  llm_unavailable: ["Local AI not running", "warn"], parsing_error: ["AI answer unreadable", "warn"],
+  llm_unavailable: ["AI not available", "warn"], parsing_error: ["AI answer unreadable", "warn"],
 };
 
 function ResultCard({ r }: { r: PublishResult }) {
@@ -58,7 +58,7 @@ function Courses({ go }: { go: (p: string) => void }) {
   };
   return (
     <>
-      <PageHead title="Your courses" intro="Post announcements in plain words: the local AI turns dates into deadlines on your students' timeline."
+      <PageHead title="Your courses" intro="Post announcements in plain words: the AI turns dates into deadlines on your students' timeline."
         actions={<button className="st-btn primary" onClick={() => go("announce")}>Post an announcement</button>} />
       <div className="st-grid st-cols-3" style={{ marginBottom: 32 }}>
         <Stat label="Courses" value={courses.length} />
@@ -119,7 +119,7 @@ function Announce({ preset }: { preset: number | null }) {
   };
   return (
     <>
-      <PageHead title="Post an announcement" intro="Write as you would in a Teams channel. The local AI reads it and, if there is a date, adds a deadline for your students." />
+      <PageHead title="Post an announcement" intro="Write as you would in a Teams channel. The AI reads it and, if there is a date, adds a deadline for your students." />
       <div className="st-split">
         <form className="st-card st-pad st-form" onSubmit={submit}>
           <label className="st-field">Course<select value={courseId ?? ""} onChange={(e) => setCourseId(Number(e.target.value))}>{courses.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>

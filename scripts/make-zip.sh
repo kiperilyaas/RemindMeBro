@@ -16,7 +16,7 @@ PY="$(command -v python3 || true)"
 "$PY" - "$HERE" "$OUT_DIR/$NAME" <<'PYEOF'
 import os, stat, sys, zipfile, datetime
 root, out = sys.argv[1], sys.argv[2]
-INCLUDE = ["README.md", "START-HERE.txt", "requirements.txt", "requirements-whisper.txt", "app", "frontend", "scripts", "unilearn", "unisis", "unicomms", "web"]
+INCLUDE = ["README.md", "START-HERE.txt", "ai.env.example", "requirements.txt", "requirements-whisper.txt", "app", "frontend", "scripts", "unilearn", "unisis", "unicomms", "web"]
 INCLUDE += sorted(f for f in os.listdir(root) if f.startswith("run-"))
 SKIP_DIRS = {"__pycache__", "node_modules", ".runtime", "data", "dist", ".git", "_to_delete"}
 n = 0

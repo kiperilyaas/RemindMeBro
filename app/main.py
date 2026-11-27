@@ -55,7 +55,12 @@ async def lifespan(app: FastAPI):
     from app.services import live_sync
     live_sync.start()   # lecturers' announcements reach the Inbox within half a minute
     logger.info("Database pronto: %s", settings.DATABASE_URL)
-    logger.info("LLM: %s @ %s | data di riferimento: %s", settings.OLLAMA_MODEL, settings.OLLAMA_HOST, settings.reference_now().date())
+    if settings.ai_remote:
+        logger.info("AI: %s (%s, veloce %s) @ %s | riserva Ollama: %s | data di riferimento: %s", settings.AI_LABEL, settings.AI_MODEL,
+                    settings.AI_MODEL_FAST, settings.AI_BASE_URL, settings.OLLAMA_MODEL if settings.AI_FALLBACK_OLLAMA else "no",
+                    settings.reference_now().date())
+    else:
+        logger.info("LLM: %s @ %s | data di riferimento: %s", settings.OLLAMA_MODEL, settings.OLLAMA_HOST, settings.reference_now().date())
     yield
 
 

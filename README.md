@@ -207,6 +207,8 @@ Lo script (`scripts/run.sh` per Mac/Linux, `scripts/run.ps1` per Windows):
 
 Chiudendo la finestra del terminale si fermano hub, UniSIS, UniLearn, UniComms e Ollama (se l'ha avviato lo script).
 Opzioni: `RMB_MODEL=llama3.2:1b` (modello più leggero), `RMB_NO_AI=1` (senza AI), `RMB_NO_BROWSER=1`.
+
+**AI esterna (Gemini o altro).** La prima volta il Run & Go chiede la chiave di Gemini e scrive `data/ai.env` (mai in git né nello zip). Con l'AI esterna llama3.2 non si scarica; Ollama, se c'è già, resta come riserva quando manca internet o finisce la quota. Per cambiare servizio basta modificare `data/ai.env` (vedi `ai.env.example`: Gemini, OpenRouter, OmniRoute, OpenAI o un indirizzo qualsiasi compatibile con OpenAI) e riavviare. Controllo veloce: `.runtime/venv/bin/python -m app.services.ai_remote`.
 Istruzioni per l'utente finale (IT/EN) in `START-HERE.txt`.
 
 **Link pubblico per gli amici:** `run-share-mac.command` / `run-share-windows.bat` / `run-share-linux.sh`
@@ -448,6 +450,11 @@ academic_hub_backend/
 
 | Variabile | Default | Note |
 |---|---|---|
+| `AI_PROVIDER` | `ollama` | `gemini`, `openrouter`, `omniroute`, `openai`, `custom` o `ollama` (solo AI locale). Si mette in `data/ai.env`, che il Run & Go crea la prima volta chiedendo la chiave di Gemini; esempio commentato in `ai.env.example` |
+| `AI_API_KEY` | — | chiave del servizio (Gemini: https://aistudio.google.com/apikey) |
+| `AI_MODEL`, `AI_MODEL_FAST` | Gemini: `gemini-3.8-flash`, `gemini-3.5-flash-lite` | modello principale (Ask Bro, Smart Notes) e veloce (scadenze nei messaggi) |
+| `AI_BASE_URL` | dal preset | qualsiasi indirizzo compatibile con OpenAI (`.../v1`), es. OmniRoute `http://127.0.0.1:20128/v1` |
+| `AI_FALLBACK_OLLAMA` | `true` | se l'AI esterna non risponde si usa Ollama (se acceso e con il modello) |
 | `OLLAMA_HOST` | `http://127.0.0.1:11434` | |
 | `OLLAMA_MODEL` | `llama3.2` | |
 | `DEMO_REFERENCE_DATE` | `now` | orologio del computer; una data ISO per fissarla (vale anche per UniLearn e UniSIS) |

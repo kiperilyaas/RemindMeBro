@@ -16,7 +16,8 @@ from app.services.llm_extractor import LLMUnavailableError, chat_long, parse_llm
 
 logger = logging.getLogger(__name__)
 
-CHUNK_CHARS = 9000
+CHUNK_CHARS = 9000            # local AI (llama3.2 with NOTES_NUM_CTX 8192)
+REMOTE_CHUNK_CHARS = 100000   # external AI (Gemini reads far longer texts): most lessons fit in one part
 MAX_CHUNKS = 12
 KIND_LABEL = {"pdf": "PDF", "slides": "slides", "document": "document", "text": "text", "audio": "audio recording", "video": "video recording"}
 
@@ -49,17 +50,27 @@ PART_FORMAT = (
 
 
 def _ask(prompt: str, should_stop: Optional[Callable[[], bool]] = None) -> Dict[str, Any]:
-    raw = chat_long([{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}],
-                    {"temperature": 0.2, "num_ctx": settings.NOTES_NUM_CTX}, json_mode=True, should_stop=should_stop)
-    try:
-        data = parse_llm_json(raw)
-    except Exception as exc:
-        raise NotesError("The AI answer could not be read. Try Regenerate.") from exc
-    return data if isinstance(data, dict) else {}
+    """Asks for the notes as JSON. An answer that is not valid JSON (cut off, broken) is asked again once."""
+    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}]
+    for attempt in (1, 2):
+        raw = chat_long(messages, {"temperature": 0.2, "num_ctx": settings.NOTES_NUM_CTX}, json_mode=True, should_stop=should_stop)
+        try:
+            data = parse_llm_json(raw)
+            return data if isinstance(data, dict) else {}
+        except Exception as exc:
+            logger.warning("Smart Notes: the AI answer is not valid JSON (attempt %d, %d characters, ends with %r): %s",
+                           attempt, len(raw), raw[-160:], exc)
+            if attempt == 2:
+                raise NotesError("The AI answer could not be read. Try Regenerate.") from exc
+            messages = messages + [{"role": "assistant", "content": raw[:4000]},
+                                   {"role": "user", "content": "That answer was not valid or complete JSON. "
+                                                               "Return the whole JSON object again, valid and complete, and nothing else."}]
+    return {}
 
 
 def _chunks(text: str) -> List[str]:
-    size = max(CHUNK_CHARS, len(text) // MAX_CHUNKS + 1)
+    from app.config import settings
+    size = max(REMOTE_CHUNK_CHARS if settings.ai_remote else CHUNK_CHARS, len(text) // MAX_CHUNKS + 1)
     paras = re.split(r"\n\s*\n|\n(?=\[)", text)
     out, cur = [], ""
     for p in paras:

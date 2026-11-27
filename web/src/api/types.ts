@@ -43,7 +43,7 @@ export interface ScheduleEvent {
   title: string; start_time: string; end_time: string; location: string | null; source: string; kind: string;
 }
 export interface Announcement { id: number; course_id: number | null; author: string; content: string; created_at: string; source: Source }
-export interface Health { status: string; app: string; version: string; reference_date: string; ollama: { reachable?: boolean; model?: string; model_available?: boolean; error?: string }; vector_documents: number }
+export interface Health { status: string; app: string; version: string; reference_date: string; ollama: { reachable?: boolean; model?: string; model_available?: boolean; error?: string; provider?: string; label?: string; local?: boolean; fallback?: { model?: string; available: boolean } }; vector_documents: number }
 export interface ChatResponse { question: string; answer: string; sources: Record<string, unknown>[] }
 export interface SyncSummary {
   courses_imported: number; moodle_deadlines_imported: number; events_imported: number; moodle_announcements_indexed: number;

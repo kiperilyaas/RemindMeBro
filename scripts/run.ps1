@@ -210,15 +210,40 @@ try {
     else { Warn "Speech-to-text could not be installed (see $Logs\pip-whisper.log): Smart Notes will skip audio and video" }
   }
 
-  # ---------- 3. Ollama ----------
-  Step "3/5  Local AI (Ollama + $Model)"
+  # ---------- 3. AI: external (data\ai.env, e.g. Gemini) and/or local Ollama ----------
+  $DataDir = if ($env:ACADEMIC_HUB_DATA_DIR) { $env:ACADEMIC_HUB_DATA_DIR } else { Join-Path $AppDir "data" }
+  New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
+  $AiEnv = Join-Path $DataDir "ai.env"
+  if (-not (Test-Path $AiEnv)) {
+    Write-Host ""
+    Write-Host "    The AI can run on Google Gemini (fast) or only on this computer (Ollama, slower, nothing leaves it)."
+    Write-Host "    Gemini key (free): https://aistudio.google.com/apikey"
+    $sec = Read-Host "    Paste your Gemini API key, or press Enter to use only the local AI" -AsSecureString
+    $geminiKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
+    $lines = @("# Which AI Remind Me Bro uses. Options: ai.env.example in the project folder. Restart the app after a change.")
+    if ($geminiKey) { $lines += "AI_PROVIDER=gemini"; $lines += "AI_API_KEY=$geminiKey" } else { $lines += "AI_PROVIDER=ollama"; $lines += "AI_API_KEY=" }
+    Set-Content -Path $AiEnv -Value $lines -Encoding ASCII
+    $geminiKey = $null
+  }
+  function Get-AiSetting($name) {
+    $line = Get-Content $AiEnv -ErrorAction SilentlyContinue | Where-Object { $_ -match "^\s*$name\s*=" } | Select-Object -Last 1
+    if (-not $line) { return "" }
+    return ((($line -split "=", 2)[1] -split " #", 2)[0]).Trim().Trim('"').Trim("'")
+  }
+  $AiProvider = if ($env:AI_PROVIDER) { $env:AI_PROVIDER } else { Get-AiSetting "AI_PROVIDER" }
+  if (-not $AiProvider) { $AiProvider = "ollama" }
+  $AiKeySet = if ($env:AI_API_KEY) { $true } else { [bool](Get-AiSetting "AI_API_KEY") }
+  $RemoteAi = ($AiProvider -in @("omniroute", "custom")) -or ($AiProvider -ne "ollama" -and $AiKeySet)
+  if ($RemoteAi) { Step "3/5  AI: $AiProvider (data\ai.env) - local Ollama only as backup" } else { Step "3/5  Local AI (Ollama + $Model)" }
+  $OllamaExe = $null
+  $cmd = Get-Command ollama -ErrorAction SilentlyContinue
+  if ($cmd) { $OllamaExe = $cmd.Source }
+  elseif (Test-Path "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe") { $OllamaExe = "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" }
   if ($env:RMB_NO_AI -eq "1") {
     Warn "RMB_NO_AI=1: skipping Ollama (AI features will show as unavailable)"
+  } elseif ($RemoteAi -and -not $OllamaExe) {
+    Ok "External AI in use: Ollama is not installed, so there is no local backup (that's fine)"
   } else {
-    $OllamaExe = $null
-    $cmd = Get-Command ollama -ErrorAction SilentlyContinue
-    if ($cmd) { $OllamaExe = $cmd.Source }
-    elseif (Test-Path "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe") { $OllamaExe = "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" }
 
     if (-not $OllamaExe) {
       Write-Host "    Downloading the Ollama installer (~1.5 GB)..."
@@ -244,6 +269,8 @@ try {
     $modelTag = if ($Model -like "*:*") { $Model } else { "$Model`:latest" }
     if ((Get-Http "$OllamaUrl/api/tags") -match [regex]::Escape("`"name`":`"$modelTag`"")) {
       Ok "Model $modelTag already downloaded"
+    } elseif ($RemoteAi) {
+      Ok "External AI in use: the local model is not downloaded (no backup, that's fine)"
     } else {
       Write-Host "    Downloading the AI model $Model (~2 GB, first time only)..."
       & $OllamaExe pull $Model

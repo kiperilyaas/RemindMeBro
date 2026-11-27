@@ -14,7 +14,7 @@ function Answer({ text }: { text: string }) {
 }
 
 /**
- * Ask Bro (Premium). Answers come from the local llama3.2 RAG endpoint.
+ * Ask Bro (Premium). Answers come from the RAG endpoint (external AI from data/ai.env, or the local llama3.2).
  * variant "page": inside the AI section; "sheet": overlay opened by a button (kept for reuse and tests).
  */
 export function Assistant({ open = true, onClose = () => undefined, variant = "sheet" }: { open?: boolean; onClose?: () => void; variant?: "sheet" | "page" }) {
@@ -58,7 +58,8 @@ export function Assistant({ open = true, onClose = () => undefined, variant = "s
       <aside className={`assistant ${page ? "page" : open ? "open" : ""}`} aria-label="Ask Bro assistant">
         <div className="as-h">
           <span className="as-logo"><Icon name="sparkle" size={18} /></span>
-          <div><b>Ask Bro</b><small>{llmOk ? `Local AI · ${health?.ollama?.model ?? "llama3.2"} · nothing leaves your computer` : "The local AI is not running"}</small></div>
+          <div><b>Ask Bro</b><small>{!llmOk ? "The AI is not available right now" : health?.ollama?.local === false
+            ? `${health.ollama.label ?? "AI"} · ${health.ollama.model}` : `Local AI · ${health?.ollama?.model ?? "llama3.2"} · nothing leaves your computer`}</small></div>
           {!page && <button className="icon-btn as-close" onClick={onClose} aria-label="Close assistant"><Icon name="x" /></button>}
         </div>
         <div className="as-log" aria-live="polite">

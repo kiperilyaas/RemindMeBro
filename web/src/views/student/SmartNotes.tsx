@@ -84,13 +84,13 @@ function NoteView({ id, onBack, onDeleted }: { id: number; onBack: () => void; o
   const regenerate = async () => {
     setBusy(true);
     const first = note.status === "new";
-    try { setNote(await api.regenerateNote(note.id)); setDraft(null); toast(first ? "Making the notes" : "Making the notes again", first ? "The local AI reads the lesson files. You can leave this page." : "The local AI reads the lesson files again."); }
+    try { setNote(await api.regenerateNote(note.id)); setDraft(null); toast(first ? "Making the notes" : "Making the notes again", first ? "The AI reads the lesson files. You can leave this page." : "The AI reads the lesson files again."); }
     catch (e) { toast("Couldn't start it", (e as Error).message, "error"); }
     setBusy(false);
   };
   const stop = async () => {
     setBusy(true);
-    try { setNote(await api.stopNote(note.id)); toast("Stopping", "The local AI stops working on this lesson."); }
+    try { setNote(await api.stopNote(note.id)); toast("Stopping", "The AI stops working on this lesson."); }
     catch (e) { toast("Couldn't stop it", (e as Error).message, "error"); }
     setBusy(false);
   };
@@ -174,13 +174,13 @@ export function SmartNotes({ noteId, openNote }: { noteId: number | null; openNo
     setSyncing(false);
   }, [toast, load]);
   const stopLesson = useCallback(async (l: LessonRow) => {
-    try { await api.stopNote(l.id); toast("Stopping", `${l.lesson}: the local AI stops working on it.`); void load(); }
+    try { await api.stopNote(l.id); toast("Stopping", `${l.lesson}: the AI stops working on it.`); void load(); }
     catch (e) { toast("Couldn't stop it", (e as Error).message, "error"); }
   }, [toast, load]);
   const make = useCallback(async (l: LessonRow) => {
     try {
       await api.regenerateNote(l.id);
-      toast("Making the notes", `${l.lesson}: the local AI reads the files. The status updates here.`);
+      toast("Making the notes", `${l.lesson}: the AI reads the files. The status updates here.`);
       void load();
     } catch (e) { toast("Couldn't start it", (e as Error).message, "error"); }
   }, [toast, load]);

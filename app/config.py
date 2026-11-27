@@ -14,6 +14,36 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(os.getenv("ACADEMIC_HUB_DATA_DIR", BASE_DIR / "data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
+# Which AI the app uses: data/ai.env (outside git, written by the Run & Go the first time, easy to edit by hand).
+# Environment variables win over the file. Example with every option: ai.env.example in the project folder.
+AI_ENV_FILE = Path(os.getenv("AI_ENV_FILE", DATA_DIR / "ai.env"))
+
+
+def _load_env_file(path: Path) -> None:
+    if not path.is_file():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.split(" #", 1)[0].strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+_load_env_file(AI_ENV_FILE)
+
+# Ready-made providers: base URL (OpenAI-compatible), main model, fast model (used to find deadlines in messages).
+# A provider that is not here: AI_PROVIDER=custom + AI_BASE_URL + AI_MODEL.
+AI_PRESETS = {
+    "gemini": {"label": "Google Gemini", "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+               "model": "gemini-3.8-flash", "fast": "gemini-3.5-flash-lite", "backup": "gemini-flash-lite-latest"},
+    "openrouter": {"label": "OpenRouter", "base_url": "https://openrouter.ai/api/v1", "model": "", "fast": ""},
+    "omniroute": {"label": "OmniRoute", "base_url": "http://127.0.0.1:20128/v1", "model": "", "fast": ""},
+    "openai": {"label": "OpenAI", "base_url": "https://api.openai.com/v1", "model": "", "fast": ""},
+    "custom": {"label": "AI service", "base_url": "", "model": "", "fast": ""},
+    "ollama": {"label": "Local AI (Ollama)", "base_url": "", "model": "", "fast": ""},
+}
+
 
 class Settings:
     """Impostazioni dell'applicazione (lette una sola volta all'avvio)."""
@@ -40,6 +70,34 @@ class Settings:
     OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.2")
     OLLAMA_TIMEOUT: float = float(os.getenv("OLLAMA_TIMEOUT", "120"))
+
+    # --- AI esterna (any OpenAI-compatible API: Gemini, OpenRouter, OmniRoute, ...) ---
+    # AI_PROVIDER=ollama (or no key) = everything stays on this computer, as before.
+    AI_PROVIDER: str = os.getenv("AI_PROVIDER", "ollama").strip().lower()
+    AI_API_KEY: str = os.getenv("AI_API_KEY", "").strip()
+    AI_BASE_URL: str = (os.getenv("AI_BASE_URL", "").strip() or AI_PRESETS.get(AI_PROVIDER, AI_PRESETS["custom"])["base_url"]).rstrip("/")
+    AI_MODEL: str = os.getenv("AI_MODEL", "").strip() or AI_PRESETS.get(AI_PROVIDER, AI_PRESETS["custom"])["model"]
+    AI_MODEL_FAST: str = os.getenv("AI_MODEL_FAST", "").strip() or AI_PRESETS.get(AI_PROVIDER, AI_PRESETS["custom"])["fast"] or AI_MODEL
+    AI_LABEL: str = os.getenv("AI_LABEL", "").strip() or AI_PRESETS.get(AI_PROVIDER, AI_PRESETS["custom"])["label"]
+    # When the external AI does not answer (no internet, quota over), use Ollama if it is running
+    AI_FALLBACK_OLLAMA: bool = os.getenv("AI_FALLBACK_OLLAMA", "true").lower() in {"1", "true", "yes"}
+    # "low" = quicker answers on thinking models; empty = do not send it
+    AI_REASONING_EFFORT: str = os.getenv("AI_REASONING_EFFORT", "low").strip()
+    AI_TIMEOUT: float = float(os.getenv("AI_TIMEOUT", "120"))
+    # Busy service (503 "high demand"), rate limit (429), network error: seconds to wait before each new try
+    # (when every model of the chain is busy: the chain is tried again after these waits)
+    AI_RETRY_WAITS: list = [float(x) for x in os.getenv("AI_RETRY_WAITS", "10,30").split(",") if x.strip()]
+    # More models of the same service to try when the main and fast ones are busy (comma list)
+    AI_MODEL_BACKUP: str = os.getenv("AI_MODEL_BACKUP", "").strip() or AI_PRESETS.get(AI_PROVIDER, AI_PRESETS["custom"]).get("backup", "")
+    # A busy model is tried last for this many seconds
+    AI_BUSY_SKIP: float = float(os.getenv("AI_BUSY_SKIP", "300"))
+
+    @property
+    def ai_remote(self) -> bool:
+        """True when an external AI is configured (provider, address, model and key, or a local gateway)."""
+        if self.AI_PROVIDER == "ollama" or not self.AI_BASE_URL or not self.AI_MODEL:
+            return False
+        return bool(self.AI_API_KEY) or self.AI_PROVIDER in {"omniroute", "custom"}
 
     # --- Data di riferimento ---
     # Data di "oggi" usata dall'LLM per risolvere espressioni relative

@@ -96,7 +96,7 @@ export function StudentProvider({ children }: { children: ReactNode }) {
 
   const runSync = useCallback(async () => {
     setSyncing(true);
-    toast("Sync started", "Reading UniLearn, UniSIS, Teams and email. The local AI looks for hidden dates, this can take a minute.");
+    toast("Sync started", "Reading UniLearn, UniSIS, Teams and email. The AI looks for hidden dates, this can take a minute.");
     try {
       const s = await api.sync();
       await reload();
