@@ -120,6 +120,10 @@ La sezione **AI** dello studente contiene Ask Bro (la chat) e Smart Notes. Le du
 - Lo studente legge, modifica (Markdown), copia o salva in PDF. Se il docente aggiunge file, gli appunti restano com'erano e mostrano "New material"; si rifanno con "Make notes again".
 - Run & Go installa `faster-whisper` in un passo a parte (`requirements-whisper.txt`) e scarica il modello `base` (~150 MB) in `data/whisper` in sottofondo. Se l'installazione non riesce l'app parte lo stesso e salta audio e video. FFmpeg non serve: è già dentro PyAV.
 
+## Date d'esame dai file dei corsi (piano Free)
+
+Nella Timeline il pulsante **Find exam dates** legge i file dei corsi che lo studente segue in UniLearn (PDF, PowerPoint, Word, testo) e trova esami, midterm, test, presentazioni e consegne. Ogni data è una proposta con la frase del file, il file e la pagina: va nel calendario solo con **Add to calendar**. Regola: meglio nessuna data che una sbagliata. Solo le righe con una data e una parola d'esame vanno all'AI, che deve copiare la frase parola per parola; poi il codice controlla che la frase sia nel file e che contenga quella data (`app/services/exam_dates/`, test in `tests/test_exam_dates.py`).
+
 ## Avvisi dei docenti in tempo reale
 
 Un avviso pubblicato in UniLearn (**Post an announcement**), un'email o un post Teams mandati da UniComms arrivano nell'Inbox degli studenti iscritti a quel corso entro circa mezzo minuto, senza premere Sync: l'hub legge i forum Announcements ogni 30 secondi (`app/services/live_sync.py`, variabile `UNILEARN_POLL_SECONDS`, 0 = spento) e l'app chiede i nuovi messaggi ogni 30 secondi, con un avviso a schermo. Lo studente vede solo i messaggi dei corsi che segue: se il corso non ha iscritti, UniLearn lo segnala sopra il modulo. Nell'Inbox i messaggi appena arrivati hanno l'etichetta **New** e una barra in alto ("1 new message just arrived"); la barra avvisa anche quando un messaggio non letto è nascosto dal filtro (es. un avviso senza scadenza non è "Important") e lo mostra con *Show all*. Il numero dei non letti compare sulla voce Inbox e nel titolo della scheda del browser, es. "(2) Remind Me Bro".

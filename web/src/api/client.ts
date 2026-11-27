@@ -1,7 +1,7 @@
 import type {
   Billing, LessonChatAnswer, LessonChatMessage, LessonNote, NotesList, NotesSync, Plan,
   ChatResponse, Connection, Course, CourseWithStats, DemoAccounts, Deadline, Health, InboxItem, PublishResult,
-  ScheduleEvent, Source, Studies, SyncSummary, TokenResponse, User,
+  ScheduleEvent, Source, Studies, SyncSummary, TokenResponse, User, FoundDatesResponse, FoundDatesStatus,
 } from "./types";
 import { storage } from "../lib/storage";
 
@@ -71,6 +71,11 @@ export class ApiClient {
   deadlines = () => this.request<Deadline[]>("/deadlines");
   setDone = (id: number, done: boolean) => this.request<Deadline>(`/deadlines/${id}/complete?completed=${done}`, { method: "PATCH" });
   inbox = () => this.request<InboxItem[]>("/inbox");
+  foundDates = () => this.request<FoundDatesResponse>("/found-dates");
+  scanFoundDates = () => this.request<FoundDatesStatus>("/found-dates/scan", { method: "POST" });
+  acceptFoundDate = (id: number) => this.request<{ accepted: boolean; deadline_id: number }>(`/found-dates/${id}/accept`, { method: "POST" });
+  rejectFoundDate = (id: number) => this.request<{ rejected: boolean }>(`/found-dates/${id}/reject`, { method: "POST" });
+  removeFoundDate = (deadlineId: number) => this.request<{ removed: boolean }>(`/found-dates/deadline/${deadlineId}`, { method: "DELETE" });
   schedule = (start: string, end: string) => this.request<ScheduleEvent[]>(`/schedule?start=${start}&end=${end}`);
   courses = () => this.request<Course[]>("/courses");
   chat = (question: string) => this.request<ChatResponse>("/chat", { method: "POST", body: { question }, timeout: 180000 });

@@ -7,6 +7,7 @@ import { daysBetween, greeting, parse, relative, startOfDay } from "../../lib/ti
 import { useSession } from "../../state/session";
 import { useStudent } from "../../state/student";
 import { buildItems, Calendar, type CalView } from "./Calendar";
+import { FoundDates } from "./FoundDates";
 
 const VIEWS: { id: CalView; label: string }[] = [{ id: "agenda", label: "Agenda" }, { id: "week", label: "Week" }, { id: "month", label: "Month" }];
 const VIEW_KEY = "rmb.calendar.view";
@@ -86,6 +87,8 @@ export function Timeline({ onNavigate }: { onNavigate: (p: string) => void }) {
           {overdue.map((d) => <span key={d.id}>{d.title} · {relative(parse(d.due_date), now)}</span>)}
         </section>
       )}
+
+      {!loading && user?.role === "student" && <FoundDates />}
 
       <div className="cal-bar">
         <div className="seg cal-views" role="tablist" aria-label="Calendar view">

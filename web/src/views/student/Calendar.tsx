@@ -1,6 +1,7 @@
 // Student calendar (design "A"): Agenda for the next three weeks, Week with a day strip, Month grid + chosen day.
 // Classes and exams come from UniSIS/UniLearn events, deadlines from every source, study blocks from "Plan my week".
 import { useMemo, useRef, type ReactNode } from "react";
+import { api } from "../../api/client";
 import type { Deadline, ScheduleEvent } from "../../api/types";
 import { Icon } from "../../components/Icon";
 import { AiTag, SourceTag } from "../../components/ui";
@@ -39,7 +40,7 @@ function EventCard({ e, now }: { e: ScheduleEvent; now: Date }) {
 }
 
 function DeadlineCard({ d, now }: { d: Deadline; now: Date }) {
-  const { toggleDone } = useStudent();
+  const { toggleDone, reload } = useStudent();
   const due = parse(d.due_date);
   const kind = kindOf(d);
   const effort = effortHours(d);
@@ -50,11 +51,15 @@ function DeadlineCard({ d, now }: { d: Deadline; now: Date }) {
         <span className="when">{relative(due, now)}</span>
       </div>
       <b>{d.title}</b>
-      <span className="sub">{d.course_name ?? "Student Office"}{effort > 0 && ` · about ${effort} h of work`}</span>
+      <span className="sub">{d.course_name ?? "Student Office"}{d.time_known === false && " · time not stated"}{effort > 0 && ` · about ${effort} h of work`}</span>
       {d.replaces && (
         <p className="moved"><Icon name="sparkle" size={14} /> Moved from <s>{fmtDay(parse(d.replaces.old_due_date))}</s> → <b>{fmtDay(due)} {fmtTime(due)}</b></p>
       )}
-      {d.source_message ? <blockquote className="quote">“{d.source_message}”</blockquote> : d.description && <p className="note">{d.description}</p>}
+      {d.found_in ? <>
+        <blockquote className="quote">“{d.description}”</blockquote>
+        <p className="found-src"><Icon name="book" size={14} /> Found in {d.found_in}
+          <button className="link-btn" onClick={() => void api.removeFoundDate(d.id).then(reload)}>Remove</button></p>
+      </> : d.source_message ? <blockquote className="quote">“{d.source_message}”</blockquote> : d.description && <p className="note">{d.description}</p>}
       <button className="done-btn" aria-pressed={d.is_completed} onClick={() => void toggleDone(d)}>
         <Icon name="check" size={16} /> {d.is_completed ? "Done" : "Mark as done"}
       </button>
@@ -85,7 +90,7 @@ export function Feed({ items, now, nowLine = false }: { items: CalItem[]; now: D
         return [
           nowLine && i === cut ? line : null,
           <li key={it.key} className={`fi ${it.type} ${done ? "is-done" : ""}`} style={{ ["--c" as string]: courseColor(it.code) }}>
-            <time dateTime={it.at.toISOString()}>{fmtTime(it.at)}<small>{it.type === "event" ? fmtTime(parse(it.e.end_time)) : it.type === "deadline" ? "due" : fmtTime(it.b.end)}</small></time>
+            <time dateTime={it.at.toISOString()}>{it.type === "deadline" && it.d.time_known === false ? "—" : fmtTime(it.at)}<small>{it.type === "event" ? fmtTime(parse(it.e.end_time)) : it.type === "deadline" ? (it.d.time_known === false ? "no time" : "due") : fmtTime(it.b.end)}</small></time>
             {it.type === "event" ? <EventCard e={it.e} now={now} /> : it.type === "deadline" ? <DeadlineCard d={it.d} now={now} /> : <StudyCard b={it.b} />}
           </li>,
         ];

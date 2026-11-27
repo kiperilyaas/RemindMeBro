@@ -522,3 +522,18 @@ pre{background:var(--surface-2);border-radius:12px;padding:12px;overflow:auto;fo
 .cchip.named{letter-spacing:0;min-width:0;max-width:100%}
 .cchip-n{overflow:hidden;text-overflow:ellipsis}
 
+
+/* Exam dates found in course files (Timeline) */
+.found{margin-top:14px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.found-head{display:flex;gap:12px;align-items:center;padding:14px 16px}
+.found-head>svg{color:var(--violet);flex:none}
+.found-head>div{flex:1;min-width:0}.found-head p{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+.found-list{list-style:none;margin:0;padding:0 16px 16px;display:grid;gap:10px}
+.found-card{display:grid;gap:6px;padding:12px 14px;border:1px solid var(--line);border-left:4px solid var(--c,var(--violet));border-radius:var(--r-sm);background:var(--bg)}
+.found-course{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.found-when{font-size:15.5px}.found-title{font-size:14px}
+.found-card .quote,.fcard .found-src+.quote{margin:2px 0}
+.found-src{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0;font-size:12.5px;color:var(--muted)}
+.found-flag{margin:0;font-size:12.5px;color:var(--muted)}.found-flag.ok{color:var(--ok,#2F855A);display:flex;gap:6px;align-items:center}
+.link-btn{background:none;border:0;padding:0 0 0 6px;color:var(--acc);font:inherit;font-weight:600;cursor:pointer}
+.link-btn:hover{text-decoration:underline}

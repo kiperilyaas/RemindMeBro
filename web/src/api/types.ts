@@ -31,7 +31,18 @@ export interface Deadline {
   title: string; description: string | null; due_date: string; source: Source;
   is_completed: boolean; extracted_by_ai: boolean; announcement_id: number | null; superseded_by_id: number | null;
   source_message: string | null; replaces: { id: number; title: string; old_due_date: string } | null;
+  found_in?: string | null;   // found in a course file and accepted: "Syllabus.pdf · page 4"
+  time_known?: boolean;       // false: the file gives only the day ("time not stated")
 }
+export interface FoundDate {
+  id: number; course_code: string; course_name: string; kind: "exam" | "midterm" | "test" | "presentation" | "submission"; kind_label: string;
+  title: string; date: string; time: string | null; room: string | null; year_written: boolean; quote: string; filename: string; page: string;
+  also_in: { filename: string; page: string }[]; in_calendar: string | null;
+}
+export interface FoundDatesStatus {
+  state: "idle" | "running" | "done" | "error"; files_total?: number; files_done?: number; current?: string | null; error?: string | null; warnings?: string[];
+}
+export interface FoundDatesResponse { status: FoundDatesStatus; pending: FoundDate[]; accepted: number }
 export interface InboxItem {
   id: number; source: Source; course_id: number | null; course_code: string | null; course_name: string | null;
   author: string; created_at: string; subject: string; content: string; ai_summary: string; important: boolean;
