@@ -38,7 +38,17 @@ export function Timeline({ onNavigate }: { onNavigate: (p: string) => void }) {
   const items = useMemo(() => buildItems(events, deadlines, blocks, course), [events, deadlines, blocks, course]);
 
   // dates found in messages wait for the student's confirmation (Inbox → Add to calendar)
-  const aiNew = inbox.filter((m) => m.deadline_status === "pending" && m.deadline_due && parse(m.deadline_due) >= startOfDay(now)).length;
+  const pendingDates = inbox.filter((m) => m.deadline_status === "pending" && m.deadline_due && parse(m.deadline_due) >= startOfDay(now))
+    .map((m) => m.deadline_id as number);
+  // closing the banner hides the dates it showed; it comes back only when the AI finds a new one
+  const seenKey = `rmb.dates-banner-closed.${user?.id ?? 0}`;
+  const [closedIds, setClosedIds] = useState<number[]>(() => storage.getJSON<number[]>(seenKey, []));
+  const aiNew = pendingDates.filter((id) => !closedIds.includes(id)).length;
+  const closeBanner = () => {
+    const ids = [...new Set([...closedIds, ...pendingDates])];
+    setClosedIds(ids);
+    storage.setJSON(seenKey, ids);
+  };
   const ul = connection("moodle"), us = connection("unisis");
   const missing = [ul && ul.status !== "connected" ? "UniLearn" : null, us && us.status !== "connected" ? "UniSIS" : null].filter(Boolean) as string[];
   const soon = upcoming.filter((d) => daysBetween(now, parse(d.due_date)) <= 14).length;
@@ -78,9 +88,12 @@ export function Timeline({ onNavigate }: { onNavigate: (p: string) => void }) {
         </section>
       )}
       {aiNew > 0 && (
-        <button className="ai-alert" onClick={() => onNavigate("inbox")}>
-          <Icon name="sparkle" /><span><b>{aiNew === 1 ? "1 new date" : `${aiNew} new dates`} found in your messages.</b> Confirm them in the Inbox to add them to your calendar.</span><Icon name="arrow" size={16} />
-        </button>
+        <div className="ai-alert-wrap">
+          <button className="ai-alert" onClick={() => onNavigate("inbox")}>
+            <Icon name="sparkle" /><span><b>{aiNew === 1 ? "1 new date" : `${aiNew} new dates`} found in your messages.</b> Confirm them in the Inbox to add them to your calendar.</span><Icon name="arrow" size={16} />
+          </button>
+          <button className="ai-alert-x" onClick={closeBanner} aria-label="Close this notice" title="Close"><Icon name="x" size={16} /></button>
+        </div>
       )}
       {overdue.length > 0 && (
         <section className="overdue" aria-label="Overdue">
