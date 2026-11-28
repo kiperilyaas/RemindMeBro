@@ -74,4 +74,28 @@ describe("Inbox: new messages", () => {
     expect(await screen.findByText("Added to your calendar")).toBeInTheDocument();
     expect(calls).toEqual(["POST /inbox/dates/7/accept"]);
   });
+
+  it("\"Not right\" leaves a date out at once, without the confirmation window", async () => {
+    const calls: string[] = [];
+    let status = "pending";
+    const email = () => ({ ...msg(4, "Term paper: consultations and final report"), source: "email", course_code: "2IB421", course_name: "Global ESG",
+      author: "Prof. Laura Bianchi", content: "The FINAL REPORT must be submitted by January 6, 2027.", deadline_id: 9, deadline_due: "2027-01-06T23:59:00",
+      deadline_title: "Final report submission", deadline_status: status, deadline_replaces: null, important: true });
+    vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+      const url = String(input), method = init?.method ?? "GET";
+      if (url.includes("/inbox/dates")) calls.push(`${method} ${url.split("/api")[1]}`);
+      if (url.endsWith("/health")) return json({ status: "ok", app: "x", version: "1", reference_date: "2026-11-28T12:00:00", ollama: {}, vector_documents: 0 });
+      if (url.endsWith("/auth/me")) return json({ id: 1, email: "s@x", full_name: "Giulia", role: "student", created_at: "", plan: "premium" });
+      if (url.endsWith("/inbox/dates/9/reject")) { status = "rejected"; return json({ deadline_id: 9, status: "rejected" }); }
+      if (url.endsWith("/inbox")) return json([email()]);
+      return json([]);
+    });
+    render(<ToastProvider><SessionProvider><StudentProvider><Inbox /></StudentProvider></SessionProvider></ToastProvider>);
+    fireEvent.click(await screen.findByText("Term paper: consultations and final report", { selector: ".msub" }));
+    fireEvent.click(screen.getByRole("button", { name: "Not right" }));
+    expect(await screen.findByText("Left out of your calendar")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(calls).toEqual(["POST /inbox/dates/9/reject"]);
+    expect(screen.queryByRole("button", { name: /Add to calendar/ })).toBeNull();   // decided: no more buttons
+  });
 });
