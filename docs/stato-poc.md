@@ -30,6 +30,12 @@ Regola: dopo ogni modifica (codice, rami, decisioni) questo documento va aggiorn
 - `fix/connect-semplice` (da `feature/date-esami`): pagina Connect con meno scritte, PR #19; va unita dopo la #18.
 - `chore/struttura` (da `fix/connect-semplice`): launcher in `scripts/`, README nuovo, `docs/architettura.md` e `docs/sviluppo.md`; va unita dopo la #19.
 
+## Zip privato per la ragazza di Illia (28 novembre, ramo `feature/zip-privato`, nato da `fix/rifiuta-data-diretto`)
+- Richiesta di Illia: ogni volta uno zip solo per la sua ragazza, la stessa copia del suo progetto con tutta la sua `data/`, che si apre e si prova subito anche senza mettere la chiave Gemini.
+- `scripts/make-zip.sh --private` → `RemindMeBro-PRIVATE-<data>[-<ramo>].zip`: come lo zip normale, ma con `data/ai.env` (la chiave). Escluso solo il modello Whisper (142 MB, si riscarica da solo). Con `data/ai.env` presente il Run & Go non chiede la chiave e usa subito Gemini. `BUILD.txt` dice che è una copia privata. Lo zip normale per i collaboratori resta senza chiave.
+- Regola in `CLAUDE.md`: dopo ogni modifica si fanno tutti e due gli zip.
+- Provato: zip privato estratto, chiave identica, tutti i file di `data/` uguali (database copiati in modo coerente e integri), Gemini configurato nella copia, database non ricreati; lo zip normale non ha la chiave.
+
 ## Inbox: "Not right" diretto (28 novembre, ramo `fix/rifiuta-data-diretto`, nato da `fix/avviso-date-chiudibile`)
 - Richiesta di Illia: per scartare una data bisognava cliccare "Add to calendar…" e poi "Not right" nella finestrina (poco intuitivo). Ora il riquadro della data nel messaggio ha due pulsanti: "Add to calendar…" (apre la finestrina di conferma) e "Not right" (scarta subito, senza finestrina). Dopo "Not right" il riquadro sparisce e resta "Left out of your calendar" (nessun "Add anyway": scelta di Illia). CSS `.date-box`, `.date-actions`, `.date-off`.
 - Prove: Vitest nuovo ("Not right" scarta senza finestrina, poi nessun pulsante); 37 Vitest; controllato su schermo da telefono.
