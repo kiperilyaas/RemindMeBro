@@ -14,7 +14,7 @@ const VIEW_KEY = "rmb.calendar.view";
 
 export function Timeline({ onNavigate }: { onNavigate: (p: string) => void }) {
   const { now, user } = useSession();
-  const { loading, deadlines, events, inbox, isRead, connection } = useStudent();
+  const { loading, deadlines, events, inbox, connection } = useStudent();
   const [view, setViewState] = useState<CalView>(() => {
     const v = storage.getJSON<CalView>(VIEW_KEY, "agenda");
     return VIEWS.some((x) => x.id === v) ? v : "agenda";
@@ -37,7 +37,8 @@ export function Timeline({ onNavigate }: { onNavigate: (p: string) => void }) {
   }, [events, deadlines]);
   const items = useMemo(() => buildItems(events, deadlines, blocks, course), [events, deadlines, blocks, course]);
 
-  const aiNew = inbox.filter((m) => m.deadline_id && !isRead(m.id)).length;
+  // dates found in messages wait for the student's confirmation (Inbox → Add to calendar)
+  const aiNew = inbox.filter((m) => m.deadline_status === "pending" && m.deadline_due && parse(m.deadline_due) >= startOfDay(now)).length;
   const ul = connection("moodle"), us = connection("unisis");
   const missing = [ul && ul.status !== "connected" ? "UniLearn" : null, us && us.status !== "connected" ? "UniSIS" : null].filter(Boolean) as string[];
   const soon = upcoming.filter((d) => daysBetween(now, parse(d.due_date)) <= 14).length;
@@ -78,7 +79,7 @@ export function Timeline({ onNavigate }: { onNavigate: (p: string) => void }) {
       )}
       {aiNew > 0 && (
         <button className="ai-alert" onClick={() => onNavigate("inbox")}>
-          <Icon name="sparkle" /><span><b>{aiNew === 1 ? "1 new date" : `${aiNew} new dates`} found in your messages.</b> Review them in the inbox.</span><Icon name="arrow" size={16} />
+          <Icon name="sparkle" /><span><b>{aiNew === 1 ? "1 new date" : `${aiNew} new dates`} found in your messages.</b> Confirm them in the Inbox to add them to your calendar.</span><Icon name="arrow" size={16} />
         </button>
       )}
       {overdue.length > 0 && (

@@ -367,3 +367,17 @@ class FoundDateChoice(Base):
     choice: Mapped[str] = mapped_column(String(10))                   # accepted | rejected
     deadline_id: Mapped[Optional[int]] = mapped_column(ForeignKey("deadlines.id", ondelete="SET NULL"), nullable=True)
     decided_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class MessageDateChoice(Base):
+    """A date the AI found in a message (Outlook, Teams, UniLearn announcement) reaches a student's calendar only when
+    the student confirms it: accepted, or rejected (not proposed again)."""
+
+    __tablename__ = "message_date_choices"
+    __table_args__ = (UniqueConstraint("user_id", "deadline_id", name="uq_message_date_choice"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    deadline_id: Mapped[int] = mapped_column(ForeignKey("deadlines.id", ondelete="CASCADE"), index=True)
+    choice: Mapped[str] = mapped_column(String(10))                   # accepted | rejected
+    decided_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

@@ -519,6 +519,13 @@ _STOPWORDS = {
 }
 
 
+def titles_match(official_title: str, message_title: str) -> bool:
+    """Same event? A word of the official title and of the title found in the message start the same way."""
+    a = set(re.findall(r"\w+", official_title.lower())) - _STOPWORDS
+    b = set(re.findall(r"\w+", message_title.lower())) - _STOPWORDS
+    return any(x[:6] == y[:6] for x in a for y in b if len(x) > 3 and len(y) > 3)
+
+
 def _find_superseded_moodle_deadline(db: Session, course: Optional[Course], extraction: ExtractedDeadline,
                                      message_time: Optional[datetime] = None) -> Optional[Deadline]:
     """
@@ -527,7 +534,9 @@ def _find_superseded_moodle_deadline(db: Session, course: Optional[Course], extr
     """
     if course is None or not extraction.title:
         return None
-    text_tokens = {t for t in re.findall(r"\w+", f"{extraction.title} {extraction.description or ''}".lower())} - _STOPWORDS
+    # only the title of the event: words of the description ("every member must present") matched unrelated assignments
+    # ("Presentation slides") and hid them
+    text_tokens = {t for t in re.findall(r"\w+", extraction.title.lower())} - _STOPWORDS
     candidates = db.scalars(
         select(Deadline).where(
             Deadline.course_id == course.id,
@@ -536,10 +545,8 @@ def _find_superseded_moodle_deadline(db: Session, course: Optional[Course], extr
         )
     )
     for d in candidates:
-        tokens = set(re.findall(r"\w+", d.title.lower())) - _STOPWORDS
         # match anche su prefisso (es. "esercitazione" ~ "esercitazioni")
-        overlap = any(a[:6] == b[:6] for a in tokens for b in text_tokens if len(a) > 3 and len(b) > 3)
-        if overlap and d.due_date != extraction.due_date:
+        if titles_match(d.title, extraction.title) and d.due_date != extraction.due_date:
             if message_time and d.source_updated_at and message_time <= d.source_updated_at:
                 continue   # the lecturer changed the official date after this message: the official date wins
             return d

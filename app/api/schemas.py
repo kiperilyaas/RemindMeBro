@@ -83,6 +83,8 @@ class DeadlineOut(BaseModel):
     replaces: Optional[Dict[str, Any]] = Field(None, description="Moodle deadline replaced by this one")
     found_in: Optional[str] = Field(None, description="Found in a course file and accepted by the student: file · page")
     time_known: bool = True
+    also_in: List[str] = Field(default_factory=list, description="The same event found elsewhere too: shown once")
+    needs_confirmation: bool = False   # found in a message: in the calendar only because the student confirmed it
 
     @classmethod
     def from_orm_deadline(cls, d: Any, replaces: Any = None) -> "DeadlineOut":
@@ -122,6 +124,10 @@ class InboxItem(BaseModel):
     important: bool
     deadline_id: Optional[int] = None
     deadline_due: Optional[datetime] = None
+    deadline_title: Optional[str] = None
+    deadline_replaces: Optional[Dict[str, Any]] = None   # official date this message moves: {title, due_date}
+    # pending (not in the calendar until confirmed) | accepted | rejected | replaced (a newer official date exists)
+    deadline_status: Optional[str] = None
     personal: bool = False   # UniComms email sent to this student only (not to the whole course)
 
 
@@ -136,6 +142,7 @@ class ScheduleEvent(BaseModel):
     location: Optional[str] = None
     source: str = "moodle"
     kind: str = "class"
+    also_in: List[str] = []   # the same exam found elsewhere too (course file, message): shown once
 
 
 class CourseWithStats(CourseOut):
