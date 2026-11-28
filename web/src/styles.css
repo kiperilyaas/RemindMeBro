@@ -559,3 +559,9 @@ pre{background:var(--surface-2);border-radius:12px;padding:12px;overflow:auto;fo
 .ai-alert-wrap .ai-alert{padding-right:52px}
 .ai-alert-x{position:absolute;top:50%;right:10px;transform:translateY(-50%);display:grid;place-items:center;width:32px;height:32px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer}
 .ai-alert-x:hover{background:color-mix(in srgb,var(--violet) 18%,transparent);color:var(--fg)}
+
+/* Date found in a message: two clear choices (add with confirmation, or "Not right" at once) */
+.date-box{display:grid;gap:10px;margin:10px 0 4px;padding:12px 14px;border:1px solid var(--violet);border-radius:var(--r-sm);background:var(--violet-soft)}
+.date-what{display:flex;align-items:flex-start;gap:10px;margin:0!important;line-height:1.4}.date-what svg{color:var(--violet);flex:none;margin-top:2px}
+.date-off{display:flex;align-items:center;gap:6px;margin:8px 0 0!important;font-size:13.5px;color:var(--muted)}
+.date-actions{display:flex;flex-wrap:wrap;gap:8px}

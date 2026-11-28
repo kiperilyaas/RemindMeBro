@@ -25,6 +25,11 @@ export function Inbox() {
   const { loading, inbox, isRead, markRead, fresh, clearFresh, reload } = useStudent();
   const toast = useToast();
   const [confirming, setConfirming] = useState<InboxItem | null>(null);
+  const reject = async (m: InboxItem) => {
+    if (!m.deadline_id) return;
+    try { await api.rejectMessageDate(m.deadline_id); await reload(); toast("Left out", "This date stays out of your calendar.", "info"); }
+    catch (e) { toast("Could not save it", (e as Error).message, "error"); }
+  };
   const undo = async (m: InboxItem) => {
     if (!m.deadline_id) return;
     try { await api.undoMessageDate(m.deadline_id); await reload(); toast("Removed from your calendar", undefined, "info"); }
@@ -89,11 +94,16 @@ export function Inbox() {
                   <div className="mbody" id={`msg-${m.id}`}>
                     <p>{m.content}</p>
                     <div className={`ai-sum ${m.deadline_id ? "hit" : ""}`}><Icon name="sparkle" size={16} /><span><b>AI summary</b> {m.ai_summary}</span></div>
-                    {m.deadline_id && m.deadline_due && (m.deadline_status === "pending" || m.deadline_status === "rejected") && (
-                      <button className="date-btn" onClick={() => setConfirming(m)}>
-                        <Icon name="calendar" size={16} /><span><b>{m.deadline_title ?? "Date"}</b> · {fmtDay(parse(m.deadline_due))}</span><span className="date-btn-go">{m.deadline_status === "rejected" ? "Left out · add anyway?" : "Add to calendar…"}</span>
-                      </button>
+                    {m.deadline_id && m.deadline_due && m.deadline_status === "pending" && (
+                      <div className="date-box">
+                        <p className="date-what"><Icon name="calendar" size={16} /><span><b>{m.deadline_title ?? "Date"}</b> · {fmtDay(parse(m.deadline_due))}</span></p>
+                        <div className="date-actions">
+                          <button className="btn primary sm" onClick={() => setConfirming(m)}><Icon name="plus" size={14} /> Add to calendar…</button>
+                          <button className="btn ghost sm" onClick={() => void reject(m)}>Not right</button>
+                        </div>
+                      </div>
                     )}
+                    {m.deadline_status === "rejected" && <p className="date-off"><Icon name="x" size={14} /> Left out of your calendar</p>}
                     {m.deadline_status === "accepted" && (
                       <p className="date-ok"><Icon name="check" size={14} /> In your calendar <button className="link-btn" onClick={() => void undo(m)}>Remove</button></p>
                     )}

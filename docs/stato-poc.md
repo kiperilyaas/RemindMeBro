@@ -30,6 +30,10 @@ Regola: dopo ogni modifica (codice, rami, decisioni) questo documento va aggiorn
 - `fix/connect-semplice` (da `feature/date-esami`): pagina Connect con meno scritte, PR #19; va unita dopo la #18.
 - `chore/struttura` (da `fix/connect-semplice`): launcher in `scripts/`, README nuovo, `docs/architettura.md` e `docs/sviluppo.md`; va unita dopo la #19.
 
+## Inbox: "Not right" diretto (28 novembre, ramo `fix/rifiuta-data-diretto`, nato da `fix/avviso-date-chiudibile`)
+- Richiesta di Illia: per scartare una data bisognava cliccare "Add to calendar…" e poi "Not right" nella finestrina (poco intuitivo). Ora il riquadro della data nel messaggio ha due pulsanti: "Add to calendar…" (apre la finestrina di conferma) e "Not right" (scarta subito, senza finestrina). Dopo "Not right" il riquadro sparisce e resta "Left out of your calendar" (nessun "Add anyway": scelta di Illia). CSS `.date-box`, `.date-actions`, `.date-off`.
+- Prove: Vitest nuovo ("Not right" scarta senza finestrina, poi nessun pulsante); 37 Vitest; controllato su schermo da telefono.
+
 ## Avviso "N new dates found in your messages" chiudibile (28 novembre, ramo `fix/avviso-date-chiudibile`)
 - Richiesta di Illia: l'avviso nella Timeline deve avere un pulsante per chiuderlo; chiuso, non torna finché l'AI non trova una data nuova.
 - `views/student/Timeline.tsx`: × a destra dell'avviso; chiudendolo, gli id delle date da confermare in quel momento vanno nel browser (`rmb.dates-banner-closed.<id utente>`); l'avviso compare solo se c'è una data da confermare non ancora vista e conta solo quelle nuove. Il ricordo è per browser: su un altro dispositivo l'avviso ricompare una volta. Le date restano da confermare nell'Inbox. CSS `.ai-alert-wrap`, `.ai-alert-x`.
