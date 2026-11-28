@@ -5,30 +5,36 @@
 # asks for it) and the Whisper model (data/whisper, 140 MB: downloaded again by itself).
 # The SQLite databases are copied with SQLite's backup API: consistent even while the app is running.
 #
-# Usage: ./scripts/make-zip.sh             code + data
+# Usage: ./scripts/make-zip.sh             code + data (for collaborators: never the AI key)
 #        ./scripts/make-zip.sh --no-data   code only (starts from zero: accounts, the eight courses and their timetable)
+#        ./scripts/make-zip.sh --private   Illia's own copy for one trusted person: code + ALL of data/ INCLUDING the AI key
+#                                          (data/ai.env), so the AI works at once. Name: RemindMeBro-PRIVATE-<date>.zip.
+#                                          Never publish it or send it to anyone else.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 OUT_DIR="$(dirname "$HERE")"
 WITH_DATA=1
+PRIVATE=0
 [ "${1:-}" = "--no-data" ] && WITH_DATA=0
+[ "${1:-}" = "--private" ] && PRIVATE=1
 # on a branch other than main the zip name says which one (RemindMeBro-demo-YYYY-MM-DD-feature-x.zip)
 BRANCH="$(git -C "$HERE" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
 SUFFIX=""
 [ "$BRANCH" != "main" ] && [ "$BRANCH" != "HEAD" ] && SUFFIX="-$(echo "$BRANCH" | tr '/ ' '--')"
 [ "$WITH_DATA" = "0" ] && SUFFIX="$SUFFIX-no-data"
 NAME="RemindMeBro-demo-$(date +%Y-%m-%d)$SUFFIX.zip"
+[ "$PRIVATE" = "1" ] && NAME="RemindMeBro-PRIVATE-$(date +%Y-%m-%d)$SUFFIX.zip"
 PY="$(command -v python3 || true)"
 [ -z "$PY" ] && [ -x "$HERE/.runtime/venv/bin/python" ] && PY="$HERE/.runtime/venv/bin/python"
 [ -z "$PY" ] && { echo "python3 not found"; exit 1; }
-"$PY" - "$HERE" "$OUT_DIR/$NAME" "$WITH_DATA" <<'PYEOF'
+"$PY" - "$HERE" "$OUT_DIR/$NAME" "$WITH_DATA" "$PRIVATE" <<'PYEOF'
 import os, sqlite3, stat, sys, tempfile, zipfile, datetime
-root, out, with_data = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
+root, out, with_data, private = sys.argv[1], sys.argv[2], sys.argv[3] == "1", sys.argv[4] == "1"
 INCLUDE = ["README.md", "config", "app", "frontend", "scripts", "unilearn", "unisis", "unicomms", "web", "docs"]
 INCLUDE += sorted(f for f in os.listdir(root) if f.startswith("run-"))
 SKIP_DIRS = {"__pycache__", "node_modules", ".runtime", "data", "dist", ".git", "_to_delete"}
 # in data/: never the AI key, never the Whisper model; SQLite side files are not needed (the copy is complete)
-DATA_SKIP_FILES = {"ai.env"}
+DATA_SKIP_FILES = set() if private else {"ai.env"}   # the private copy keeps the AI key: the AI works at once
 DATA_SKIP_DIRS = {"whisper", "__pycache__"}
 DB_EXT = (".db", ".sqlite3", ".sqlite")
 n = 0
@@ -90,10 +96,16 @@ with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
                 else:
                     add_file(z, path, arc)
                 data_files += 1
-    note = ("Data: included (data/), without the AI key and the Whisper model.\n" if with_data and data_files
-            else "Data: not included: the app starts from zero.\n")
+    if private:
+        note = ("PRIVATE COPY: code + all of data/, AI key included (the AI works at once). Do not share it.\n"
+                "Not included: the Whisper model for audio (downloaded by itself in the background).\n")
+    elif with_data and data_files:
+        note = "Data: included (data/), without the AI key and the Whisper model.\n"
+    else:
+        note = "Data: not included: the app starts from zero.\n"
     z.writestr("RemindMeBro/BUILD.txt", f"Remind Me Bro demo\nZip made on {datetime.datetime.now():%Y-%m-%d %H:%M}\n{note}"
                                         "Start: open docs/START-HERE.txt\n")
 os.replace(tmp, out)
-print(f"{out}  ({n} files, {data_files} from data/, {os.path.getsize(out) // 1024} KB)")
+has_key = private and os.path.isfile(os.path.join(root, "data", "ai.env"))
+print(f"{out}  ({n} files, {data_files} from data/, {os.path.getsize(out) // 1024} KB){'  · AI key included' if has_key else ''}")
 PYEOF

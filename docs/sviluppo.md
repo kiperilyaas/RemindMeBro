@@ -40,6 +40,8 @@ Zip per i collaboratori: `scripts/make-zip.sh` → `../RemindMeBro-demo-<data>[-
 di `data/` (database copiati in modo coerente anche con l'app accesa, file dei corsi, chiavi interne tra i servizi), così
 chi lo apre vede la stessa demo. Mai nello zip: `data/ai.env` (la chiave dell'AI: ognuno mette la sua, il Run & Go la
 chiede) e `data/whisper` (si riscarica da solo). `scripts/make-zip.sh --no-data` fa uno zip che parte da zero.
+`scripts/make-zip.sh --private` fa la copia privata di Illia (`RemindMeBro-PRIVATE-<data>.zip`): codice e tutta `data/`,
+**compresa la chiave dell'AI**, per una persona di fiducia che deve provare subito senza mettere la chiave. Non va pubblicata.
 
 ## Configurazione
 
