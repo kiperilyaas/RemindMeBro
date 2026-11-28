@@ -36,7 +36,10 @@ npm run build       # compila hub e aree staff in frontend/app, unilearn/, unisi
 I quattro file compilati sono nel repository (il Run & Go non richiede Node.js): dopo ogni modifica a `web/` vanno
 ricompilati e committati. In caso di conflitto non si sistemano a mano: si ricompilano.
 
-Zip per i collaboratori: `scripts/make-zip.sh` → `../RemindMeBro-demo-<data>[-<ramo>].zip`.
+Zip per i collaboratori: `scripts/make-zip.sh` → `../RemindMeBro-demo-<data>[-<ramo>].zip`, con il codice e i dati
+di `data/` (database copiati in modo coerente anche con l'app accesa, file dei corsi, chiavi interne tra i servizi), così
+chi lo apre vede la stessa demo. Mai nello zip: `data/ai.env` (la chiave dell'AI: ognuno mette la sua, il Run & Go la
+chiede) e `data/whisper` (si riscarica da solo). `scripts/make-zip.sh --no-data` fa uno zip che parte da zero.
 
 ## Configurazione
 

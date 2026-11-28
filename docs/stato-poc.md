@@ -30,6 +30,11 @@ Regola: dopo ogni modifica (codice, rami, decisioni) questo documento va aggiorn
 - `fix/connect-semplice` (da `feature/date-esami`): pagina Connect con meno scritte, PR #19; va unita dopo la #18.
 - `chore/struttura` (da `fix/connect-semplice`): launcher in `scripts/`, README nuovo, `docs/architettura.md` e `docs/sviluppo.md`; va unita dopo la #19.
 
+## Zip con i dati (28 novembre, ramo `feature/zip-con-dati`)
+- Richiesta di Illia: ogni zip deve contenere anche la sua cartella `data/`, così chi lo riceve vede quello che sta provando.
+- `scripts/make-zip.sh`: aggiunge `data/` (circa 16 MB → zip di circa 12 MB). Esclusi sempre `data/ai.env` (la chiave Gemini di Illia: chi riceve lo zip mette la sua al primo avvio) e `data/whisper` (142 MB, si riscarica da solo), più i file `-wal`/`-shm`. I database SQLite (`.db`, anche quello di ChromaDB) sono copiati con l'API di backup di SQLite: copia coerente anche con l'app accesa. Restano le chiavi interne tra i servizi (`.jwt_secret`, `provisioning.key`, `hub.key`, credenziali del client UniSIS, session secret) e i file `STAFF-PASSWORDS*`: servono perché i dati copiati funzionino (token cifrati, accesso dello staff). `--no-data` fa lo zip senza dati. `BUILD.txt` nello zip dice se i dati ci sono.
+- Provato: zip estratto in una cartella di prova, database integri e con gli stessi numeri dell'originale, nessun servizio li ricrea, i collegamenti di Giulia a UniLearn e UniSIS (token cifrati) si leggono, nessuna AI esterna configurata (la chiave non c'è).
+
 ## Cartella principale solo con i launcher (27 novembre, ramo `chore/cartella-pulita`)
 - Richiesta di Illia (con screenshot di GitHub): nella cartella principale devono restare solo i `run-share-*`. Restano anche `README.md` (pagina del progetto su GitHub), `CLAUDE.md` (Claude Code lo legge solo da lì) e `.gitignore` (git lo cerca lì).
 - `requirements.txt`, `requirements-whisper.txt`, `ai.env.example` → `config/`; `START-HERE.txt` → `docs/START-HERE.txt`. Corretti `scripts/run.sh` e `run.ps1` (installazione da `config/`, la cartella di lavoro è già quella del progetto), `make-zip.sh` (include `config/`; `BUILD.txt` rimanda a `docs/START-HERE.txt`), README, documenti, `CLAUDE.md`, commenti in `app/config.py` e `ai_remote.py`. Provato: `uv pip install -r config/requirements*.txt` sull'ambiente esistente, zip con i file al posto giusto.

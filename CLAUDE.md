@@ -9,7 +9,7 @@ Progetto di Illia (con Sara): PoC "Academic Unified Hub & AI Assistant", fronten
 ## Regole di lavoro
 1. **Un ramo nuovo per ogni modifica**, prima di toccare il codice (`feature/...` per le novità, `fix/...` per le correzioni). Mai lavorare direttamente su `main`.
 2. **Alla fine**: commit (messaggio in italiano: titolo breve, poi cosa e perché), `git push -u origin <ramo>`, **pull request verso `main` senza conflitti**. Se GitHub segnala conflitti, unisci `main` nel ramo e risolvili prima di consegnare.
-3. **Dopo ogni modifica al codice** fai lo zip per i collaboratori: `scripts/make-zip.sh` → `~/saraProjects/RemindMeBro-demo-<data>[-<ramo>].zip`.
+3. **Dopo ogni modifica al codice** fai lo zip per i collaboratori: `scripts/make-zip.sh` → `~/saraProjects/RemindMeBro-demo-<data>[-<ramo>].zip`. Lo zip contiene anche i dati di Illia (`data/`, richiesta di Illia: chi lo apre vede quello che sta provando), ma **mai** `data/ai.env` (la sua chiave Gemini) né `data/whisper`; i database sono copiati in modo coerente anche con l'app accesa. `--no-data` per uno zip che parte da zero.
 4. **Aggiorna `docs/stato-poc.md`** subito dopo ogni modifica (rami, PR, decisioni, cause dei bug trovati) e committalo nello stesso ramo.
 5. Allo studente si mostra il **nome del corso**, non il codice (il codice al massimo nel suggerimento).
 6. Non mettere nei commit modifiche locali di Illia che non ha chiesto (per esempio il modello in `scripts/run.sh`).
