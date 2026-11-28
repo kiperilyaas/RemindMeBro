@@ -6,6 +6,11 @@ import { SOURCES } from "../../lib/domain";
 import { fmtDay, fmtTime, parse, timeAgo } from "../../lib/time";
 import { useSession } from "../../state/session";
 import { useStudent } from "../../state/student";
+import { useToast } from "../../state/toast";
+import { api } from "../../api/client";
+import { ConfirmDate } from "./ConfirmDate";
+
+const DATE_STATE: Record<string, string> = { pending: "to confirm", accepted: "in your calendar", rejected: "left out", replaced: "official date is newer" };
 
 type Filter = "important" | "all" | Source;
 const FILTERS: [Filter, string][] = [["important", "Important"], ["all", "All"], ["teams", "Teams"], ["moodle", "UniLearn"], ["email", "Outlook"]];
@@ -17,7 +22,14 @@ function Avatar({ m }: { m: InboxItem }) {
 
 export function Inbox() {
   const { now } = useSession();
-  const { loading, inbox, isRead, markRead, fresh, clearFresh } = useStudent();
+  const { loading, inbox, isRead, markRead, fresh, clearFresh, reload } = useStudent();
+  const toast = useToast();
+  const [confirming, setConfirming] = useState<InboxItem | null>(null);
+  const undo = async (m: InboxItem) => {
+    if (!m.deadline_id) return;
+    try { await api.undoMessageDate(m.deadline_id); await reload(); toast("Removed from your calendar", undefined, "info"); }
+    catch (e) { toast("Could not remove it", (e as Error).message, "error"); }
+  };
   // open on "All" when an unread message is not "Important" (a plain announcement), so new messages are never hidden
   const [filter, setFilter] = useState<Filter>(() => (inbox.some((m) => !isRead(m.id) && !(m.important || m.deadline_id)) ? "all" : "important"));
   useEffect(() => clearFresh, [clearFresh]);   // "New" lasts until the student leaves the Inbox
@@ -69,7 +81,7 @@ export function Inbox() {
                     <span className="mline"><b>{m.author}</b>{fresh.has(m.id) && <span className="new-pill">New</span>}<time dateTime={m.created_at} title={`${fmtDay(at)} ${fmtTime(at)}`}>{timeAgo(at, now)}</time></span>
                     <span className="msub">{m.subject}</span>
                     <span className="mmeta"><SourceTag source={m.source} />{m.course_code && <CourseChip code={m.course_code} name={m.course_name} showName />}
-                      {m.deadline_id && m.deadline_due && <span className="ai"><Icon name="sparkle" size={12} /> date found · {fmtDay(parse(m.deadline_due))}</span>}</span>
+                      {m.deadline_id && m.deadline_due && <span className={`ai ${m.deadline_status ?? ""}`}><Icon name="sparkle" size={12} /> date found · {fmtDay(parse(m.deadline_due))}{m.deadline_status && ` · ${DATE_STATE[m.deadline_status]}`}</span>}</span>
                   </span>
                   {unread && <span className="udot" aria-label="Unread" />}
                 </button>
@@ -77,6 +89,14 @@ export function Inbox() {
                   <div className="mbody" id={`msg-${m.id}`}>
                     <p>{m.content}</p>
                     <div className={`ai-sum ${m.deadline_id ? "hit" : ""}`}><Icon name="sparkle" size={16} /><span><b>AI summary</b> {m.ai_summary}</span></div>
+                    {m.deadline_id && m.deadline_due && (m.deadline_status === "pending" || m.deadline_status === "rejected") && (
+                      <button className="date-btn" onClick={() => setConfirming(m)}>
+                        <Icon name="calendar" size={16} /><span><b>{m.deadline_title ?? "Date"}</b> · {fmtDay(parse(m.deadline_due))}</span><span className="date-btn-go">{m.deadline_status === "rejected" ? "Left out · add anyway?" : "Add to calendar…"}</span>
+                      </button>
+                    )}
+                    {m.deadline_status === "accepted" && (
+                      <p className="date-ok"><Icon name="check" size={14} /> In your calendar <button className="link-btn" onClick={() => void undo(m)}>Remove</button></p>
+                    )}
                     <p className="mfoot">{m.course_name ?? "University"} · {fmtDay(at)} {fmtTime(at)}{m.personal && " · sent only to you"}</p>
                   </div>
                 )}
@@ -85,6 +105,7 @@ export function Inbox() {
           })}
         </ul>
       )}
+      {confirming && <ConfirmDate m={confirming} onClose={() => setConfirming(null)} />}
     </>
   );
 }

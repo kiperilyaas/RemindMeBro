@@ -14,7 +14,7 @@ import re
 import time
 import uuid
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import and_, or_, select
@@ -26,8 +26,8 @@ from app.api.auth import get_current_user, list_demo_accounts
 from app.api.premium import require_premium
 from app.config import settings
 from app.database.db import get_db
-from app.database.models import Announcement, Course, Deadline, DeadlineDone, Event, SourceType, User
-from app.services import llm_extractor, sync_service, vector_store
+from app.database.models import Announcement, Course, Deadline, DeadlineDone, Event, MessageDateChoice, SourceType, User
+from app.services import calendar_view, llm_extractor, sync_service, vector_store
 from app.services.my_courses import course_filter
 
 router = APIRouter(prefix="/api", tags=["Academic Hub"])
@@ -135,20 +135,37 @@ def list_deadlines(
     db: Session = Depends(get_db),
     user: User = Authenticated,
 ) -> List[schemas.DeadlineOut]:
-    stmt = (
+    rows = _student_deadlines(db, user, include_superseded)
+    if source:
+        rows = [d for d in rows if d.source == source]
+    if course_id:
+        rows = [d for d in rows if d.course_id == course_id]
+    if include_superseded:
+        out = serialize_deadlines(db, rows, user)
+    else:   # one entry per event (the same exam from UniSIS, a course file and an email is shown once)
+        merged, _ = calendar_view.merge(rows, _exam_events(db, user))
+        out = serialize_deadlines(db, [p for p, _, _ in merged], user)
+        for o, (p, also, timed) in zip(out, merged):
+            o.also_in = also
+            o.needs_confirmation = calendar_view.is_message_date(p)
+            if timed is not p:
+                o.due_date, o.time_known = timed.due_date, True
+    return out if include_completed else [d for d in out if not d.is_completed]
+
+
+def _student_deadlines(db: Session, user: User, include_superseded: bool = False) -> List[Deadline]:
+    """Deadlines the user sees: dates found in messages only once confirmed, dates moved by a confirmed message hidden."""
+    rows = list(db.scalars(
         select(Deadline)
         .options(selectinload(Deadline.course), selectinload(Deadline.announcement))
+        .where(or_(Deadline.user_id == user.id, and_(Deadline.user_id.is_(None), course_filter(db, user, Deadline.course_id))))
         .order_by(Deadline.due_date)
-    )
-    stmt = stmt.where(or_(Deadline.user_id == user.id, and_(Deadline.user_id.is_(None), course_filter(db, user, Deadline.course_id))))
-    if not include_superseded:
-        stmt = stmt.where(Deadline.superseded_by_id.is_(None))
-    if source:
-        stmt = stmt.where(Deadline.source == source)
-    if course_id:
-        stmt = stmt.where(Deadline.course_id == course_id)
-    out = serialize_deadlines(db, list(db.scalars(stmt)), user)
-    return out if include_completed else [d for d in out if not d.is_completed]
+    ))
+    return rows if include_superseded else calendar_view.visible(db, user, rows)
+
+
+def _exam_events(db: Session, user: User) -> List[Event]:
+    return list(db.scalars(select(Event).where(Event.kind == "exam", visible_events(user), course_filter(db, user, Event.course_id))))
 
 
 @router.patch("/deadlines/{deadline_id}/complete", response_model=schemas.DeadlineOut, summary="Mark a deadline as completed")
@@ -190,10 +207,27 @@ def inbox(limit: int = Query(50, ge=1, le=200), db: Session = Depends(get_db), u
         .limit(limit)
     )
     now = settings.reference_now()
-    return [_inbox_item(a, now) for a in rows]
+    mine = calendar_view.choices(db, user)
+    return [_inbox_item(a, now, mine, db) for a in rows]
 
 
-def _inbox_item(a: Announcement, now: datetime) -> schemas.InboxItem:
+def _replaces(db: Session, dl: Deadline) -> Optional[Dict[str, Any]]:
+    """The official date this message would move, so the student knows before confirming."""
+    old = db.scalar(select(Deadline).where(Deadline.superseded_by_id == dl.id, Deadline.extracted_by_ai.is_(False)))
+    return {"title": old.title, "due_date": old.due_date.isoformat()} if old is not None else None
+
+
+def _date_status(db: Session, dl: Deadline, mine: Dict[int, str]) -> str:
+    if dl.id in mine:
+        return mine[dl.id]
+    if dl.superseded_by_id:
+        newer = db.get(Deadline, dl.superseded_by_id)
+        if newer is not None and not calendar_view.is_message_date(newer):
+            return "replaced"   # the lecturer set a newer official date afterwards
+    return "pending"
+
+
+def _inbox_item(a: Announcement, now: datetime, mine: Optional[Dict[int, str]] = None, db: Optional[Session] = None) -> schemas.InboxItem:
     dl = next(iter(sorted(a.deadlines, key=lambda d: d.due_date)), None)
     if dl:
         summary = f"AI-detected deadline: {dl.title} — {_fmt_short(dl.due_date)}."
@@ -214,8 +248,54 @@ def _inbox_item(a: Announcement, now: datetime) -> schemas.InboxItem:
         important=bool(dl) or recent,
         deadline_id=dl.id if dl else None,
         deadline_due=dl.due_date if dl else None,
+        deadline_title=dl.title if dl else None,
+        deadline_replaces=_replaces(db, dl) if dl is not None and db is not None else None,
+        deadline_status=_date_status(db, dl, mine or {}) if dl is not None and db is not None else None,
         personal=a.user_id is not None,
     )
+
+
+# ---------------------------------------------------------------------------
+# Dates found in messages: the student confirms them before they reach the calendar
+# ---------------------------------------------------------------------------
+def _message_date(db: Session, user: User, deadline_id: int) -> Deadline:
+    d = db.get(Deadline, deadline_id)
+    if d is None or not calendar_view.is_message_date(d) or (d.user_id is not None and d.user_id != user.id):
+        raise HTTPException(status_code=404, detail="Date not found.")
+    if d.user_id is None and d.course_id is not None:
+        if db.scalar(select(Deadline.id).where(Deadline.id == d.id, course_filter(db, user, Deadline.course_id))) is None:
+            raise HTTPException(status_code=404, detail="Date not found.")
+    return d
+
+
+def _choose_message_date(db: Session, user: User, deadline_id: int, choice: Optional[str]) -> Dict[str, Any]:
+    d = _message_date(db, user, deadline_id)
+    row = db.scalar(select(MessageDateChoice).where(MessageDateChoice.user_id == user.id, MessageDateChoice.deadline_id == d.id))
+    if choice is None:
+        if row is not None:
+            db.delete(row)
+    else:
+        if row is None:
+            row = MessageDateChoice(user_id=user.id, deadline_id=d.id)
+            db.add(row)
+        row.choice, row.decided_at = choice, datetime.now()
+    db.commit()
+    return {"deadline_id": d.id, "status": choice or "pending"}
+
+
+@router.post("/inbox/dates/{deadline_id}/accept", summary="Add a date found in a message to my calendar")
+def accept_message_date(deadline_id: int, db: Session = Depends(get_db), user: User = Authenticated) -> Dict[str, Any]:
+    return _choose_message_date(db, user, deadline_id, "accepted")
+
+
+@router.post("/inbox/dates/{deadline_id}/reject", summary="This date is not right: leave it out of my calendar")
+def reject_message_date(deadline_id: int, db: Session = Depends(get_db), user: User = Authenticated) -> Dict[str, Any]:
+    return _choose_message_date(db, user, deadline_id, "rejected")
+
+
+@router.delete("/inbox/dates/{deadline_id}", summary="Remove it from my calendar (it is proposed again)")
+def undo_message_date(deadline_id: int, db: Session = Depends(get_db), user: User = Authenticated) -> Dict[str, Any]:
+    return _choose_message_date(db, user, deadline_id, None)
 
 
 @router.get("/schedule", response_model=List[schemas.ScheduleEvent], summary="Timetable/events in a date range")
@@ -238,8 +318,11 @@ def schedule(
         .where(Event.start_time < datetime.combine(end + timedelta(days=1), datetime.min.time()))
         .order_by(Event.start_time)
     )
+    rows = list(rows)
+    _, event_also = calendar_view.merge(_student_deadlines(db, user), [e for e in rows if e.kind == "exam"])
     return [
         schemas.ScheduleEvent(
+            also_in=event_also.get(e.id, []),
             id=e.id,
             course_id=e.course_id,
             course_code=e.course.code if e.course else None,

@@ -45,4 +45,33 @@ describe("Inbox: new messages", () => {
     expect(screen.getByText(/New message in your Inbox/)).toBeInTheDocument();
     await waitFor(() => expect(document.title).toMatch(/^\(2\) /));
   });
+
+  it("a date found in an email reaches the calendar only after the confirmation window", async () => {
+    const calls: string[] = [];
+    const email = { ...msg(3, "Midterm II on 15 December"), source: "email", course_code: "2MO522", course_name: "Financial Strategies in International Business",
+      author: "Prof. Laura Bianchi", content: "Midterm II will take place on 15.12.2026 during our seminar.", deadline_id: 7, deadline_due: "2026-12-15T23:59:00",
+      deadline_title: "Midterm II", deadline_status: "pending", deadline_replaces: null, important: true };
+    vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+      const url = String(input), method = init?.method ?? "GET";
+      if (url.includes("/inbox/dates")) calls.push(`${method} ${url.split("/api")[1]}`);
+      if (url.endsWith("/health")) return json({ status: "ok", app: "x", version: "1", reference_date: "2026-11-28T12:00:00", ollama: {}, vector_documents: 0 });
+      if (url.endsWith("/auth/me")) return json({ id: 1, email: "s@x", full_name: "Giulia", role: "student", created_at: "", plan: "premium" });
+      if (url.endsWith("/inbox/dates/7/accept")) return json({ deadline_id: 7, status: "accepted" });
+      if (url.endsWith("/inbox")) return json([email]);
+      return json([]);
+    });
+    render(<ToastProvider><SessionProvider><StudentProvider><Inbox /></StudentProvider></SessionProvider></ToastProvider>);
+    expect(await screen.findByText(/date found · .* · to confirm/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Midterm II on 15 December", { selector: ".msub" }));
+    fireEvent.click(screen.getByRole("button", { name: /Add to calendar…/ }));
+    // the window: what, when (no time written), the message; nothing saved yet
+    const dialog = await screen.findByRole("dialog", { name: "Add to your calendar?" });
+    expect(dialog).toHaveTextContent("Midterm II");
+    expect(dialog).toHaveTextContent("time not stated");
+    expect(dialog).toHaveTextContent("Outlook · Prof. Laura Bianchi");
+    expect(calls).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: "Add to calendar" }));
+    expect(await screen.findByText("Added to your calendar")).toBeInTheDocument();
+    expect(calls).toEqual(["POST /inbox/dates/7/accept"]);
+  });
 });

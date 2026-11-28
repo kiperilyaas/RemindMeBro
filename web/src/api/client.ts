@@ -71,6 +71,9 @@ export class ApiClient {
   deadlines = () => this.request<Deadline[]>("/deadlines");
   setDone = (id: number, done: boolean) => this.request<Deadline>(`/deadlines/${id}/complete?completed=${done}`, { method: "PATCH" });
   inbox = () => this.request<InboxItem[]>("/inbox");
+  acceptMessageDate = (deadlineId: number) => this.request<{ status: string }>(`/inbox/dates/${deadlineId}/accept`, { method: "POST" });
+  rejectMessageDate = (deadlineId: number) => this.request<{ status: string }>(`/inbox/dates/${deadlineId}/reject`, { method: "POST" });
+  undoMessageDate = (deadlineId: number) => this.request<{ status: string }>(`/inbox/dates/${deadlineId}`, { method: "DELETE" });
   foundDates = () => this.request<FoundDatesResponse>("/found-dates");
   scanFoundDates = () => this.request<FoundDatesStatus>("/found-dates/scan", { method: "POST" });
   acceptFoundDate = (id: number) => this.request<{ accepted: boolean; deadline_id: number }>(`/found-dates/${id}/accept`, { method: "POST" });

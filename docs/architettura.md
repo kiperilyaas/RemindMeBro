@@ -60,6 +60,9 @@ API FastAPI + interfaccia React compilata in un solo file (`frontend/app/index.h
   solo le righe con una data e una parola d'esame vanno all'AI, che deve copiare la frase parola per parola; il codice
   controlla che la frase sia nel file e contenga la stessa data (lettore di date senza AI, `exam_dates/dates.py`), poi
   una seconda domanda sì/no all'AI. Lo studente conferma ogni data prima che vada nel calendario.
+- **Le date dei messaggi si confermano.** Una data trovata dall'AI in un'email, un post Teams o un avviso entra nel calendario
+  solo dopo "Add to calendar" nella finestrina (`app/services/calendar_view.py`). Lo stesso evento trovato in più posti è
+  una voce sola, con l'elenco delle altre fonti ("Also in").
 - **La data ufficiale vince.** Se un avviso sposta un compito, la vecchia data è nascosta (`superseded_by_id`), non
   cancellata; se poi il docente cambia la data in UniLearn, vale di nuovo quella ufficiale.
 - **Sincronizzazione idempotente.** Chiave `source + external_id`: rifare il Sync non duplica nulla. Un sync alla volta

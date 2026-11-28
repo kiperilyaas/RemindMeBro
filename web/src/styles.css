@@ -540,3 +540,16 @@ pre{background:var(--surface-2);border-radius:12px;padding:12px;overflow:auto;fo
 /* "Find exams" above the calendar */
 .find-exams{flex:none}
 @media (max-width:520px){.cal-bar{gap:8px}.cal-bar .btn{padding-left:10px;padding-right:10px;font-size:14px;gap:6px}}
+
+/* Dates found in messages: confirmation before the calendar */
+.date-btn{display:flex;align-items:center;gap:10px;width:100%;margin:10px 0 4px;padding:11px 14px;border:1px solid var(--violet);border-radius:var(--r-sm);background:var(--violet-soft);color:var(--fg);text-align:left;cursor:pointer;font:inherit}
+.date-btn>svg{color:var(--violet);flex:none}.date-btn>span:nth-child(2){flex:1;min-width:0}
+.date-btn-go{font-weight:650;color:var(--violet);white-space:nowrap}
+.date-btn:hover{filter:brightness(1.05)}
+.date-ok{display:flex;align-items:center;gap:6px;margin:8px 0 0!important;font-size:13.5px;color:var(--ok,#2F855A)}
+.mmeta .ai.pending{color:var(--violet)}.mmeta .ai.rejected,.mmeta .ai.replaced{opacity:.7}
+.modal.confirm-date{gap:12px}.confirm-date .eyebrow{display:flex;gap:6px;align-items:center;margin:0}
+.cd-what{display:grid;gap:2px}.cd-what b{font-size:17px}
+.cd-from{margin:0;font-size:13px;color:var(--muted)}
+.cd-replaces{display:flex;gap:6px;align-items:flex-start;margin:0;font-size:13.5px;color:var(--warn,#B7791F)}.cd-replaces svg{flex:none;margin-top:2px}
+.also-in{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0 0;font-size:12.5px;color:var(--muted)}

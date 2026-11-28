@@ -33,6 +33,8 @@ export interface Deadline {
   source_message: string | null; replaces: { id: number; title: string; old_due_date: string } | null;
   found_in?: string | null;   // found in a course file and accepted: "Syllabus.pdf · page 4"
   time_known?: boolean;       // false: the file gives only the day ("time not stated")
+  also_in?: string[];         // the same event found elsewhere too (shown once)
+  needs_confirmation?: boolean; // found in a message and confirmed by the student
 }
 export interface FoundDate {
   id: number; course_code: string; course_name: string; kind: "exam" | "midterm" | "test" | "presentation" | "submission"; kind_label: string;
@@ -48,10 +50,15 @@ export interface InboxItem {
   author: string; created_at: string; subject: string; content: string; ai_summary: string; important: boolean;
   deadline_id: number | null; deadline_due: string | null;
   personal?: boolean;   // UniComms email sent only to this student
+  deadline_title?: string | null;
+  /** pending: not in the calendar until confirmed · accepted · rejected · replaced (a newer official date exists) */
+  deadline_status?: "pending" | "accepted" | "rejected" | "replaced" | null;
+  deadline_replaces?: { title: string; due_date: string } | null;
 }
 export interface ScheduleEvent {
   id: number; course_id: number | null; course_code: string | null; course_name: string | null;
   title: string; start_time: string; end_time: string; location: string | null; source: string; kind: string;
+  also_in?: string[];
 }
 export interface Announcement { id: number; course_id: number | null; author: string; content: string; created_at: string; source: Source }
 export interface Health { status: string; app: string; version: string; reference_date: string; ollama: { reachable?: boolean; model?: string; model_available?: boolean; error?: string; provider?: string; label?: string; local?: boolean; fallback?: { model?: string; available: boolean } }; vector_documents: number }

@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.database.models import Announcement, Course, Deadline, DeadlineDone, Event, SourceType
+from app.database.models import Announcement, Course, Deadline, DeadlineDone, Event, MessageDateChoice, SourceType
 from app.mocks import moodle_mock
 from app.services import llm_extractor, unicomms_client, unilearn_client, unisis_client, vector_store
 
@@ -135,6 +135,8 @@ def delete_announcement(db: Session, ann: Announcement) -> None:
         for d in db.scalars(select(Deadline).where(Deadline.superseded_by_id.in_(ids))):
             d.superseded_by_id = None   # an official date hidden by this message comes back
         for row in db.scalars(select(DeadlineDone).where(DeadlineDone.deadline_id.in_(ids))):
+            db.delete(row)
+        for row in db.scalars(select(MessageDateChoice).where(MessageDateChoice.deadline_id.in_(ids))):
             db.delete(row)
         for d in found:
             db.delete(d)
@@ -309,6 +311,21 @@ def prune_vector_store(db: Session) -> int:
     return len(gone)
 
 
+def repair_wrong_moves(db: Session) -> int:
+    """At start-up: an official date hidden by a message about something else (old rule that also read the AI's description)
+    comes back. Only the titles count now (llm_extractor.titles_match)."""
+    fixed = 0
+    for d in db.scalars(select(Deadline).where(Deadline.superseded_by_id.is_not(None), Deadline.extracted_by_ai.is_(False))):
+        newer = db.get(Deadline, d.superseded_by_id)
+        if newer is not None and newer.extracted_by_ai and newer.announcement_id and not llm_extractor.titles_match(d.title, newer.title):
+            d.superseded_by_id = None
+            fixed += 1
+    if fixed:
+        db.commit()
+        logger.info("%s data ufficiale/i tornata/e visibile/i (spostamento sbagliato da un messaggio)", fixed)
+    return fixed
+
+
 def move_demo_courses(db: Session) -> int:
     """Existing data: a course still taught by its old demo lecturer goes to the new one (and to their hub account)."""
     from app.database.models import User   # local import: only needed here
@@ -342,6 +359,7 @@ def bootstrap_demo_data(db: Session, seed_users: bool = True) -> Dict[str, Any]:
         info["imported"] = True
     move_demo_courses(db)
     db.commit()
+    repair_wrong_moves(db)
     prune_vector_store(db)
     if seed_users:
         info["demo_users_created"] = seed_demo_users(db)

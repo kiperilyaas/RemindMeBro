@@ -35,6 +35,7 @@ function EventCard({ e, now }: { e: ScheduleEvent; now: Date }) {
       </div>
       <b>{generic ? e.course_name : e.title}</b>
       <span className="sub">{e.location && <><Icon name="pin" size={14} /> {e.location} · </>}{fmtTime(s)}–{fmtTime(en)}{generic ? ` · ${e.title}` : e.course_name && e.course_name !== e.title ? ` · ${e.course_name}` : ""}</span>
+      {!!e.also_in?.length && <p className="also-in"><Icon name="check" size={13} /> Also in: {e.also_in.join(" · ")}</p>}
     </div>
   );
 }
@@ -59,7 +60,12 @@ function DeadlineCard({ d, now }: { d: Deadline; now: Date }) {
         <blockquote className="quote">“{d.description}”</blockquote>
         <p className="found-src"><Icon name="book" size={14} /> Found in {d.found_in}
           <button className="link-btn" onClick={() => void api.removeFoundDate(d.id).then(reload)}>Remove</button></p>
-      </> : d.source_message ? <blockquote className="quote">“{d.source_message}”</blockquote> : d.description && <p className="note">{d.description}</p>}
+      </> : d.source_message ? <>
+        <blockquote className="quote">“{d.source_message}”</blockquote>
+        {d.needs_confirmation && d.announcement_id && <p className="found-src"><Icon name="sparkle" size={14} /> Added from a message
+          <button className="link-btn" onClick={() => void api.undoMessageDate(d.id).then(reload)}>Remove</button></p>}
+      </> : d.description && <p className="note">{d.description}</p>}
+      {!!d.also_in?.length && <p className="also-in"><Icon name="check" size={13} /> Also in: {d.also_in.join(" · ")}</p>}
       <button className="done-btn" aria-pressed={d.is_completed} onClick={() => void toggleDone(d)}>
         <Icon name="check" size={16} /> {d.is_completed ? "Done" : "Mark as done"}
       </button>
